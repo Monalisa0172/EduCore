@@ -1,7 +1,5 @@
 ﻿using EduCore.API.Enums;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -26,6 +24,8 @@ public partial class Usuario
     public string? Senha { get; set; }
 
     public TipoUsuarioEnum Tipo { get; set; }
+
+    public bool Ativo { get; set; }
 
     [InverseProperty("Usuario")]
     public virtual ICollection<Aluno> Alunos { get; set; } = new List<Aluno>();
