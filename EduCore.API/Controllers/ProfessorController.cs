@@ -65,4 +65,30 @@ public class ProfessorController : ControllerBase
 
         return Ok(professor);
     }
+
+    /// <summary>
+    /// Atualiza o status funcional do professor
+    /// </summary>
+    [Authorize(Roles = Roles.Admin)]
+    [HttpPatch("{funcionarioId}/status")]
+    public async Task<IActionResult> UpdateStatus(
+        int funcionarioId,
+        [FromBody] UpdateProfessorStatusRequest request)
+    {
+        var atualizado = await _professorService
+            .UpdateStatusAsync(funcionarioId, request.Status);
+
+        if (!atualizado)
+        {
+            return NotFound(new
+            {
+                message = "Funcionário não encontrado"
+            });
+        }
+
+        return Ok(new
+        {
+            message = "Status atualizado com sucesso"
+        });
+    }
 }

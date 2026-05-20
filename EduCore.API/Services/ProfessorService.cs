@@ -87,4 +87,36 @@ public class ProfessorService
             Status = funcionario.Status.ToString(),
         };
     }
+
+    public async Task<bool> UpdateStatusAsync(
+    int funcionarioId,
+    StatusFuncionarioEnum status)
+    {
+        var funcionario = await _funcionarioRepository
+            .GetByIdAsync(funcionarioId);
+
+        if (funcionario == null)
+            return false;
+
+        funcionario.Status = status;
+
+        if (status == StatusFuncionarioEnum.Desligado)
+        {
+            funcionario.Ativo = false;
+
+            var usuario = await _usuarioRepository
+                .GetByIdAsync(funcionario.UsuarioId);
+
+            if (usuario != null)
+            {
+                usuario.Ativo = false;
+
+                await _usuarioRepository.UpdateAsync(usuario);
+            }
+        }
+
+        await _funcionarioRepository.UpdateAsync(funcionario);
+
+        return true;
+    }
 }
