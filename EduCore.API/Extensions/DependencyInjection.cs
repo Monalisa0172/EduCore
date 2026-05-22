@@ -16,13 +16,16 @@ public static class DependencyInjection
         services.AddScoped<UsuarioService>();
         services.AddScoped<ProfessorService>();
         services.AddScoped<DisciplinaService>();
+        services.AddScoped<SubDisciplinaService>();
 
         services.AddScoped<IAlunoRepository, AlunoRepository>();
         services.AddScoped<IUsuarioRepository, UsuarioRepository>();
         services.AddScoped<IProfessorRepository, ProfessorRepository>();
         services.AddScoped<IFuncionarioRepository, FuncionarioRepository>();
         services.AddScoped<IDisciplinaRepository, DisciplinaRepository>();
+        services.AddScoped<ISubDisciplinaRepository,SubDisciplinaRepository>();
 
         return services;
     }
 }
+

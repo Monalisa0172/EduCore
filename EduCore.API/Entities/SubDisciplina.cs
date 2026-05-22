@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 
@@ -15,8 +13,11 @@ public partial class SubDisciplina
     [Unicode(false)]
     public string? Nome { get; set; }
     public int DisciplinaId { get; set; }
+    [StringLength(255)]
+    [Unicode(false)]
+    public string? Descricao { get; set; }
+    public bool Ativo { get; set; }
     [ForeignKey("DisciplinaId")]
     [InverseProperty("SubDisciplinas")]
-    public virtual Disciplina? Disciplina { get; set; }
-    public bool Ativo { get; set; }
+    public virtual Disciplina Disciplina { get; set; } = null!;
 }
