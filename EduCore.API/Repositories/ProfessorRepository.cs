@@ -63,4 +63,13 @@ public class ProfessorRepository : IProfessorRepository
         await _context.Professors.AddAsync(professor);
         await _context.SaveChangesAsync();
     }
+
+    public async Task<Professor?>
+    GetEntityByIdAsync(int id)
+    {
+        return await _context.Professors
+            .Include(x => x.Funcionario)
+                .ThenInclude(x => x.Usuario)
+            .FirstOrDefaultAsync(x => x.Id == id);
+    }
 }

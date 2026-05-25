@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 
@@ -19,6 +17,6 @@ public partial class Professor
     public string? Especialidade { get; set; }
 
     [ForeignKey("FuncionarioId")]
-    [InverseProperty("Professors")]
+    [InverseProperty("Professor")]
     public virtual Funcionario Funcionario { get; set; } = null!;
 }

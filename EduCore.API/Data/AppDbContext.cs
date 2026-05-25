@@ -40,20 +40,26 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<Usuario> Usuarios { get; set; }
 
+    public virtual DbSet<ProfessorSubDisciplina> ProfessorSubDisciplinas { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Aluno>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK__Aluno__3214EC0745EFD30B");
 
-            entity.HasOne(d => d.Usuario).WithMany(p => p.Alunos).HasConstraintName("FK__Aluno__UsuarioId__3C69FB99");
+            entity.HasOne(d => d.Usuario)
+                .WithMany(p => p.Alunos)
+                .HasConstraintName("FK__Aluno__UsuarioId__3C69FB99");
         });
 
         modelBuilder.Entity<Contato>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK__Contato__3214EC07F006A48F");
 
-            entity.HasOne(d => d.Usuario).WithMany(p => p.Contatos).HasConstraintName("FK__Contato__Usuario__4222D4EF");
+            entity.HasOne(d => d.Usuario)
+                .WithMany(p => p.Contatos)
+                .HasConstraintName("FK__Contato__Usuario__4222D4EF");
         });
 
         modelBuilder.Entity<Disciplina>(entity =>
@@ -65,14 +71,17 @@ public partial class AppDbContext : DbContext
         {
             entity.HasKey(e => e.Id).HasName("PK__Endereco__3214EC07BF7CF971");
 
-            entity.HasOne(d => d.Usuario).WithMany(p => p.Enderecos).HasConstraintName("FK__Endereco__Usuari__3F466844");
+            entity.HasOne(d => d.Usuario)
+                .WithMany(p => p.Enderecos)
+                .HasConstraintName("FK__Endereco__Usuari__3F466844");
         });
 
         modelBuilder.Entity<Funcionario>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK__Funciona__3214EC07C131EA4E");
 
-            entity.HasOne(d => d.Usuario).WithMany(p => p.Funcionarios)
+            entity.HasOne(d => d.Usuario)
+                .WithMany(p => p.Funcionarios)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__Funcionar__Usuar__5812160E");
         });
@@ -81,34 +90,48 @@ public partial class AppDbContext : DbContext
         {
             entity.HasKey(e => e.Id).HasName("PK__Matricul__3214EC07702D739C");
 
-            entity.HasOne(d => d.Aluno).WithMany(p => p.Matriculas).HasConstraintName("FK__Matricula__Aluno__49C3F6B7");
+            entity.HasOne(d => d.Aluno)
+                .WithMany(p => p.Matriculas)
+                .HasConstraintName("FK__Matricula__Aluno__49C3F6B7");
 
-            entity.HasOne(d => d.Turma).WithMany(p => p.Matriculas).HasConstraintName("FK__Matricula__Turma__4AB81AF0");
+            entity.HasOne(d => d.Turma)
+                .WithMany(p => p.Matriculas)
+                .HasConstraintName("FK__Matricula__Turma__4AB81AF0");
         });
 
         modelBuilder.Entity<Notum>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK__Nota__3214EC07A7A801C1");
 
-            entity.HasOne(d => d.Aluno).WithMany(p => p.Nota).HasConstraintName("FK__Nota__AlunoId__4D94879B");
+            entity.HasOne(d => d.Aluno)
+                .WithMany(p => p.Nota)
+                .HasConstraintName("FK__Nota__AlunoId__4D94879B");
 
-            entity.HasOne(d => d.Disciplina).WithMany(p => p.Nota).HasConstraintName("FK__Nota__Disciplina__4E88ABD4");
+            entity.HasOne(d => d.Disciplina)
+                .WithMany(p => p.Nota)
+                .HasConstraintName("FK__Nota__Disciplina__4E88ABD4");
         });
 
         modelBuilder.Entity<Presenca>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK__Presenca__3214EC074F832E32");
 
-            entity.HasOne(d => d.Aluno).WithMany(p => p.Presencas).HasConstraintName("FK__Presenca__AlunoI__5165187F");
+            entity.HasOne(d => d.Aluno)
+                .WithMany(p => p.Presencas)
+                .HasConstraintName("FK__Presenca__AlunoI__5165187F");
 
-            entity.HasOne(d => d.Disciplina).WithMany(p => p.Presencas).HasConstraintName("FK__Presenca__Discip__52593CB8");
+            entity.HasOne(d => d.Disciplina)
+                .WithMany(p => p.Presencas)
+                .HasConstraintName("FK__Presenca__Discip__52593CB8");
         });
 
         modelBuilder.Entity<Professor>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK__Professo__3214EC07B5375209");
 
-            entity.HasOne(d => d.Funcionario).WithMany(p => p.Professors)
+            entity.HasOne(d => d.Funcionario)
+                .WithOne(p => p.Professor)
+                .HasForeignKey<Professor>(d => d.FuncionarioId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__Professor__Funci__5AEE82B9");
         });
@@ -117,7 +140,9 @@ public partial class AppDbContext : DbContext
         {
             entity.HasKey(e => e.Id).HasName("PK__SubDisci__3214EC0758CDCEA2");
 
-            entity.HasOne(d => d.Disciplina).WithMany(p => p.SubDisciplinas).HasConstraintName("FK__SubDiscip__Disci__5535A963");
+            entity.HasOne(d => d.Disciplina)
+                .WithMany(p => p.SubDisciplinas)
+                .HasConstraintName("FK__SubDiscip__Disci__5535A963");
         });
 
         modelBuilder.Entity<Turma>(entity =>
@@ -128,6 +153,19 @@ public partial class AppDbContext : DbContext
         modelBuilder.Entity<Usuario>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK__Usuario__3214EC077A86FEDD");
+        });
+
+        modelBuilder.Entity<ProfessorSubDisciplina>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            entity.HasOne(d => d.Professor)
+                .WithMany()
+                .HasForeignKey(d => d.ProfessorId);
+
+            entity.HasOne(d => d.SubDisciplina)
+                .WithMany()
+                .HasForeignKey(d => d.SubDisciplinaId);
         });
 
         OnModelCreatingPartial(modelBuilder);

@@ -17,6 +17,7 @@ public static class DependencyInjection
         services.AddScoped<ProfessorService>();
         services.AddScoped<DisciplinaService>();
         services.AddScoped<SubDisciplinaService>();
+        services.AddScoped<ProfessorSubDisciplinaService>();
 
         services.AddScoped<IAlunoRepository, AlunoRepository>();
         services.AddScoped<IUsuarioRepository, UsuarioRepository>();
@@ -24,6 +25,7 @@ public static class DependencyInjection
         services.AddScoped<IFuncionarioRepository, FuncionarioRepository>();
         services.AddScoped<IDisciplinaRepository, DisciplinaRepository>();
         services.AddScoped<ISubDisciplinaRepository,SubDisciplinaRepository>();
+        services.AddScoped<IProfessorSubDisciplinaRepository, ProfessorSubDisciplinaRepository>();
 
         return services;
     }

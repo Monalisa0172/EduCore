@@ -8,4 +8,5 @@ public interface IProfessorRepository
     Task<List<ProfessorResponseDTO>> GetAllAsync();
     Task<ProfessorResponseDTO?> GetByIdAsync(int id);
     Task AddAsync(Professor professor);
+    Task<Professor?> GetEntityByIdAsync(int id);
 }
