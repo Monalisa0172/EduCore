@@ -19,4 +19,16 @@ public partial class Professor
     [ForeignKey("FuncionarioId")]
     [InverseProperty("Professor")]
     public virtual Funcionario Funcionario { get; set; } = null!;
+
+    [InverseProperty("Professor")]
+    public virtual ICollection<ProfessorSubDisciplina>
+        ProfessorSubDisciplinas
+    { get; set; }
+            = new List<ProfessorSubDisciplina>();
+
+    [InverseProperty("Professor")]
+    public virtual ICollection<ProfessorTurma>
+        ProfessorTurmas
+    { get; set; }
+            = new List<ProfessorTurma>();
 }

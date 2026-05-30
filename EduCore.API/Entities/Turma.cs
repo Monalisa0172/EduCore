@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 
@@ -16,8 +14,13 @@ public partial class Turma
     [Unicode(false)]
     public string? Nome { get; set; }
 
-    public int? ProfessorId { get; set; }
+    public bool Ativo { get; set; }
+
+    public int AnoLetivo { get; set; }
 
     [InverseProperty("Turma")]
     public virtual ICollection<Matricula> Matriculas { get; set; } = new List<Matricula>();
+
+    [InverseProperty("Turma")]
+    public virtual ICollection<ProfessorTurma> ProfessorTurmas { get; set; } = new List<ProfessorTurma>();
 }

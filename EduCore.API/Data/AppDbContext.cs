@@ -42,6 +42,8 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<ProfessorSubDisciplina> ProfessorSubDisciplinas { get; set; }
 
+    public virtual DbSet<ProfessorTurma> ProfessorTurmas { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Aluno>(entity =>
@@ -160,12 +162,25 @@ public partial class AppDbContext : DbContext
             entity.HasKey(e => e.Id);
 
             entity.HasOne(d => d.Professor)
-                .WithMany()
+                .WithMany(p => p.ProfessorSubDisciplinas)
                 .HasForeignKey(d => d.ProfessorId);
 
             entity.HasOne(d => d.SubDisciplina)
                 .WithMany()
                 .HasForeignKey(d => d.SubDisciplinaId);
+        });
+
+        modelBuilder.Entity<ProfessorTurma>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            entity.HasOne(d => d.Professor)
+                .WithMany(p => p.ProfessorTurmas)
+                .HasForeignKey(d => d.ProfessorId);
+
+            entity.HasOne(d => d.Turma)
+                .WithMany(t => t.ProfessorTurmas)
+                .HasForeignKey(d => d.TurmaId);
         });
 
         OnModelCreatingPartial(modelBuilder);
