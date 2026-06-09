@@ -13,7 +13,7 @@ O projeto foi criado com foco em arquitetura moderna, boas práticas de desenvol
 - Entity Framework Core
 - SQL Server
 
-## Front-end (futuramente)
+## Front-end
 - React
 - TypeScript
 - HTML
