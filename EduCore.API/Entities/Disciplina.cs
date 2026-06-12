@@ -34,4 +34,6 @@ public partial class Disciplina
 
     [InverseProperty("Disciplina")]
     public virtual ICollection<SubDisciplina> SubDisciplinas { get; set; } = new List<SubDisciplina>();
+
+    public virtual ICollection<Avaliacao> Avaliacoes { get; set; } = new List<Avaliacao>();
 }
