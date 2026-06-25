@@ -86,8 +86,7 @@ public class AvaliacaoController : ControllerBase
         {
             return BadRequest(new
             {
-                message =
-                    "Disciplina não encontrada ou dados inválidos"
+                message = "Não foi possível criar a avaliação, peso total do bimestre não pode ultrapassar 100%. Verifique os dados informados!"
             });
         }
 
