@@ -192,6 +192,10 @@ public partial class AppDbContext : DbContext
             entity.HasOne(d => d.Disciplina)
                 .WithMany(p => p.Avaliacoes)
                 .HasForeignKey(d => d.DisciplinaId);
+
+            entity.HasOne(x => x.SubDisciplina)
+                .WithMany(x => x.Avaliacoes)
+                .HasForeignKey(x => x.SubDisciplinaId);
         });
 
         OnModelCreatingPartial(modelBuilder);

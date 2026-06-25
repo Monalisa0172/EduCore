@@ -19,4 +19,8 @@ public class Avaliacao
     public bool Ativo { get; set; }
 
     public virtual Disciplina? Disciplina { get; set; }
+
+    public int? SubDisciplinaId { get; set; }
+
+    public virtual SubDisciplina? SubDisciplina { get; set; }
 }
