@@ -21,15 +21,36 @@ public class AvaliacaoRepository : IAvaliacaoRepository
     {
         return await _context.Avaliacoes
             .Include(x => x.Disciplina)
+            .Include(x => x.SubDisciplina)
             .Select(x => new AvaliacaoResponseDTO
             {
                 Id = x.Id,
-                DisciplinaId = x.DisciplinaId,
-                Nome = x.Nome,
-                Peso = x.Peso,
-                DataAplicacao = x.DataAplicacao,
-                Bimestre = (BimestreEnum)x.Bimestre,
-                Ativo = x.Ativo
+
+                DisciplinaId =
+                    x.DisciplinaId,
+
+                SubDisciplinaId =
+                    x.SubDisciplinaId,
+
+                Nome =
+                    x.Nome,
+
+                Peso =
+                    x.Peso,
+
+                DataAplicacao =
+                    x.DataAplicacao,
+
+                Bimestre =
+                    (BimestreEnum)x.Bimestre,
+
+                Ativo =
+                    x.Ativo,
+
+                SubDisciplina =
+                    x.SubDisciplina != null
+                        ? x.SubDisciplina.Nome
+                        : null
             })
             .ToListAsync();
     }
@@ -43,6 +64,8 @@ public class AvaliacaoRepository : IAvaliacaoRepository
             {
                 Id = x.Id,
                 DisciplinaId = x.DisciplinaId,
+                SubDisciplinaId = x.SubDisciplinaId,
+                SubDisciplina = x.SubDisciplina != null ? x.SubDisciplina.Nome : null,
                 Nome = x.Nome,
                 Peso = x.Peso,
                 DataAplicacao = x.DataAplicacao,
@@ -62,6 +85,8 @@ public class AvaliacaoRepository : IAvaliacaoRepository
             {
                 Id = x.Id,
                 DisciplinaId = x.DisciplinaId,
+                SubDisciplinaId = x.SubDisciplinaId,
+                SubDisciplina = x.SubDisciplina != null ? x.SubDisciplina.Nome : null,
                 Nome = x.Nome,
                 Peso = x.Peso,
                 DataAplicacao = x.DataAplicacao,

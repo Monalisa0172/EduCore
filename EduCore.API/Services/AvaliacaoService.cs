@@ -14,8 +14,12 @@ public class AvaliacaoService
     private readonly IDisciplinaRepository
         _disciplinaRepository;
 
+    private readonly ISubDisciplinaRepository
+        _subDisciplinaRepository;
+
     public AvaliacaoService(
         IAvaliacaoRepository avaliacaoRepository,
+        ISubDisciplinaRepository subDisciplinaRepository,
         IDisciplinaRepository disciplinaRepository)
     {
         _avaliacaoRepository =
@@ -23,6 +27,9 @@ public class AvaliacaoService
 
         _disciplinaRepository =
             disciplinaRepository;
+
+        _subDisciplinaRepository =
+            subDisciplinaRepository;
     }
 
     public async Task<List<AvaliacaoResponseDTO>>
@@ -46,42 +53,55 @@ public class AvaliacaoService
             .GetByDisciplinaAsync(disciplinaId);
     }
 
-    public async Task<AvaliacaoResponseDTO?>CreateAsync(CreateAvaliacaoRequest request)
+    public async Task<AvaliacaoResponseDTO?> CreateAsync(CreateAvaliacaoRequest request)
     {
-        var pesoAtual = await _avaliacaoRepository.GetPesoTotalByDisciplinaEBimestreAsync(request.DisciplinaId,request.Bimestre);
-
-        if (pesoAtual + request.Peso > 100)
-            return null;
-
-        var disciplina = await _disciplinaRepository.GetEntityByIdAsync(request.DisciplinaId);
+        var disciplina =
+            await _disciplinaRepository
+                .GetEntityByIdAsync(request.DisciplinaId);
 
         if (disciplina == null)
             return null;
 
-        if (!Enum.IsDefined(typeof(BimestreEnum), request.Bimestre))
+        if (request.SubDisciplinaId.HasValue)
+        {
+            var subDisciplina =
+                await _subDisciplinaRepository
+                    .GetEntityByIdAsync(request.SubDisciplinaId.Value);
+
+            if (subDisciplina == null)
+                return null;
+
+            if (subDisciplina.DisciplinaId != request.DisciplinaId)
+                return null;
+        }
+
+        if (!Enum.IsDefined(
+                typeof(BimestreEnum),
+                request.Bimestre))
             return null;
 
-        if (request.Peso <= 0 || request.Peso > 100)
+        if (request.Peso <= 0 ||
+            request.Peso > 100)
+            return null;
+
+        var pesoAtual =
+            await _avaliacaoRepository
+                .GetPesoTotalByDisciplinaEBimestreAsync(
+                    request.DisciplinaId,
+                    request.Bimestre);
+
+        if (pesoAtual + request.Peso > 100)
             return null;
 
         var avaliacao =
             new Avaliacao
             {
-                DisciplinaId =
-                    request.DisciplinaId,
-
-                Nome =
-                    request.Nome,
-
-                Peso =
-                    request.Peso,
-
-                DataAplicacao =
-                    request.DataAplicacao,
-
-                Bimestre =
-                    (int)request.Bimestre,
-
+                DisciplinaId = request.DisciplinaId,
+                SubDisciplinaId = request.SubDisciplinaId,
+                Nome = request.Nome,
+                Peso = request.Peso,
+                DataAplicacao = request.DataAplicacao,
+                Bimestre = (int)request.Bimestre,
                 Ativo = true
             };
 
@@ -91,21 +111,15 @@ public class AvaliacaoService
         return new AvaliacaoResponseDTO
         {
             Id = avaliacao.Id,
-            DisciplinaId =
-                avaliacao.DisciplinaId,
-            Nome =
-                avaliacao.Nome,
-            Peso =
-                avaliacao.Peso,
-            DataAplicacao =
-                avaliacao.DataAplicacao,
-            Bimestre =
-                (Enums.BimestreEnum)avaliacao.Bimestre,
-            Ativo =
-                avaliacao.Ativo
+            DisciplinaId = avaliacao.DisciplinaId,
+            SubDisciplinaId = avaliacao.SubDisciplinaId,
+            Nome = avaliacao.Nome,
+            Peso = avaliacao.Peso,
+            DataAplicacao = avaliacao.DataAplicacao,
+            Bimestre = (BimestreEnum)avaliacao.Bimestre,
+            Ativo = avaliacao.Ativo
         };
     }
-
     public async Task<bool> UpdateAsync(
     int id,
     UpdateAvaliacaoRequest request)
@@ -135,9 +149,24 @@ public class AvaliacaoService
 
         if (pesoAtual + request.Peso > 100)
             return false;
+        if (request.SubDisciplinaId.HasValue)
+        {
+            var subDisciplina =
+                await _subDisciplinaRepository
+                    .GetEntityByIdAsync(request.SubDisciplinaId.Value);
+
+            if (subDisciplina == null)
+                return false;
+
+            if (subDisciplina.DisciplinaId != avaliacao.DisciplinaId)
+                return false;
+        }
 
         avaliacao.Nome =
             request.Nome;
+
+        avaliacao.SubDisciplinaId =
+            request.SubDisciplinaId;
 
         avaliacao.Peso =
             request.Peso;

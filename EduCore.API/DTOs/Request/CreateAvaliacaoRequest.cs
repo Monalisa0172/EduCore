@@ -13,4 +13,6 @@ public class CreateAvaliacaoRequest
     public DateTime DataAplicacao { get; set; }
 
     public BimestreEnum Bimestre { get; set; }
+
+    public int? SubDisciplinaId { get; set; }
 }
