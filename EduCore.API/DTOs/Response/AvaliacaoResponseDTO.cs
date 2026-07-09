@@ -13,6 +13,12 @@ public class AvaliacaoResponseDTO
     public decimal Peso { get; set; }
 
     public DateTime DataAplicacao { get; set; }
+
     public BimestreEnum Bimestre { get; set; }
+
     public bool Ativo { get; set; }
+
+    public int? SubDisciplinaId { get; set; }
+
+    public string? SubDisciplina { get; set; }
 }

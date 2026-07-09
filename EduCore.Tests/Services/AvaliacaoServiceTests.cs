@@ -17,6 +17,9 @@ public class AvaliacaoServiceTests
 private readonly Mock<IDisciplinaRepository>
     _disciplinaRepository;
 
+private readonly Mock<ISubDisciplinaRepository>
+    _subDisciplinaRepository;
+
     private readonly AvaliacaoService
         _service;
 
@@ -28,9 +31,13 @@ private readonly Mock<IDisciplinaRepository>
         _disciplinaRepository =
             new Mock<IDisciplinaRepository>();
 
+        _subDisciplinaRepository =             
+            new Mock<ISubDisciplinaRepository>();
+
         _service =
             new AvaliacaoService(
                 _avaliacaoRepository.Object,
+                _subDisciplinaRepository.Object,
                 _disciplinaRepository.Object);
     }
 
@@ -49,6 +56,19 @@ private readonly Mock<IDisciplinaRepository>
                 x.GetEntityByIdAsync(1))
             .ReturnsAsync(disciplina);
 
+        _subDisciplinaRepository
+            .Setup(x =>
+                x.GetEntityByIdAsync(1))
+            .ReturnsAsync(
+                new SubDisciplina
+                {
+                    Id = 1,
+                    DisciplinaId = 1,
+                    Nome = "Capoeira",
+                    Ativo = true
+                }
+            );
+
         _avaliacaoRepository
             .Setup(x =>
                 x.GetPesoTotalByDisciplinaEBimestreAsync(
@@ -66,6 +86,7 @@ private readonly Mock<IDisciplinaRepository>
             new CreateAvaliacaoRequest
             {
                 DisciplinaId = 1,
+                SubDisciplinaId = 1,
                 Nome = "Prova Mensal",
                 Peso = 30,
                 DataAplicacao = DateTime.Now,
@@ -196,10 +217,10 @@ private readonly Mock<IDisciplinaRepository>
             {
                 Id = 1,
                 DisciplinaId = 1,
+                SubDisciplinaId = 1,
                 Peso = 20,
                 Bimestre = (int)BimestreEnum.Primeiro
             };
-
         _avaliacaoRepository
             .Setup(x =>
                 x.GetEntityByIdAsync(1))
@@ -272,9 +293,9 @@ private readonly Mock<IDisciplinaRepository>
             {
                 Id = 1,
                 DisciplinaId = 1,
+                SubDisciplinaId = 1,
                 Peso = 20,
-                Bimestre = (int)BimestreEnum.Primeiro,
-                Ativo = true
+                Bimestre = (int)BimestreEnum.Primeiro
             };
 
         _avaliacaoRepository
@@ -391,6 +412,8 @@ private readonly Mock<IDisciplinaRepository>
             new AvaliacaoResponseDTO
             {
                 Id = 1,
+                DisciplinaId = 1,
+                SubDisciplinaId = 1,
                 Nome = "Prova"
             };
 
@@ -441,10 +464,12 @@ private readonly Mock<IDisciplinaRepository>
             new CreateAvaliacaoRequest
             {
                 DisciplinaId = 1,
-                Nome = "Prova",
-                Peso = 20,
+                Nome = "Prova Mensal",
+                Peso = 30,
+                DataAplicacao = DateTime.Now,
                 Bimestre = (BimestreEnum)99
             };
+
 
         var resultado =
             await _service.CreateAsync(request);
@@ -459,13 +484,15 @@ private readonly Mock<IDisciplinaRepository>
             .Setup(x => x.GetEntityByIdAsync(It.IsAny<int>()))
             .ReturnsAsync(new Disciplina());
 
-        var request = new CreateAvaliacaoRequest
-        {
-            DisciplinaId = 1,
-            Nome = "Prova",
-            Peso = 0,
-            Bimestre = BimestreEnum.Primeiro
-        };
+        var request =
+            new CreateAvaliacaoRequest
+            {
+                DisciplinaId = 1,
+                Nome = "Prova Mensal",
+                Peso = 0,
+                DataAplicacao = DateTime.Now,
+                Bimestre = (BimestreEnum)99
+            };
 
         var resultado =
             await _service.CreateAsync(request);
@@ -480,9 +507,11 @@ private readonly Mock<IDisciplinaRepository>
             new Avaliacao
             {
                 Id = 1,
-                DisciplinaId = 1
+                DisciplinaId = 1,
+                SubDisciplinaId = 1,
+                Peso = 20,
+                Bimestre = (int)(BimestreEnum)99
             };
-
         _avaliacaoRepository
             .Setup(x => x.GetEntityByIdAsync(1))
             .ReturnsAsync(avaliacao);
@@ -492,9 +521,9 @@ private readonly Mock<IDisciplinaRepository>
             {
                 Nome = "Teste",
                 Peso = 20,
-                Bimestre = (BimestreEnum)99
+                DataAplicacao = DateTime.Now,
+                Bimestre = (BimestreEnum)(int)(BimestreEnum)99
             };
-
         var resultado =
             await _service.UpdateAsync(
                 1,
@@ -510,7 +539,10 @@ private readonly Mock<IDisciplinaRepository>
             new Avaliacao
             {
                 Id = 1,
-                DisciplinaId = 1
+                DisciplinaId = 1,
+                SubDisciplinaId = 1,
+                Peso = 20,
+                Bimestre = (int)BimestreEnum.Primeiro
             };
 
         _avaliacaoRepository
@@ -522,6 +554,7 @@ private readonly Mock<IDisciplinaRepository>
             {
                 Nome = "Teste",
                 Peso = 0,
+                DataAplicacao = DateTime.Now,
                 Bimestre = BimestreEnum.Primeiro
             };
 
@@ -541,7 +574,10 @@ private readonly Mock<IDisciplinaRepository>
             new Avaliacao
             {
                 Id = 1,
-                DisciplinaId = 1
+                DisciplinaId = 1,
+                SubDisciplinaId = 1,
+                Peso = 20,
+                Bimestre = (int)BimestreEnum.Primeiro
             };
 
         _avaliacaoRepository
@@ -552,7 +588,8 @@ private readonly Mock<IDisciplinaRepository>
             new UpdateAvaliacaoRequest
             {
                 Nome = "Teste",
-                Peso = 120,
+                Peso = 200,
+                DataAplicacao = DateTime.Now,
                 Bimestre = BimestreEnum.Primeiro
             };
 
@@ -563,4 +600,181 @@ private readonly Mock<IDisciplinaRepository>
 
         resultado.Should().BeFalse();
     }
+
+    [Fact]
+    public async Task Deve_Criar_Avaliacao_Com_SubDisciplina_Valida()
+    {
+        var disciplina =
+            new Disciplina
+            {
+                Id = 1,
+                SubDisciplinas =
+                [
+                    new SubDisciplina
+            {
+                Id = 1,
+                DisciplinaId = 1
+            }
+                ]
+            };
+
+        _disciplinaRepository
+            .Setup(x => x.GetEntityByIdAsync(1))
+            .ReturnsAsync(disciplina);
+
+        _subDisciplinaRepository
+            .Setup(x => x.GetEntityByIdAsync(1))
+            .ReturnsAsync(
+                new SubDisciplina
+                {
+                    Id = 1,
+                    DisciplinaId = 1,
+                    Nome = "Capoeira",
+                    Ativo = true
+                });
+
+        _avaliacaoRepository
+            .Setup(x => x.GetPesoTotalByDisciplinaEBimestreAsync(
+                1,
+                BimestreEnum.Primeiro,
+                null))
+            .ReturnsAsync(20);
+
+        _avaliacaoRepository
+            .Setup(x => x.AddAsync(It.IsAny<Avaliacao>()))
+            .Returns(Task.CompletedTask);
+
+        var request = new CreateAvaliacaoRequest
+        {
+            DisciplinaId = 1,
+            SubDisciplinaId = 1,
+            Nome = "Prova",
+            Peso = 20,
+            Bimestre = BimestreEnum.Primeiro,
+            DataAplicacao = DateTime.Now
+        };
+
+        var resultado =
+            await _service.CreateAsync(request);
+
+        resultado.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task Nao_Deve_Atualizar_Com_SubDisciplina_Invalida()
+    {
+        var avaliacao =
+            new Avaliacao
+            {
+                Id = 1,
+                DisciplinaId = 1,
+                SubDisciplinaId = 1,
+                Peso = 20,
+                Bimestre = (int)BimestreEnum.Primeiro
+            };
+
+        _avaliacaoRepository
+            .Setup(x => x.GetEntityByIdAsync(1))
+            .ReturnsAsync(avaliacao);
+
+        var request = new UpdateAvaliacaoRequest
+        {
+            Nome = "Nova",
+            Peso = 20,
+            Bimestre = BimestreEnum.Primeiro,
+            SubDisciplinaId = 999
+        };
+
+        var resultado =
+            await _service.UpdateAsync(1, request);
+
+        resultado.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Nao_Deve_Criar_Avaliacao_Quando_SubDisciplina_Nao_Existir()
+    {
+        var disciplina =
+            new Disciplina
+            {
+                Id = 1
+            };
+
+        _disciplinaRepository
+            .Setup(x =>
+                x.GetEntityByIdAsync(1))
+            .ReturnsAsync(disciplina);
+
+        _subDisciplinaRepository
+            .Setup(x =>
+                x.GetEntityByIdAsync(1))
+            .ReturnsAsync((SubDisciplina?)null);
+
+        var request =
+            new CreateAvaliacaoRequest
+            {
+                DisciplinaId = 1,
+                SubDisciplinaId = 1,
+                Nome = "Prova",
+                Peso = 20,
+                DataAplicacao = DateTime.Now,
+                Bimestre = BimestreEnum.Primeiro
+            };
+
+        var resultado =
+            await _service.CreateAsync(request);
+
+        resultado.Should().BeNull();
+
+        _avaliacaoRepository.Verify(
+            x => x.AddAsync(It.IsAny<Avaliacao>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task Nao_Deve_Atualizar_Quando_SubDisciplina_Nao_Existir()
+    {
+        var avaliacao =
+            new Avaliacao
+            {
+                Id = 1,
+                DisciplinaId = 1,
+                SubDisciplinaId = 1,
+                Peso = 20,
+                Bimestre = (int)BimestreEnum.Primeiro,
+                Ativo = true
+            };
+
+        _avaliacaoRepository
+            .Setup(x =>
+                x.GetEntityByIdAsync(1))
+            .ReturnsAsync(avaliacao);
+
+        _subDisciplinaRepository
+            .Setup(x =>
+                x.GetEntityByIdAsync(1))
+            .ReturnsAsync((SubDisciplina?)null);
+
+        var request =
+            new UpdateAvaliacaoRequest
+            {
+                SubDisciplinaId = 1,
+                Nome = "Prova Atualizada",
+                Peso = 20,
+                DataAplicacao = DateTime.Now,
+                Bimestre = BimestreEnum.Primeiro
+            };
+
+        var resultado =
+            await _service.UpdateAsync(
+                1,
+                request);
+
+        resultado.Should().BeFalse();
+
+        _avaliacaoRepository.Verify(
+            x => x.UpdateAsync(It.IsAny<Avaliacao>()),
+            Times.Never);
+    }
+
 }

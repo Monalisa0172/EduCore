@@ -11,4 +11,6 @@ public class UpdateAvaliacaoRequest
     public DateTime DataAplicacao { get; set; }
 
     public BimestreEnum Bimestre { get; set; }
+
+    public int? SubDisciplinaId { get; set; }
 }
