@@ -13,6 +13,9 @@ namespace EduCore.Tests.Services
         private readonly Mock<IDisciplinaRepository>
             _disciplinaRepository;
 
+        private readonly Mock<ISubDisciplinaRepository>
+        _subDisciplinaRepository;
+
         private readonly DisciplinaService
             _service;
 

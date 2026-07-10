@@ -20,4 +20,11 @@ public partial class SubDisciplina
     [ForeignKey("DisciplinaId")]
     [InverseProperty("SubDisciplinas")]
     public virtual Disciplina Disciplina { get; set; } = null!;
+
+    public virtual ICollection<Avaliacao> Avaliacoes
+    {
+        get;
+        set;
+    }
+    = new List<Avaliacao>();
 }
