@@ -1,0 +1,49 @@
+.kpi ::deep .kpi-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 20px;
+}
+
+.kpi-icon {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 48px;
+    height: 48px;
+    border-radius: var(--borderRadiusXLarge, 12px);
+    /* Token do Fluent gerado a partir da cor da marca: clareia sozinho no modo escuro */
+    color: var(--colorBrandForeground1, var(--educore-primary));
+    background: color-mix(in srgb, var(--educore-primary) 12%, transparent);
+}
+
+/* Ambar escuro sobre fundo ambar claro: contraste suficiente para o icone */
+.kpi-icon--secondary {
+    color: #8A5A00;
+    background: color-mix(in srgb, var(--educore-secondary) 20%, transparent);
+}
+
+.kpi-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.kpi-label {
+    font-size: var(--fontSizeBase300, 14px);
+    color: var(--colorNeutralForeground3);
+}
+
+.kpi-value {
+    font-size: var(--fontSizeHero800, 32px);
+    line-height: 1;
+    font-weight: var(--fontWeightSemibold, 600);
+    color: var(--colorNeutralForeground1);
+}
+
+@media (prefers-color-scheme: dark) {
+    .kpi-icon--secondary {
+        color: var(--educore-secondary);
+    }
+}

@@ -1,0 +1,96 @@
+@page "/usuarios/{UsuarioId:int}"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+
+<PageTitle>@(_usuario is null ? "Editar usuário" : $"Editar {_usuario.Nome}") | EduCore</PageTitle>
+
+<AuthorizeView Roles="@Roles.Admin">
+    <Authorized>
+        @if (_erro?.Kind == ApiErrorKind.NotFound)
+        {
+            <div class="estado-vazio">
+                <FluentIcon Value="@(new Icons.Regular.Size24.PersonQuestionMark())" Width="48px" Color="Color.Custom" CustomColor="var(--colorNeutralForeground3)" />
+                <FluentText As="TextTag.H1" Size="TextSize.Size700" Weight="TextWeight.Semibold" Block="true">Usuário não encontrado</FluentText>
+                <FluentText Block="true" Class="text-muted">
+                    O usuário #@UsuarioId não existe ou não é um aluno ou professor.
+                </FluentText>
+                <FluentButton Appearance="ButtonAppearance.Primary"
+                              IconStart="@(new Icons.Regular.Size20.ArrowLeft())"
+                              OnClick="@(() => Navigation.NavigateTo(""))">
+                    Voltar ao painel
+                </FluentButton>
+            </div>
+        }
+        else
+        {
+            <UsuarioPagina Titulo="Editar usuário">
+                <Resumo>
+                    @if (_usuario is not null)
+                    {
+                        <div class="usuario-resumo">
+                            <FluentAvatar Name="@_usuario.Nome" Size="AvatarSize.Size40" Color="AvatarColor.Colorful" aria-hidden="true" />
+                            <div class="usuario-resumo-texto">
+                                <span class="usuario-resumo-nome">@_usuario.Nome</span>
+                                <span class="usuario-resumo-email">@_usuario.Email</span>
+                            </div>
+                            <FluentBadge Appearance="BadgeAppearance.Tint"
+                                         Color="@(_usuario.IsAluno ? BadgeColor.Informative : BadgeColor.Brand)"
+                                         Shape="BadgeShape.Rounded">
+                                @_usuario.Tipo
+                            </FluentBadge>
+                            @if (!_usuario.Ativo)
+                            {
+                                <FluentBadge Appearance="BadgeAppearance.Tint" Color="BadgeColor.Danger" Shape="BadgeShape.Rounded">
+                                    Inativo
+                                </FluentBadge>
+                            }
+                        </div>
+                    }
+                </Resumo>
+
+                <ChildContent>
+                    @if (_erro is not null)
+                    {
+                        <FluentMessageBar Intent="MessageBarIntent.Error" Title="@_erro.Title" AllowDismiss="false">
+                            <ChildContent>@_erro.Message</ChildContent>
+                            <ActionsTemplate>
+                                <FluentButton Appearance="ButtonAppearance.Default" OnClick="CarregarAsync">Tentar novamente</FluentButton>
+                            </ActionsTemplate>
+                        </FluentMessageBar>
+                    }
+                    else if (_modelo is null)
+                    {
+                        <div class="carregando" aria-busy="true" aria-label="Carregando dados do usuário">
+                            <FluentSkeleton Height="180px" Shimmer="true" />
+                            <FluentSkeleton Height="260px" Shimmer="true" />
+                        </div>
+                    }
+                    else
+                    {
+                        @if (!_usuario!.Ativo)
+                        {
+                            <FluentMessageBar Intent="MessageBarIntent.Warning" Title="Usuário inativo" AllowDismiss="false">
+                                Este usuário não consegue entrar no sistema. As alterações são salvas normalmente.
+                            </FluentMessageBar>
+                        }
+
+                        @if (!_usuario.IsAluno && _usuario.Professor is null)
+                        {
+                            <FluentMessageBar Intent="MessageBarIntent.Info" Title="Cadastro incompleto" AllowDismiss="false">
+                                Este professor ainda não tem dados profissionais. Preencha-os abaixo para completar o cadastro.
+                            </FluentMessageBar>
+                        }
+
+                        <UsuarioForm Model="_modelo"
+                                     OnSalvar="AtualizarAsync"
+                                     Turmas="_turmas"
+                                     ErroTurmas="_erroTurmas"
+                                     OnRecarregarTurmas="CarregarTurmasAsync" />
+                    }
+                </ChildContent>
+            </UsuarioPagina>
+        }
+    </Authorized>
+    <NotAuthorized>
+        <AcessoNegadoOuLogin />
+    </NotAuthorized>
+</AuthorizeView>

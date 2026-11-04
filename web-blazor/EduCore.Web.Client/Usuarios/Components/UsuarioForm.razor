@@ -1,0 +1,254 @@
+@* Formulario compartilhado por "Novo usuario" e "Editar usuario". *@
+<EditForm EditContext="_editContext" OnValidSubmit="SalvarAsync" FormName="usuario" class="usuario-form" novalidate>
+    <DataAnnotationsValidator />
+    <ValidadorDeRegras />
+
+    @* ---------- Tipo (so no cadastro: o perfil nao muda depois) ---------- *@
+    @if (!Model.Edicao)
+    {
+        <section class="form-section" aria-labelledby="secao-tipo">
+            <div class="section-heading">
+                <FluentText As="TextTag.H2" Id="secao-tipo" Size="TextSize.Size500" Weight="TextWeight.Semibold">Tipo de usuário</FluentText>
+                <FluentText Size="TextSize.Size200" Block="true" Class="section-hint">
+                    Define o perfil de acesso e quais dados são pedidos abaixo. Não pode ser alterado depois.
+                </FluentText>
+            </div>
+
+            <FluentRadioGroup TValue="TipoUsuario"
+                              Label="Perfil"
+                              Required="true"
+                              Orientation="Orientation.Horizontal"
+                              @bind-Value="Model.Tipo">
+                <FluentRadio Value="TipoUsuario.Aluno" Label="Aluno" />
+                <FluentRadio Value="TipoUsuario.Professor" Label="Professor" />
+            </FluentRadioGroup>
+        </section>
+    }
+
+    @* ---------- Dados de acesso ---------- *@
+    <section class="form-section" aria-labelledby="secao-acesso">
+        <div class="section-heading">
+            <FluentText As="TextTag.H2" Id="secao-acesso" Size="TextSize.Size500" Weight="TextWeight.Semibold">Dados de acesso</FluentText>
+            <FluentText Size="TextSize.Size200" Block="true" Class="section-hint">
+                O e-mail é usado para entrar no sistema.
+            </FluentText>
+        </div>
+
+        <div class="form-grid">
+            <FluentTextInput Id="usuario-nome"
+                             Label="Nome completo"
+                             @bind-Value="Model.Nome"
+                             Required="true"
+                             MaxLength="100"
+                             AutoComplete="off" />
+
+            <FluentTextInput Id="usuario-email"
+                             Label="E-mail"
+                             Placeholder="nome@escola.com"
+                             @bind-Value="Model.Email"
+                             Required="true"
+                             MaxLength="100"
+                             TextInputType="TextInputType.Email"
+                             InputMode="TextInputMode.Email"
+                             AutoComplete="off" />
+        </div>
+
+        <div class="subsection-heading">
+            <FluentText As="TextTag.H3" Size="TextSize.Size400" Weight="TextWeight.Semibold">
+                @(Model.Edicao ? "Redefinir senha" : "Senha")
+            </FluentText>
+            <FluentText Size="TextSize.Size200" Block="true" Class="section-hint">
+                @(Model.Edicao
+                    ? "Opcional. Deixe em branco para manter a senha atual. Mínimo de 8 caracteres."
+                    : "Mínimo de 8 caracteres. Informe a senha ao usuário por um canal seguro.")
+            </FluentText>
+        </div>
+
+        <div class="form-grid">
+            <FluentTextInput Id="usuario-senha"
+                             Label="@(Model.Edicao ? "Nova senha" : "Senha")"
+                             @bind-Value="Model.Senha"
+                             Required="@(!Model.Edicao)"
+                             MaxLength="100"
+                             TextInputType="@(_mostrarSenha ? TextInputType.Text : TextInputType.Password)"
+                             AutoComplete="new-password">
+                <EndTemplate>
+                    <FluentButton Type="ButtonType.Button"
+                                  Appearance="ButtonAppearance.Transparent"
+                                  Size="ButtonSize.Small"
+                                  IconOnly="true"
+                                  IconStart="@(_mostrarSenha ? new Icons.Regular.Size20.EyeOff() : new Icons.Regular.Size20.Eye())"
+                                  Title="@(_mostrarSenha ? "Ocultar senha" : "Mostrar senha")"
+                                  aria-label="@(_mostrarSenha ? "Ocultar senha" : "Mostrar senha")"
+                                  aria-pressed="@(_mostrarSenha ? "true" : "false")"
+                                  OnClick="@(() => _mostrarSenha = !_mostrarSenha)" />
+                </EndTemplate>
+            </FluentTextInput>
+
+            <FluentTextInput Id="usuario-confirmacao-senha"
+                             Label="@(Model.Edicao ? "Confirmar nova senha" : "Confirmar senha")"
+                             @bind-Value="Model.ConfirmacaoSenha"
+                             Required="@(!Model.Edicao)"
+                             MaxLength="100"
+                             TextInputType="@(_mostrarSenha ? TextInputType.Text : TextInputType.Password)"
+                             AutoComplete="new-password" />
+        </div>
+    </section>
+
+    @* ---------- Dados do perfil ---------- *@
+    @if (Model.IsProfessor)
+    {
+        <section class="form-section" aria-labelledby="secao-professor">
+            <div class="section-heading">
+                <FluentText As="TextTag.H2" Id="secao-professor" Size="TextSize.Size500" Weight="TextWeight.Semibold">Dados profissionais</FluentText>
+                <FluentText Size="TextSize.Size200" Block="true" Class="section-hint">
+                    A especialidade aparece na coluna "Especificação" do painel.
+                </FluentText>
+            </div>
+
+            <div class="form-grid">
+                <FluentTextInput Id="professor-especialidade"
+                                 Label="Especialidade"
+                                 Placeholder="Ex.: Matemática"
+                                 @bind-Value="Model.Especialidade"
+                                 Required="true"
+                                 MaxLength="100" />
+
+                <FluentTextInput Id="professor-cargo"
+                                 Label="Cargo"
+                                 @bind-Value="Model.Cargo"
+                                 Required="true"
+                                 MaxLength="100" />
+
+                <FluentDatePicker TValue="DateOnly?"
+                                  Id="professor-admissao"
+                                  Label="Data de admissão"
+                                  Placeholder="dd/mm/aaaa"
+                                  @bind-Value="Model.DataAdmissao"
+                                  Required="true"
+                                  Culture="PtBr" />
+
+                <FluentRadioGroup TValue="TipoContrato?"
+                                  Label="Tipo de contrato"
+                                  Required="true"
+                                  Orientation="Orientation.Horizontal"
+                                  @bind-Value="Model.TipoContrato">
+                    <FluentRadio Value="@((TipoContrato?)TipoContrato.Clt)" Label="CLT" />
+                    <FluentRadio Value="@((TipoContrato?)TipoContrato.Pj)" Label="PJ" />
+                </FluentRadioGroup>
+            </div>
+        </section>
+    }
+    else
+    {
+        <section class="form-section" aria-labelledby="secao-turmas">
+            <div class="section-heading">
+                <div class="section-title-row">
+                    <FluentText As="TextTag.H2" Id="secao-turmas" Size="TextSize.Size500" Weight="TextWeight.Semibold">Turmas</FluentText>
+                    <span class="section-count" role="status">@TextoTurmasSelecionadas</span>
+                </div>
+                <FluentText Size="TextSize.Size200" Block="true" Class="section-hint">
+                    Opcional. Marque as turmas ativas em que o aluno está matriculado.
+                    @if (Model.Edicao)
+                    {
+                        <text>Matrículas em turmas já encerradas são mantidas no histórico.</text>
+                    }
+                </FluentText>
+            </div>
+
+            @if (ErroTurmas is not null)
+            {
+                <FluentMessageBar Intent="MessageBarIntent.Error" Title="@ErroTurmas.Title" AllowDismiss="false">
+                    <ChildContent>@ErroTurmas.Message</ChildContent>
+                    <ActionsTemplate>
+                        <FluentButton Appearance="ButtonAppearance.Default" OnClick="OnRecarregarTurmas">Tentar novamente</FluentButton>
+                    </ActionsTemplate>
+                </FluentMessageBar>
+            }
+            else if (Turmas is null)
+            {
+                <div class="turmas-grid" aria-busy="true" aria-label="Carregando turmas">
+                    @for (var i = 0; i < 4; i++)
+                    {
+                        <FluentSkeleton Height="40px" Shimmer="true" />
+                    }
+                </div>
+            }
+            else if (Turmas.Count == 0)
+            {
+                <FluentText Block="true" Class="section-hint">
+                    Não há turmas ativas no momento. O aluno pode ser cadastrado agora e matriculado depois.
+                </FluentText>
+            }
+            else
+            {
+                <fieldset class="turmas-fieldset">
+                    <legend class="visually-hidden">Turmas ativas</legend>
+                    @foreach (var grupo in _turmas.GroupBy(t => t.Turma.AnoLetivo))
+                    {
+                        <div class="turmas-ano" role="group" aria-label="@($"Ano letivo {grupo.Key}")">
+                            <span class="turmas-ano-titulo" aria-hidden="true">Ano letivo @grupo.Key</span>
+                            <div class="turmas-grid">
+                                @foreach (var item in grupo)
+                                {
+                                    <div class="turma-opcao @(item.Selecionada ? "turma-opcao--selecionada" : null)" @key="item.Turma.Id">
+                                        <FluentCheckbox Label="@item.Turma.Nome"
+                                                        @bind-Value="item.Selecionada"
+                                                        @bind-Value:after="SincronizarTurmas" />
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                </fieldset>
+            }
+
+            <FluentValidationMessage For="@(() => Model.TurmaIds)" />
+        </section>
+    }
+
+    @* ---------- Acoes ---------- *@
+    @if (_erroGeral is not null)
+    {
+        <FluentMessageBar @key="_erroGeralId" Intent="MessageBarIntent.Error" Title="@_erroGeral.Title" AllowDismiss="false">
+            @_erroGeral.Message
+        </FluentMessageBar>
+    }
+
+    <div class="form-actions">
+        <FluentButton Type="ButtonType.Button"
+                      Appearance="ButtonAppearance.Default"
+                      Disabled="_salvando"
+                      OnClick="Cancelar">
+            Cancelar
+        </FluentButton>
+        <FluentButton Type="ButtonType.Submit"
+                      Appearance="ButtonAppearance.Primary"
+                      IconStart="@(Model.Edicao ? new Icons.Regular.Size20.Save() : new Icons.Regular.Size20.PersonAdd())"
+                      Loading="_salvando">
+            @(Model.Edicao ? "Salvar alterações" : "Cadastrar usuário")
+        </FluentButton>
+    </div>
+</EditForm>
+
+@* Impede sair com alteracoes nao salvas: links internos abrem o dialogo; fechar/recarregar a aba usa o aviso do navegador. *@
+<NavigationLock OnBeforeInternalNavigation="AoNavegarAsync" ConfirmExternalNavigation="@TemAlteracoesNaoSalvas" />
+
+<FluentDialog @ref="_dialogoDescartar" Modal="true">
+    <FluentDialogBody>
+        <TitleTemplate>Descartar alterações?</TitleTemplate>
+        <ChildContent>
+            <p class="dialog-text">As informações preenchidas neste formulário ainda não foram salvas e serão perdidas.</p>
+        </ChildContent>
+        <ActionTemplate>
+            <div class="dialog-actions">
+                <FluentButton Appearance="ButtonAppearance.Default" OnClick="ContinuarEditandoAsync">
+                    Continuar editando
+                </FluentButton>
+                <FluentButton Appearance="ButtonAppearance.Primary" Class="button-danger" OnClick="DescartarAsync">
+                    Descartar
+                </FluentButton>
+            </div>
+        </ActionTemplate>
+    </FluentDialogBody>
+</FluentDialog>
