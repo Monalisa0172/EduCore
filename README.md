@@ -12,7 +12,7 @@ O projeto contempla três perfis de acesso (administrador, professor e aluno) e 
 # 🚀 Tecnologias
 
 ## Back-end
-- ASP.NET Core Web API (.NET 8)
+- ASP.NET Core Web API (.NET 10 LTS)
 - C# e Entity Framework Core
 - SQL Server
 - Autenticação JWT com autorização por perfil (roles)
@@ -20,7 +20,7 @@ O projeto contempla três perfis de acesso (administrador, professor e aluno) e 
 - Testes unitários com xUnit, Moq e FluentAssertions
 
 ## Front-end (Blazor)
-- Blazor Web App (.NET 9), páginas autenticadas em WebAssembly
+- Blazor Web App (.NET 10 LTS), páginas autenticadas em WebAssembly
 - Fluent UI Blazor (componentes Microsoft Fluent 2)
 - Layout responsivo e preocupação com acessibilidade (rótulos ARIA, estados de carregamento e erro)
 
@@ -63,7 +63,7 @@ EduCore/
 
 # ▶️ Como executar
 
-**Pré-requisitos:** .NET SDK 9 ou superior, SQL Server e Visual Studio 2022 ou superior.
+**Pré-requisitos:** .NET SDK 10 (a versão é fixada em `global.json`), SQL Server e Visual Studio 2026 ou superior.
 
 1. Clone o repositório e abra `EduCore.slnx`.
 2. Configure a connection string em `api/EduCore.API/appsettings.json` (banco `EscolaDB`).
