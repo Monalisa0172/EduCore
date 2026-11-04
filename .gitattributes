@@ -1,0 +1,11 @@
+# Normaliza quebras de linha: LF no repositorio, nativo no checkout
+* text=auto
+
+*.sln     text eol=crlf
+*.slnx    text eol=crlf
+*.csproj  text eol=crlf
+*.sql     text eol=crlf
+
+*.png binary
+*.jpg binary
+*.ico binary

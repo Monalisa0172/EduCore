@@ -1,4 +1,0 @@
-<Solution>
-  <Project Path="EduCore.API/EduCore.API.csproj" />
-  <Project Path="EduCore.Tests/EduCore.Tests.csproj" />
-</Solution>
