@@ -1,0 +1,19 @@
+/* Item de tela planejada: titulo a esquerda e selo "Em breve" a direita. */
+.nav-item-planejado {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+}
+
+.nav-item-badge {
+    flex-shrink: 0;
+    padding: 0 6px;
+    border-radius: var(--borderRadiusMedium, 4px);
+    background-color: var(--colorNeutralBackground5, #ebebeb);
+    color: var(--colorNeutralForeground3, #616161);
+    font-size: var(--fontSizeBase100, 10px);
+    line-height: var(--lineHeightBase200, 16px);
+    font-weight: var(--fontWeightSemibold, 600);
+}
