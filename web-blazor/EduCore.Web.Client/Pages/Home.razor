@@ -1,0 +1,40 @@
+@page "/"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@using EduCore.Web.Client.Pages.HomeViews
+
+<PageTitle>Início | EduCore</PageTitle>
+
+@* O token fica no navegador, por isso a pagina roda so no WebAssembly (sem prerender). *@
+<AuthorizeView>
+    <Authorizing>
+        <div class="home-loading" role="status">
+            <FluentSpinner Size="SpinnerSize.Large" />
+            <FluentText>Carregando seu painel...</FluentText>
+        </div>
+    </Authorizing>
+
+    <Authorized>
+        @if (context.User.IsInRole(Roles.Admin))
+        {
+            <AdminHome User="context.User" />
+        }
+        else if (context.User.IsInRole(Roles.Professor))
+        {
+            <ProfessorHome User="context.User" />
+        }
+        else if (context.User.IsInRole(Roles.Aluno))
+        {
+            <AlunoHome User="context.User" />
+        }
+        else
+        {
+            <FluentMessageBar Intent="MessageBarIntent.Warning" Title="Perfil sem painel disponível" AllowDismiss="false">
+                Seu perfil ainda não possui uma página inicial. Procure o administrador do sistema.
+            </FluentMessageBar>
+        }
+    </Authorized>
+
+    <NotAuthorized>
+        <RedirectToLogin />
+    </NotAuthorized>
+</AuthorizeView>

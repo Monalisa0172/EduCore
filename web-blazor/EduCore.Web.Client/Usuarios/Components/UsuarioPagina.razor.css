@@ -1,0 +1,40 @@
+.usuario-pagina {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 8px 0 24px;
+}
+
+.voltar {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    margin-left: -12px;
+    border-radius: var(--borderRadiusMedium, 4px);
+    color: var(--colorNeutralForeground1);
+    font-weight: var(--fontWeightSemibold, 600);
+    text-decoration: none;
+}
+
+    .voltar:hover {
+        background: var(--colorSubtleBackgroundHover);
+    }
+
+    .voltar:focus-visible {
+        outline: 2px solid var(--colorStrokeFocus2, var(--educore-primary));
+        outline-offset: 2px;
+    }
+
+.page-header {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 8px;
+}
+
+.page-header ::deep .page-subtitle {
+    color: var(--colorNeutralForeground3);
+}

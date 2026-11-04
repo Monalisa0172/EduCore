@@ -1,0 +1,20 @@
+@page "/usuarios/novo"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+
+<PageTitle>Novo usuário | EduCore</PageTitle>
+
+<AuthorizeView Roles="@Roles.Admin">
+    <Authorized>
+        <UsuarioPagina Titulo="Novo usuário"
+                       Descricao="Cadastre um aluno ou professor. Campos com * são obrigatórios.">
+            <UsuarioForm Model="_modelo"
+                         OnSalvar="CriarAsync"
+                         Turmas="_turmas"
+                         ErroTurmas="_erroTurmas"
+                         OnRecarregarTurmas="CarregarTurmasAsync" />
+        </UsuarioPagina>
+    </Authorized>
+    <NotAuthorized>
+        <AcessoNegadoOuLogin />
+    </NotAuthorized>
+</AuthorizeView>

@@ -1,0 +1,16 @@
+@inject NavigationManager Navigation
+
+@* Envia para o login guardando a pagina atual para voltar depois. *@
+
+@code {
+    protected override void OnInitialized()
+    {
+        var returnUrl = "/" + Navigation.ToBaseRelativePath(Navigation.Uri);
+
+        var loginUrl = returnUrl == "/"
+            ? "login"
+            : $"login?returnUrl={Uri.EscapeDataString(returnUrl)}";
+
+        Navigation.NavigateTo(loginUrl, replace: true);
+    }
+}

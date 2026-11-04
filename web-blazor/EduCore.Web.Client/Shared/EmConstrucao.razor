@@ -1,0 +1,21 @@
+@inject NavigationManager Navigation
+
+@* Placeholder para telas planejadas, com caminho de volta para o usuario. *@
+<div class="em-construcao">
+    <FluentIcon Value="@(new Icons.Regular.Size24.WrenchScrewdriver())" Width="48px" Color="Color.Custom" CustomColor="var(--educore-primary)" />
+    <FluentText As="TextTag.H1" Size="TextSize.Size700" Weight="TextWeight.Semibold" Block="true">@Titulo</FluentText>
+    <FluentText Block="true" Class="em-construcao-texto">@Descricao</FluentText>
+    <FluentButton Appearance="ButtonAppearance.Primary"
+                  IconStart="@(new Icons.Regular.Size20.ArrowLeft())"
+                  OnClick="@(() => Navigation.NavigateTo(""))">
+        Voltar ao início
+    </FluentButton>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Titulo { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string Descricao { get; set; } = string.Empty;
+}

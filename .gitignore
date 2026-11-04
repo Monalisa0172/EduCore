@@ -1,9 +1,38 @@
-﻿################################################################################
-# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
-################################################################################
+﻿# Visual Studio / Rider / VS Code
+.vs/
+.vscode/
+.idea/
 
-/CoverageReport
-/.vs
-/EduCore.Tests/bin/Debug
-/EduCore.Tests/obj
-/EduCore.Tests/TestResults
+# User-specific files
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Build
+bin/
+obj/
+
+# Tests and coverage
+TestResults/
+CoverageReport/
+
+# Logs
+*.log
+
+# SQL Server data files
+*.mdf
+*.ldf
+
+# Node (front React)
+node_modules/
+dist/
+
+# Local environment files (nunca versionar segredos)
+.env
+.env.*
+appsettings.*.local.json
+
+# OS
+.DS_Store
+Thumbs.db

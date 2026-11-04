@@ -1,0 +1,37 @@
+@* Moldura das paginas de usuario: caminho de volta, titulo e conteudo. *@
+<div class="usuario-pagina">
+    @* <a> nativo: link de verdade (abre em nova aba, leitor de tela anuncia como link).
+       A confirmacao de "descartar alteracoes" e feita pelo UsuarioForm.razor.js. *@
+    <nav aria-label="Navegação da página">
+        <a class="voltar" href="">
+            <FluentIcon Value="@(new Icons.Regular.Size20.ArrowLeft())" Color="Color.Custom" CustomColor="currentColor" aria-hidden="true" />
+            Voltar ao painel
+        </a>
+    </nav>
+
+    <header class="page-header">
+        <FluentText As="TextTag.H1" Size="TextSize.Size800" Weight="TextWeight.Semibold" Block="true">@Titulo</FluentText>
+        @if (!string.IsNullOrWhiteSpace(Descricao))
+        {
+            <FluentText Block="true" Class="page-subtitle">@Descricao</FluentText>
+        }
+        @Resumo
+    </header>
+
+    @ChildContent
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Titulo { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? Descricao { get; set; }
+
+    /// <summary>Conteúdo extra do cabeçalho (ex.: quem está sendo editado).</summary>
+    [Parameter]
+    public RenderFragment? Resumo { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+}

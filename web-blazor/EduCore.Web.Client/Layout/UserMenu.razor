@@ -1,0 +1,26 @@
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+
+@* Fica no cabecalho azul da marca: textos usam a cor "sobre a marca" para manter contraste. *@
+<AuthorizeView>
+    <Authorized>
+        <div class="user-menu">
+            <span class="user-menu-email">@context.User.Identity?.Name</span>
+            <FluentButton Appearance="ButtonAppearance.Transparent"
+                          Color="var(--colorNeutralForegroundOnBrand)"
+                          IconStart="@(new Icons.Regular.Size20.SignOut())"
+                          OnClick="LogoutAsync">
+                Sair
+            </FluentButton>
+        </div>
+    </Authorized>
+</AuthorizeView>
+
+@code {
+    private async Task LogoutAsync()
+    {
+        await AuthService.LogoutAsync();
+        Navigation.NavigateTo("login", replace: true);
+    }
+}

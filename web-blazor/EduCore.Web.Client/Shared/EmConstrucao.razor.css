@@ -1,0 +1,14 @@
+.em-construcao {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    max-width: 480px;
+    margin: 64px auto;
+    text-align: center;
+}
+
+.em-construcao ::deep .em-construcao-texto {
+    color: var(--colorNeutralForeground3);
+    margin-bottom: 8px;
+}

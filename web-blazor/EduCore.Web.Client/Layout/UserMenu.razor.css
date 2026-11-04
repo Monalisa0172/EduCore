@@ -1,0 +1,21 @@
+.user-menu {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--colorNeutralForegroundOnBrand);
+}
+
+.user-menu-email {
+    font-size: var(--fontSizeBase300, 14px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 240px;
+}
+
+/* No celular o espaco do cabecalho e do nome do sistema */
+@media (max-width: 600px) {
+    .user-menu-email {
+        display: none;
+    }
+}

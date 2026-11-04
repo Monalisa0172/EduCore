@@ -1,0 +1,40 @@
+@using System.Globalization
+
+@* Card de indicador numerico. Value nulo = carregando (mostra skeleton). *@
+<div class="kpi">
+<FluentCard Class="kpi-card">
+    <div class="kpi-icon @(Secondary ? "kpi-icon--secondary" : null)" aria-hidden="true">
+        <FluentIcon Value="Icon" Color="Color.Custom" CustomColor="currentColor" />
+    </div>
+
+    <div class="kpi-content" aria-busy="@(Value is null ? "true" : "false")">
+        <span class="kpi-label">@Label</span>
+        @if (Value is null)
+        {
+            <FluentSkeleton Width="72px" Height="36px" Shimmer="true" />
+        }
+        else
+        {
+            <span class="kpi-value">@Value.Value.ToString("N0", PtBr)</span>
+        }
+    </div>
+</FluentCard>
+</div>
+
+@code {
+    private static readonly CultureInfo PtBr = CultureInfo.GetCultureInfo("pt-BR");
+
+    [Parameter, EditorRequired]
+    public string Label { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public Icon Icon { get; set; } = default!;
+
+    /// <summary>Valor exibido; nulo enquanto carrega.</summary>
+    [Parameter]
+    public int? Value { get; set; }
+
+    /// <summary>Usa a cor secundária da marca (âmbar) no ícone.</summary>
+    [Parameter]
+    public bool Secondary { get; set; }
+}

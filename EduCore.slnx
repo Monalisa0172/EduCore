@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/api/">
+    <Project Path="api/EduCore.API/EduCore.API.csproj" />
+    <Project Path="api/EduCore.Tests/EduCore.Tests.csproj" />
+  </Folder>
+  <Folder Name="/web-blazor/">
+    <Project Path="web-blazor/EduCore.Web/EduCore.Web.csproj" />
+    <Project Path="web-blazor/EduCore.Web.Client/EduCore.Web.Client.csproj" />
+  </Folder>
+</Solution>
