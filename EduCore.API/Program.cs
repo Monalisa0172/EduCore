@@ -59,6 +59,31 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(
         builder.Configuration.GetConnectionString("DefaultConnection")));
 
+// A chave nao fica no appsettings: em desenvolvimento use "dotnet user-secrets",
+// em producao use variavel de ambiente (Jwt__Key).
+var jwtKey = builder.Configuration["Jwt:Key"];
+
+if (string.IsNullOrWhiteSpace(jwtKey) || Encoding.UTF8.GetByteCount(jwtKey) < 32)
+{
+    throw new InvalidOperationException(
+        "Jwt:Key não configurada ou com menos de 32 bytes. " +
+        "Execute: dotnet user-secrets set \"Jwt:Key\" \"<chave>\"");
+}
+
+const string FrontendCorsPolicy = "Frontend";
+
+var allowedOrigins =
+    builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+    ?? Array.Empty<string>();
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(FrontendCorsPolicy, policy =>
+        policy.WithOrigins(allowedOrigins)
+            .WithHeaders("Authorization", "Content-Type")
+            .WithMethods("GET", "POST", "PUT", "PATCH", "DELETE"));
+});
+
 builder.Services.AddAuthentication(
     JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -79,8 +104,9 @@ builder.Services.AddAuthentication(
 
                 IssuerSigningKey =
                     new SymmetricSecurityKey(
-                        Encoding.UTF8.GetBytes(
-                            builder.Configuration["Jwt:Key"]!))
+                        Encoding.UTF8.GetBytes(jwtKey)),
+
+                ClockSkew = TimeSpan.FromMinutes(1)
             };
     });
 
@@ -98,6 +124,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseCors(FrontendCorsPolicy);
 
 app.UseAuthentication();
 

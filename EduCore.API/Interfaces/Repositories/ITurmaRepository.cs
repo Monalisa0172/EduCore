@@ -11,4 +11,5 @@ public interface ITurmaRepository
     Task<Turma?> GetByNomeAsync(string nome);
     Task AddAsync(Turma turma);
     Task UpdateAsync(Turma turma);
+    Task<List<int>> GetIdsAtivosAsync(IReadOnlyCollection<int> ids);
 }

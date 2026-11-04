@@ -10,7 +10,8 @@
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 
 		<NoWarn>$(NoWarn);1591</NoWarn>
-	</PropertyGroup>
+	  <UserSecretsId>f43e15cd-857e-461c-afc7-6d505816de34</UserSecretsId>
+  </PropertyGroup>
 
 	<ItemGroup>
 		<PackageReference Include="BCrypt.Net-Next" Version="4.2.0" />

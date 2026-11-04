@@ -4,5 +4,7 @@ using EduCore.API.Entities;
 
 public interface IJwtService
 {
+    int ExpirationMinutes { get; }
+
     string GenerateToken(Usuario user);
 }

@@ -14,6 +14,7 @@ public static class DependencyInjection
         services.AddScoped<IJwtService, JwtService>();
         services.AddScoped<AlunoService>();
         services.AddScoped<UsuarioService>();
+        services.AddScoped<UsuarioCadastroService>();
         services.AddScoped<ProfessorService>();
         services.AddScoped<DisciplinaService>();
         services.AddScoped<SubDisciplinaService>();

@@ -75,4 +75,13 @@ public class TurmaRepository
 
         await _context.SaveChangesAsync();
     }
+
+    public async Task<List<int>>
+        GetIdsAtivosAsync(IReadOnlyCollection<int> ids)
+    {
+        return await _context.Turmas
+            .Where(x => x.Ativo && ids.Contains(x.Id))
+            .Select(x => x.Id)
+            .ToListAsync();
+    }
 }

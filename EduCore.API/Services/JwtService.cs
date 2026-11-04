@@ -14,6 +14,11 @@ public class JwtService : IJwtService
         _config = config;
     }
 
+    public int ExpirationMinutes =>
+        int.TryParse(_config["Jwt:ExpirationMinutes"], out var minutes) && minutes > 0
+            ? minutes
+            : 120;
+
     public string GenerateToken(Usuario user)
     {
         var key = new SymmetricSecurityKey(
@@ -33,7 +38,7 @@ public class JwtService : IJwtService
             issuer: _config["Jwt:Issuer"],
             audience: _config["Jwt:Audience"],
             claims: claims,
-            expires: DateTime.UtcNow.AddHours(2),
+            expires: DateTime.UtcNow.AddMinutes(ExpirationMinutes),
             signingCredentials: creds
         );
 
