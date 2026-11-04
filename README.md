@@ -1,81 +1,96 @@
 # 🎓 EduCore
-Sistema de gestão escolar desenvolvido com ASP.NET Core Web API, SQL Server e React. O projeto contempla gerenciamento de alunos, professores, turmas, notas, frequência, dashboards e integrações via APIs REST.
 
-O projeto foi criado com foco em arquitetura moderna, boas práticas de desenvolvimento e construção de um ambiente completo para gerenciamento escolar.
+Sistema de gestão escolar com **API REST em ASP.NET Core** e **SQL Server**, com dois fronts consumindo a mesma API:
+
+- **Blazor** (em desenvolvimento): Blazor Web App com Fluent UI.
+- **React + TypeScript** (planejado): será construído depois do Blazor, reaproveitando os mesmos endpoints.
+
+O projeto contempla três perfis de acesso (administrador, professor e aluno) e cobre cadastro de usuários, estrutura acadêmica (disciplinas, subdisciplinas e turmas), avaliações, notas, frequência e painéis por perfil.
 
 ---
 
-# 🚀 Tecnologias Utilizadas
+# 🚀 Tecnologias
 
 ## Back-end
-- ASP.NET Core Web API
-- C#
-- Entity Framework Core
+- ASP.NET Core Web API (.NET 8)
+- C# e Entity Framework Core
 - SQL Server
+- Autenticação JWT com autorização por perfil (roles)
+- Swagger / OpenAPI
+- Testes unitários com xUnit, Moq e FluentAssertions
 
-## Front-end
-- React
-- TypeScript
-- HTML
-- CSS
+## Front-end (Blazor)
+- Blazor Web App (.NET 9), páginas autenticadas em WebAssembly
+- Fluent UI Blazor (componentes Microsoft Fluent 2)
+- Layout responsivo e preocupação com acessibilidade (rótulos ARIA, estados de carregamento e erro)
 
-## Banco de Dados
-- SQL Server Management Studio (SSMS)
+## Front-end (React, planejado)
+- React e TypeScript
 
 ## Ferramentas
-- Swagger / OpenAPI
+- Visual Studio e SQL Server Management Studio (SSMS)
 - Git e GitHub
-- Visual Studio 2022
 
 ---
 
-# 📚 Funcionalidades
+# 🗂️ Estrutura do repositório
 
-- Cadastro de alunos
-- Cadastro de professores
-- Cadastro de funcionários
-- Gerenciamento de turmas
-- Controle de notas
-- Controle de frequência
-- Dashboard acadêmico
-- Integração via APIs REST
-- Estrutura preparada para autenticação JWT
-- Estrutura preparada para microsserviços
-
----
-
-# 🏗️ Arquitetura do Projeto
-
-O projeto está sendo desenvolvido utilizando:
-- Separação por camadas
-- DTOs
-- Services
-- Repository Pattern
-- Boas práticas REST
-- Estrutura escalável para futuras integrações
+```
+EduCore/
+├─ api/
+│  ├─ EduCore.API/          API REST (controllers, services, repositories, DTOs)
+│  └─ EduCore.Tests/        testes unitários dos services
+├─ web-blazor/
+│  ├─ EduCore.Web/          host do Blazor Web App
+│  └─ EduCore.Web.Client/   páginas e componentes (WebAssembly)
+├─ web-react/               front em React (planejado)
+├─ database/                scripts SQL versionados (em construção)
+└─ EduCore.slnx             solution com API, testes e front Blazor
+```
 
 ---
 
-# 🗄️ Banco de Dados
+# 🏗️ Arquitetura
 
-O banco foi modelado visando um cenário real de gestão escolar, contemplando:
-- Usuários
-- Contatos
-- Endereços
-- Funcionários
-- Professores
-- Alunos
-- Disciplinas
-- Turmas
-- Matrículas
-- Notas
-- Frequências
+- Separação em camadas: Controllers → Services → Repositories → EF Core
+- DTOs de entrada e saída, sem expor entidades na API
+- Repository Pattern e injeção de dependência
+- Erros padronizados com `ProblemDetails`
+- Princípios SOLID; no front, serviços de API isolados por domínio (`IUsuarioApiClient`, `ITurmaApiClient`) e menu configurado por perfil
+- Segredos fora do código (User Secrets em desenvolvimento)
 
 ---
 
-# 📌 Status do Projeto
+# ▶️ Como executar
 
-🚧 Em desenvolvimento
+**Pré-requisitos:** .NET SDK 9 ou superior, SQL Server e Visual Studio 2022 ou superior.
+
+1. Clone o repositório e abra `EduCore.slnx`.
+2. Configure a connection string em `api/EduCore.API/appsettings.json` (banco `EscolaDB`).
+3. Defina a chave do JWT (mínimo de 32 caracteres) com User Secrets:
+   ```bash
+   dotnet user-secrets set "Jwt:Key" "<sua-chave-secreta>" --project api/EduCore.API
+   ```
+4. No Visual Studio: **Configure Startup Projects** → **Multiple startup projects** → `EduCore.API` e `EduCore.Web`.
+5. Execute (F5). A API publica o Swagger e o front abre na tela de login.
+
+> Os scripts de criação do banco e os dados de demonstração estão sendo organizados em `database/`.
+
+---
+
+# 📌 Roadmap
+
+- [x] API: usuários, alunos, professores, disciplinas, subdisciplinas, turmas e avaliações
+- [x] Autenticação JWT com perfis Admin, Professor e Aluno
+- [x] Front Blazor: login, página inicial por perfil e painel administrativo
+- [x] Cadastro e edição de usuários (alunos com matrícula em turmas)
+- [x] Menu lateral por perfil
+- [ ] Admin: disciplinas, turmas e atribuição de professores
+- [ ] Notas por avaliação (pesos por bimestre somando 100) e chamada
+- [ ] Professor: minhas turmas, avaliações, lançamento de notas e chamada
+- [ ] Aluno: boletim e frequência
+- [ ] Dashboards, CI no GitHub Actions e deploy gratuito
+- [ ] Front em React + TypeScript
 
 ---
 
