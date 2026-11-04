@@ -1,0 +1,45 @@
+.usuario-resumo {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.usuario-resumo-texto {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.usuario-resumo-nome {
+    font-weight: var(--fontWeightSemibold, 600);
+    color: var(--colorNeutralForeground1);
+}
+
+.usuario-resumo-email {
+    font-size: var(--fontSizeBase200, 12px);
+    color: var(--colorNeutralForeground3 
+    overflow-wrap: anywhere;
+}
+
+.carregando {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.estado-vazio {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    max-width: 480px;
+    margin: 48px auto;
+    text-align: center;
+}
+
+.estado-vazio ::deep .text-muted {
+    color: var(--colorNeutralForeground3);
+}
+ 

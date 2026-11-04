@@ -1,0 +1,23 @@
+@rendermode InteractiveWebAssembly
+@inject IThemeService ThemeService
+
+@* Aplica a cor da marca ao tema do Fluent UI. Nao renderiza markup. *@
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        try
+        {
+            await ThemeService.SetThemeAsync(BrandColors.Primary, isExact: true);
+        }
+        catch (JSException)
+        {
+            // Falha de interop: mantem o tema padrao do Fluent em vez de quebrar a tela.
+        }
+    }
+}

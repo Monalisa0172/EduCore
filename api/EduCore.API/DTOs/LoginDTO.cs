@@ -1,0 +1,16 @@
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace EduCore.API.DTOs
+{
+    public class LoginDTO
+    {
+        [Required(ErrorMessage = "Informe o e-mail.")]
+        [EmailAddress(ErrorMessage = "Informe um e-mail válido.")]
+        [StringLength(100, ErrorMessage = "O e-mail deve ter no máximo 100 caracteres.")]
+        public string Email { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Informe a senha.")]
+        [StringLength(128, ErrorMessage = "A senha deve ter no máximo 128 caracteres.")]
+        public string Senha { get; set; } = string.Empty;
+    }
+}

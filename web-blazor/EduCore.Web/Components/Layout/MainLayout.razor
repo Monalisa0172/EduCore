@@ -1,0 +1,30 @@
+﻿@inherits LayoutComponentBase
+
+<BrandTheme />
+
+<FluentLayout>
+    <FluentLayoutItem Area="LayoutArea.Header">
+        <FluentLayoutHamburger />
+        <FluentText Weight="TextWeight.Bold" Size="TextSize.Size600">EduCore</FluentText>
+        <FluentSpacer />
+        <UserMenu />
+    </FluentLayoutItem>
+    <FluentLayoutItem Area="LayoutArea.Navigation">
+        <NavMenu />
+    </FluentLayoutItem>
+    <FluentLayoutItem Area="LayoutArea.Content" Class="main">
+        <div class="content">
+            @Body
+        </div>
+    </FluentLayoutItem>
+
+    <FluentLayoutItem Area="LayoutArea.Footer">
+        <FluentText Size="TextSize.Size200">© @DateTime.Now.Year EduCore</FluentText>
+    </FluentLayoutItem>
+</FluentLayout>
+
+<div id="blazor-error-ui" data-nosnippet>
+    Ocorreu um erro inesperado.
+    <a href="." class="reload">Recarregar</a>
+    <span class="dismiss">🗙</span>
+</div>

@@ -1,0 +1,225 @@
+@inherits HomeViewBase
+
+<div class="admin-home">
+    @* ---------- Cabecalho da pagina ---------- *@
+    <header class="page-header">
+        <div class="page-heading">
+            <FluentText As="TextTag.H1" Id="admin-home-title" Size="TextSize.Size800" Weight="TextWeight.Semibold" Block="true">
+                Painel administrativo
+            </FluentText>
+            <FluentText Block="true" Class="page-subtitle">
+                Olá, @UserEmail. Acompanhe os alunos e professores ativos da escola.
+            </FluentText>
+        </div>
+
+        <FluentButton Appearance="ButtonAppearance.Primary"
+                      IconStart="@(new Icons.Regular.Size20.PersonAdd())"
+                      OnClick="IrParaNovoUsuario">
+            Novo usuário
+        </FluentButton>
+    </header>
+
+    @if (_avisoSucesso is not null)
+    {
+        <FluentMessageBar @key="_avisoSucessoId"
+                          Intent="MessageBarIntent.Success"
+                          Title="@_avisoSucesso.Titulo"
+                          AllowDismiss="true"
+                          Class="page-feedback">
+            @_avisoSucesso.Mensagem
+        </FluentMessageBar>
+    }
+
+    @* ---------- Indicadores ---------- *@
+    <section class="kpi-grid" aria-label="Resumo de usuários ativos">
+        @if (_erroResumo is not null)
+        {
+            <FluentMessageBar Intent="MessageBarIntent.Error" Title="@_erroResumo.Title" AllowDismiss="false" Class="kpi-error">
+                <ChildContent>@_erroResumo.Message</ChildContent>
+                <ActionsTemplate>
+                    <FluentButton Appearance="ButtonAppearance.Default" OnClick="CarregarResumoAsync">Tentar novamente</FluentButton>
+                </ActionsTemplate>
+            </FluentMessageBar>
+        }
+        else
+        {
+            <KpiCard Label="Professores ativos"
+                     Icon="@(new Icons.Regular.Size24.PersonBoard())"
+                     Value="@_resumo?.ProfessoresAtivos" />
+            <KpiCard Label="Alunos ativos"
+                     Icon="@(new Icons.Regular.Size24.HatGraduation())"
+                     Value="@_resumo?.AlunosAtivos"
+                     Secondary="true" />
+        }
+    </section>
+
+    @* ---------- Grid de usuarios ---------- *@
+    <section class="users-section" aria-labelledby="usuarios-titulo">
+        <div class="section-header">
+            <FluentText As="TextTag.H2" Id="usuarios-titulo" Size="TextSize.Size600" Weight="TextWeight.Semibold">
+                Usuários ativos
+            </FluentText>
+            <span class="section-count" role="status">@TextoContagem</span>
+        </div>
+
+        <div class="toolbar">
+            <FluentRadioGroup TValue="TipoUsuarioFiltro"
+                              Label="Exibir"
+                              Orientation="Orientation.Horizontal"
+                              @bind-Value="_filtro"
+                              @bind-Value:after="AoAlterarFiltroAsync">
+                <FluentRadio Value="TipoUsuarioFiltro.Todos" Label="Todos" />
+                <FluentRadio Value="TipoUsuarioFiltro.Alunos" Label="Alunos" />
+                <FluentRadio Value="TipoUsuarioFiltro.Professores" Label="Professores" />
+            </FluentRadioGroup>
+
+            <FluentTextInput Id="busca-usuarios"
+                             Label="Buscar"
+                             Placeholder="Nome ou e-mail"
+                             TextInputType="TextInputType.Search"
+                             AutoComplete="off"
+                             @bind-Value="_busca"
+                             @bind-Value:after="AplicarBuscaAsync"
+                             Immediate="true"
+                             ImmediateDelay="300"
+                             Width="280px">
+                <StartTemplate>
+                    <FluentIcon Value="@(new Icons.Regular.Size20.Search())" />
+                </StartTemplate>
+            </FluentTextInput>
+        </div>
+
+        @if (_erroUsuarios is not null)
+        {
+            <FluentMessageBar Intent="MessageBarIntent.Error" Title="@_erroUsuarios.Title" AllowDismiss="false">
+                <ChildContent>@_erroUsuarios.Message</ChildContent>
+                <ActionsTemplate>
+                    <FluentButton Appearance="ButtonAppearance.Default" OnClick="CarregarUsuariosAsync">Tentar novamente</FluentButton>
+                </ActionsTemplate>
+            </FluentMessageBar>
+        }
+        else
+        {
+            <div class="grid-container">
+                <FluentDataGrid TGridItem="UsuarioListItem"
+                                Items="_itensVisiveis"
+                                Pagination="_paginacao"
+                                Loading="_carregandoUsuarios"
+                                ItemKey="@(u => u.UsuarioId)"
+                                GridTemplateColumns="minmax(220px, 2fr) minmax(110px, 1fr) minmax(200px, 2fr) 72px"
+                                ShowHover="true"
+                                MultiLine="true"
+                                aria-labelledby="usuarios-titulo">
+                    <ChildContent>
+                    <TemplateColumn Title="Nome"
+                                    Sortable="true"
+                                    SortBy="_ordenarPorNome"
+                                    IsDefaultSortColumn="true"
+                                    InitialSortDirection="DataGridSortDirection.Ascending">
+                        <div class="user-cell">
+                            <FluentAvatar Name="@context.Nome" Size="AvatarSize.Size32" Color="AvatarColor.Colorful" aria-hidden="true" />
+                            <div class="user-text">
+                                <span class="user-name">@context.Nome</span>
+                                <span class="user-email">@context.Email</span>
+                            </div>
+                        </div>
+                    </TemplateColumn>
+
+                    <TemplateColumn Title="Tipo" Sortable="true" SortBy="_ordenarPorTipo">
+                        <FluentBadge Appearance="BadgeAppearance.Tint"
+                                     Color="@(context.IsAluno ? BadgeColor.Informative : BadgeColor.Brand)"
+                                     Shape="BadgeShape.Rounded">
+                            @context.Tipo
+                        </FluentBadge>
+                    </TemplateColumn>
+
+                    <TemplateColumn Title="Especificação">
+                        @if (string.IsNullOrWhiteSpace(context.Especificacao))
+                        {
+                            <span class="text-muted">@(context.IsAluno ? "Sem turma ativa" : "Especialidade não informada")</span>
+                        }
+                        else
+                        {
+                            <span class="especificacao" title="@context.Especificacao">@context.Especificacao</span>
+                        }
+                    </TemplateColumn>
+
+                    <TemplateColumn Title="Ações" Align="DataGridCellAlignment.End">
+                        <div class="acoes">
+                        <FluentButton Id="@IdBotaoAcoes(context)"
+                                      Appearance="ButtonAppearance.Subtle"
+                                      IconOnly="true"
+                                      IconStart="@(new Icons.Regular.Size20.MoreHorizontal())"
+                                      Title="@($"Ações para {context.Nome}")"
+                                      aria-label="@($"Ações para {context.Nome}")" />
+                        <FluentMenu Trigger="@IdBotaoAcoes(context)">
+                            <FluentMenuList>
+                                <FluentMenuItem IconStart="@(new Icons.Regular.Size20.Edit())" OnClick="@(() => IrParaEdicao(context))">
+                                    Editar
+                                </FluentMenuItem>
+                                <FluentMenuItem IconStart="@(new Icons.Regular.Size20.PersonProhibited())" OnClick="@(() => SolicitarInativacaoAsync(context))">
+                                    Inativar
+                                </FluentMenuItem>
+                            </FluentMenuList>
+                        </FluentMenu>
+                        </div>
+                    </TemplateColumn>
+                    </ChildContent>
+
+                    <EmptyContent>
+                        <div class="empty-state">
+                            <FluentIcon Value="@(new Icons.Regular.Size24.PeopleSearch())" Width="48px" Color="Color.Custom" CustomColor="var(--colorNeutralForeground3)" />
+                            <FluentText Weight="TextWeight.Semibold" Block="true">@TituloVazio</FluentText>
+                            <FluentText Size="TextSize.Size200" Block="true" Class="text-muted">@DescricaoVazio</FluentText>
+                        </div>
+                    </EmptyContent>
+                </FluentDataGrid>
+            </div>
+
+            <FluentPaginator State="_paginacao">
+                <SummaryTemplate>@TextoResumoPaginacao</SummaryTemplate>
+                <PaginationTextTemplate>Página @(_paginacao.CurrentPageIndex + 1) de @((_paginacao.LastPageIndex ?? 0) + 1)</PaginationTextTemplate>
+            </FluentPaginator>
+        }
+    </section>
+</div>
+
+@* ---------- Confirmacao de inativacao ---------- *@
+<FluentDialog @ref="_dialogoInativar" Modal="true">
+    <FluentDialogBody>
+        <TitleTemplate>Inativar usuário</TitleTemplate>
+
+        <ChildContent>
+            <div class="dialog-content">
+                @if (_erroInativar is not null)
+                {
+                    <FluentMessageBar Intent="MessageBarIntent.Error" Title="@_erroInativar.Title" AllowDismiss="false">
+                        @_erroInativar.Message
+                    </FluentMessageBar>
+                }
+
+                <p>
+                    Deseja inativar <strong>@_usuarioParaInativar?.Nome</strong>?
+                </p>
+                <p class="text-muted">
+                    O usuário perde o acesso ao sistema e deixa de aparecer nesta lista.
+                    O histórico escolar (matrículas, notas e presenças) é mantido.
+                </p>
+            </div>
+        </ChildContent>
+
+        <ActionTemplate>
+            <div class="dialog-actions">
+                <FluentButton Appearance="ButtonAppearance.Default" Disabled="_inativando" OnClick="CancelarInativacaoAsync">
+                    Cancelar
+                </FluentButton>
+                <FluentButton Appearance="ButtonAppearance.Primary"
+                              Class="button-danger"
+                              Loading="_inativando"
+                              OnClick="ConfirmarInativacaoAsync">
+                    Inativar
+                </FluentButton>
+            </div>
+        </ActionTemplate>
+    </FluentDialogBody>
+</FluentDialog>

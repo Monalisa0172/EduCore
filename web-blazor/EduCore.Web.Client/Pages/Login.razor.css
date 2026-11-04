@@ -1,0 +1,218 @@
+/* Layout dividido: painel da marca (40%) + formulario (60%) */
+.login-page {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    min-height: 100vh;
+    min-height: 100dvh;
+}
+
+/* ---------- Painel da marca ---------- */
+.brand-panel {
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 32px;
+    padding: 40px 48px;
+    color: #FFFFFF;
+    background: linear-gradient(160deg, var(--educore-primary) 0%, var(--educore-primary-dark) 100%);
+}
+
+    /* Formas decorativas ao fundo */
+    .brand-panel::before,
+    .brand-panel::after {
+        content: "";
+        position: absolute;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.06);
+        pointer-events: none;
+    }
+
+    .brand-panel::before {
+        width: 420px;
+        height: 420px;
+        top: -160px;
+        right: -180px;
+    }
+
+    .brand-panel::after {
+        width: 300px;
+        height: 300px;
+        bottom: -140px;
+        left: -120px;
+    }
+
+.brand-logo {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.brand-logo-mark {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: #FFFFFF;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+}
+
+.brand-logo-text {
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+}
+
+.brand-hero {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-width: 440px;
+}
+
+.brand-illustration {
+    width: 100%;
+    max-width: 360px;
+    height: auto;
+    margin-bottom: 24px;
+    animation: brand-float 6s ease-in-out infinite;
+}
+
+.brand-title {
+    margin: 0;
+    font-size: 32px;
+    line-height: 40px;
+    font-weight: 600;
+}
+
+.brand-text {
+    margin: 0;
+    font-size: 16px;
+    line-height: 24px;
+    color: rgba(255, 255, 255, 0.88);
+}
+
+.brand-footer {
+    position: relative;
+    z-index: 1;
+    margin: 0;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+/* ---------- Painel do formulario ---------- */
+.form-panel {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 24px;
+    background: var(--colorNeutralBackground1);
+}
+
+.form-container {
+    width: 100%;
+    min-width: 0;
+    max-width: 400px;
+    animation: login-enter 320ms ease-out;
+}
+
+.login-header {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 32px;
+}
+
+.form-panel ::deep .login-subtitle {
+    color: var(--colorNeutralForeground3);
+}
+
+.form-panel ::deep .login-alert {
+    animation: login-shake 360ms ease-in-out;
+}
+
+.form-panel ::deep .login-submit {
+    width: 100%;
+    margin-top: 8px;
+}
+
+.login-footer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 32px;
+    padding-top: 16px;
+    border-top: 1px solid var(--colorNeutralStroke2);
+}
+
+.form-panel ::deep .login-footer-text {
+    color: var(--colorNeutralForeground3);
+}
+
+/* ---------- Responsivo ---------- */
+@media (max-width: 1100px) {
+    .brand-panel {
+        padding: 32px;
+    }
+
+    .brand-title {
+        font-size: 28px;
+        line-height: 36px;
+    }
+}
+
+/* Celular/tablet: painel vira faixa no topo, so com o logo */
+@media (max-width: 768px) {
+    .login-page {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: auto 1fr;
+    }
+
+    .brand-panel {
+        padding: 16px;
+    }
+
+        .brand-panel::before,
+        .brand-panel::after,
+        .brand-hero,
+        .brand-footer {
+            display: none;
+        }
+
+    .form-panel {
+        align-items: flex-start;
+        padding: 32px 16px;
+    }
+}
+
+@keyframes login-enter {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes login-shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-4px); }
+    75% { transform: translateX(4px); }
+}
+
+@keyframes brand-float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .form-container,
+    .brand-illustration,
+    .form-panel ::deep .login-alert {
+        animation: none;
+    }
+}
