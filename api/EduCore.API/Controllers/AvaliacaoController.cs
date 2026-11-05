@@ -1,150 +1,110 @@
 ﻿using EduCore.API.Constants;
 using EduCore.API.DTOs.Request;
+using EduCore.API.DTOs.Response;
 using EduCore.API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace EduCore.API.Controllers;
 
+/// <summary>
+/// Avaliações por turma, disciplina e bimestre.
+/// </summary>
 [ApiController]
 [Route("api/avaliacoes")]
+[Authorize(Roles = $"{Roles.Admin},{Roles.Professor}")]
 public class AvaliacaoController : ControllerBase
 {
     private readonly AvaliacaoService _avaliacaoService;
 
-    public AvaliacaoController(
-        AvaliacaoService avaliacaoService)
+    public AvaliacaoController(AvaliacaoService avaliacaoService)
     {
         _avaliacaoService = avaliacaoService;
     }
 
     /// <summary>
-    /// Retorna todas as avaliações cadastradas
+    /// Lista as avaliações. Filtros opcionais por turma, disciplina, bimestre (1 a 4) e situação.
     /// </summary>
-    [Authorize(
-        Roles = $"{Roles.Admin},{Roles.Professor}")]
     [HttpGet]
-    public async Task<IActionResult> GetAll()
+    [ProducesResponseType(typeof(List<AvaliacaoResponseDTO>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> Listar(
+        [FromQuery] int? turmaId,
+        [FromQuery] int? disciplinaId,
+        [FromQuery] int? bimestre,
+        [FromQuery] bool? ativo)
     {
-        var avaliacoes =
-            await _avaliacaoService.GetAllAsync();
-
-        return Ok(avaliacoes);
+        return Ok(await _avaliacaoService.ListarAsync(turmaId, disciplinaId, bimestre, ativo));
     }
 
     /// <summary>
-    /// Retorna uma avaliação pelo ID
+    /// Busca uma avaliação pelo ID.
     /// </summary>
-    [Authorize(
-        Roles = $"{Roles.Admin},{Roles.Professor}")]
-    [HttpGet("{id}")]
+    [HttpGet("{id:int}")]
+    [ProducesResponseType(typeof(AvaliacaoResponseDTO), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetById(int id)
     {
-        var avaliacao =
-            await _avaliacaoService.GetByIdAsync(id);
+        var avaliacao = await _avaliacaoService.GetByIdAsync(id);
 
-        if (avaliacao == null)
-        {
-            return NotFound(new
-            {
-                message = "Avaliação não encontrada"
-            });
-        }
-
-        return Ok(avaliacao);
+        return avaliacao is null
+            ? Problem(detail: "Avaliação não encontrada.", statusCode: StatusCodes.Status404NotFound, title: "Registro não encontrado")
+            : Ok(avaliacao);
     }
 
     /// <summary>
-    /// Retorna todas as avaliações de uma disciplina
+    /// Cria uma avaliação. Os pesos do bimestre (turma + disciplina) somam no máximo 100.
     /// </summary>
-    [Authorize(
-        Roles = $"{Roles.Admin},{Roles.Professor}")]
-    [HttpGet("disciplina/{disciplinaId}")]
-    public async Task<IActionResult> GetByDisciplina(
-        int disciplinaId)
-    {
-        var avaliacoes =
-            await _avaliacaoService
-                .GetByDisciplinaAsync(disciplinaId);
-
-        return Ok(avaliacoes);
-    }
-
-    /// <summary>
-    /// Cria uma nova avaliação
-    /// </summary>
-    [Authorize(
-        Roles = $"{Roles.Admin},{Roles.Professor}")]
+    /// <response code="201">Avaliação criada.</response>
+    /// <response code="400">Dados inválidos, disciplina sem professor na turma ou peso acima do disponível.</response>
     [HttpPost]
-    public async Task<IActionResult> Create(
-        [FromBody] CreateAvaliacaoRequest request)
+    [ProducesResponseType(typeof(AvaliacaoResponseDTO), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> Criar([FromBody] CreateAvaliacaoRequest request)
     {
-        var avaliacao =
-            await _avaliacaoService.CreateAsync(request);
-
-        if (avaliacao == null)
-        {
-            return BadRequest(new
-            {
-                message = "Não foi possível criar a avaliação, peso total do bimestre não pode ultrapassar 100%. Verifique os dados informados!"
-            });
-        }
-
-        return Ok(avaliacao);
+        return this.ParaResposta(await _avaliacaoService.CriarAsync(request), avaliacao =>
+            CreatedAtAction(nameof(GetById), new { id = avaliacao.Id }, avaliacao));
     }
 
     /// <summary>
-    /// Atualiza uma avaliação existente
+    /// Atualiza nome, peso, data, bimestre e subdisciplina. Turma e disciplina não mudam.
     /// </summary>
-    [Authorize(
-        Roles = $"{Roles.Admin},{Roles.Professor}")]
-    [HttpPut("{id}")]
-    public async Task<IActionResult> Update(
-        int id,
-        [FromBody] UpdateAvaliacaoRequest request)
+    [HttpPut("{id:int}")]
+    [ProducesResponseType(typeof(AvaliacaoResponseDTO), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Atualizar(int id, [FromBody] UpdateAvaliacaoRequest request)
     {
-        var atualizado =
-            await _avaliacaoService
-                .UpdateAsync(id, request);
-
-        if (!atualizado)
-        {
-            return NotFound(new
-            {
-                message = "Avaliação não encontrada"
-            });
-        }
-
-        return Ok(new
-        {
-            message =
-                "Avaliação atualizada com sucesso"
-        });
+        return this.ParaResposta(await _avaliacaoService.AtualizarAsync(id, request), Ok);
     }
 
     /// <summary>
-    /// Desativa uma avaliação
+    /// Inativa a avaliação: as notas ficam guardadas e o peso sai da média do bimestre.
     /// </summary>
-    [Authorize(
-        Roles = $"{Roles.Admin},{Roles.Professor}")]
-    [HttpDelete("{id}")]
-    public async Task<IActionResult> Delete(int id)
+    [HttpPatch("{id:int}/inativar")]
+    [ProducesResponseType(typeof(AvaliacaoResponseDTO), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Inativar(int id)
     {
-        var removido =
-            await _avaliacaoService.DeleteAsync(id);
-
-        if (!removido)
-        {
-            return NotFound(new
-            {
-                message = "Avaliação não encontrada"
-            });
-        }
-
-        return Ok(new
-        {
-            message =
-                "Avaliação removida com sucesso"
-        });
+        return this.ParaResposta(await _avaliacaoService.InativarAsync(id), Ok);
     }
+
+    /// <summary>
+    /// Reativa a avaliação, se o peso dela ainda couber no bimestre.
+    /// </summary>
+    [HttpPatch("{id:int}/reativar")]
+    [ProducesResponseType(typeof(AvaliacaoResponseDTO), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Reativar(int id)
+    {
+        return this.ParaResposta(await _avaliacaoService.ReativarAsync(id), Ok);
+    }
+
+    /// <summary>
+    /// Inativa a avaliação. Mantido por compatibilidade: prefira PATCH {id}/inativar.
+    /// </summary>
+    [HttpDelete("{id:int}")]
+    [ProducesResponseType(typeof(AvaliacaoResponseDTO), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public Task<IActionResult> Delete(int id) => Inativar(id);
 }
