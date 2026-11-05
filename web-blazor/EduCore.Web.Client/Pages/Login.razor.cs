@@ -3,13 +3,17 @@ using EduCore.Web.Client.Auth.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.FluentUI.AspNetCore.Components;
+using Microsoft.JSInterop;
 using Icons = Microsoft.FluentUI.AspNetCore.Components.Icons;
 
 namespace EduCore.Web.Client.Pages;
 
-public partial class Login : IDisposable
+public partial class Login : IAsyncDisposable
 {
     private const string DefaultRedirect = "/";
+    private const string ModuloJs = "./Pages/Login.razor.js";
+    private const string EmailFieldId = "login-email";
+    private const string PasswordFieldId = "login-password";
 
     private static readonly Icon ShowPasswordIcon = new Icons.Regular.Size20.Eye();
     private static readonly Icon HidePasswordIcon = new Icons.Regular.Size20.EyeOff();
@@ -19,6 +23,7 @@ public partial class Login : IDisposable
 
     private EditContext _editContext = default!;
     private ValidationMessageStore _serverErrors = default!;
+    private IJSObjectReference? _moduloJs;
     private LoginResult? _failure;
     private bool _isSubmitting;
     private bool _showPassword;
@@ -28,6 +33,9 @@ public partial class Login : IDisposable
 
     [Inject]
     private NavigationManager Navigation { get; set; } = default!;
+
+    [Inject]
+    private IJSRuntime JS { get; set; } = default!;
 
     [SupplyParameterFromQuery]
     public string? ReturnUrl { get; set; }
@@ -46,9 +54,35 @@ public partial class Login : IDisposable
         _editContext.OnFieldChanged += HandleFieldChanged;
     }
 
-    private async Task HandleValidSubmitAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || !RendererInfo.IsInteractive)
+        {
+            return;
+        }
+
+        try
+        {
+            _moduloJs ??= await JS.InvokeAsync<IJSObjectReference>("import", _cts.Token, ModuloJs);
+            await _moduloJs.InvokeVoidAsync("ocultarRevelarNativo", _cts.Token, PasswordFieldId);
+        }
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException or OperationCanceledException)
+        {
+            // Detalhe visual: sem JS, o campo continua funcionando.
+        }
+    }
+
+    private async Task HandleSubmitAsync()
     {
         if (!CanSubmit)
+        {
+            return;
+        }
+
+        // Valores do preenchimento automatico podem ainda nao ter chegado ao modelo: le do campo antes de validar.
+        await SincronizarCamposPreenchidosAsync();
+
+        if (!_editContext.Validate())
         {
             return;
         }
@@ -77,6 +111,37 @@ public partial class Login : IDisposable
         {
             _isSubmitting = false;
         }
+    }
+
+    /// <summary>
+    /// Copia para o modelo o que esta de fato nos campos. O navegador preenche a senha salva sem
+    /// avisar o Blazor ate a primeira interacao; sem isso o primeiro clique em "Entrar" ia vazio.
+    /// </summary>
+    private async Task SincronizarCamposPreenchidosAsync()
+    {
+        try
+        {
+            _moduloJs ??= await JS.InvokeAsync<IJSObjectReference>("import", _cts.Token, ModuloJs);
+            var valores = await _moduloJs.InvokeAsync<string?[]>("lerValores", _cts.Token, (object)new[] { EmailFieldId, PasswordFieldId });
+
+            AtualizarSeDiferente(nameof(LoginRequest.Email), _model.Email, valores[0], v => _model.Email = v);
+            AtualizarSeDiferente(nameof(LoginRequest.Password), _model.Password, valores[1], v => _model.Password = v);
+        }
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException or OperationCanceledException)
+        {
+            // Sem acesso ao DOM: segue com o que o binding ja tem.
+        }
+    }
+
+    private void AtualizarSeDiferente(string campo, string atual, string? lido, Action<string> definir)
+    {
+        if (string.IsNullOrEmpty(lido) || lido == atual)
+        {
+            return;
+        }
+
+        definir(lido);
+        _editContext.NotifyFieldChanged(_editContext.Field(campo));
     }
 
     private void ShowFailure(LoginResult result)
@@ -135,10 +200,22 @@ public partial class Login : IDisposable
         return ReturnUrl;
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
         _editContext.OnFieldChanged -= HandleFieldChanged;
         _cts.Cancel();
         _cts.Dispose();
+
+        if (_moduloJs is not null)
+        {
+            try
+            {
+                await _moduloJs.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+                // Pagina ja descarregada.
+            }
+        }
     }
 }
