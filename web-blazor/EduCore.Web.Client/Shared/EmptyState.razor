@@ -1,0 +1,30 @@
+@* Estado vazio padrao: icone, titulo, explicacao e acao opcional. *@
+<div class="empty-state" role="status">
+    <span class="empty-state-icone" aria-hidden="true">
+        <FluentIcon Value="Icone" Color="Color.Custom" CustomColor="currentColor" />
+    </span>
+    <FluentText Weight="TextWeight.Semibold" Block="true">@Titulo</FluentText>
+    @if (!string.IsNullOrWhiteSpace(Descricao))
+    {
+        <p class="empty-state-descricao">@Descricao</p>
+    }
+    @if (ChildContent is not null)
+    {
+        <div class="empty-state-acoes">@ChildContent</div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Titulo { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? Descricao { get; set; }
+
+    [Parameter]
+    public Icon Icone { get; set; } = new Icons.Regular.Size24.DocumentSearch();
+
+    /// <summary>Ações (ex.: botão "Cadastrar").</summary>
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+}

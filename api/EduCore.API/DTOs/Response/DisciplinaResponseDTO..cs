@@ -3,9 +3,17 @@
 public class DisciplinaResponseDTO
 {
     public int Id { get; set; }
+
     public string Nome { get; set; } = string.Empty;
+
     public string Codigo { get; set; } = string.Empty;
+
     public string? Descricao { get; set; }
+
     public int? CargaHoraria { get; set; }
+
     public bool Ativo { get; set; }
+
+    /// <summary>Quantidade de subdisciplinas ativas.</summary>
+    public int QuantidadeSubDisciplinas { get; set; }
 }

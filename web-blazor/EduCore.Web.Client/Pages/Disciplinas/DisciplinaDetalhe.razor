@@ -1,0 +1,249 @@
+@page "/disciplinas/{Id:int}"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+
+<PageTitle>@(_disciplina?.Nome ?? "Disciplina") | EduCore</PageTitle>
+
+<AuthorizeView Roles="@Roles.Admin">
+    <Authorized>
+        <div class="pagina">
+            @if (_carregandoDisciplina)
+            {
+                <div class="carregando" aria-busy="true" aria-label="Carregando disciplina">
+                    <FluentSkeleton Width="120px" Height="20px" Shimmer="true" />
+                    <FluentSkeleton Width="320px" Height="40px" Shimmer="true" />
+                    <FluentSkeleton Width="240px" Height="20px" Shimmer="true" />
+                    <FluentSkeleton Height="220px" Shimmer="true" />
+                </div>
+            }
+            else if (_erroDisciplina is { Kind: ApiErrorKind.NotFound })
+            {
+                <PageHeader Titulo="Disciplina não encontrada" Trilha="TrilhaBase" />
+                <section class="secao-card">
+                    <EmptyState Titulo="Esta disciplina não existe"
+                                Descricao="O endereço pode estar incorreto. Volte para a lista e escolha uma disciplina."
+                                Icone="@(new Icons.Regular.Size24.BookQuestionMark())">
+                        <FluentButton Appearance="ButtonAppearance.Primary" OnClick="VoltarParaLista">Ver disciplinas</FluentButton>
+                    </EmptyState>
+                </section>
+            }
+            else if (_erroDisciplina is not null)
+            {
+                <PageHeader Titulo="Disciplina" Trilha="TrilhaBase" />
+                <FluentMessageBar Intent="MessageBarIntent.Error" Title="@_erroDisciplina.Title" AllowDismiss="false">
+                    <ChildContent>@_erroDisciplina.Message</ChildContent>
+                    <ActionsTemplate>
+                        <FluentButton Appearance="ButtonAppearance.Default" OnClick="CarregarAsync">Tentar novamente</FluentButton>
+                    </ActionsTemplate>
+                </FluentMessageBar>
+            }
+            else if (_disciplina is { } disciplina)
+            {
+                <PageHeader Titulo="@disciplina.Nome"
+                            Secao="Acadêmico · Disciplina"
+                            Icone="@(new Icons.Regular.Size24.BookOpen())"
+                            Descricao="@disciplina.Descricao"
+                            Trilha="@([ItemTrilha.Inicio, new("Disciplinas", "disciplinas"), new(disciplina.Nome)])">
+                    <Selo>
+                        <StatusBadge Ativo="disciplina.Ativo" />
+                        @if (disciplina.Incompleta)
+                        {
+                            <button type="button"
+                                    class="chip-atencao chip-acao"
+                                    title="Informar o código e a carga horária que faltam"
+                                    @onclick="CompletarCadastroAsync">
+                                <FluentIcon Value="@(new Icons.Filled.Size12.Warning())" Color="Color.Custom" CustomColor="currentColor" aria-hidden="true" />
+                                Cadastro incompleto · Completar
+                            </button>
+                        }
+                    </Selo>
+                    <Detalhes>
+                        <dl class="disciplina-dados">
+                            <div>
+                                <dt>Código</dt>
+                                <dd class="@(disciplina.TemCodigo ? "codigo" : "nao-informado")">@disciplina.CodigoTexto</dd>
+                            </div>
+                            <div>
+                                <dt>Carga horária</dt>
+                                <dd class="@(disciplina.CargaHoraria is > 0 ? null : "nao-informado")">@disciplina.CargaHorariaTexto</dd>
+                            </div>
+                        </dl>
+                    </Detalhes>
+                    <Acoes>
+                        <FluentButton Appearance="ButtonAppearance.Default"
+                                      IconStart="@(new Icons.Regular.Size20.Edit())"
+                                      OnClick="EditarDisciplinaAsync">
+                            Editar
+                        </FluentButton>
+                        @if (disciplina.Ativo)
+                        {
+                            <FluentButton Appearance="ButtonAppearance.Default"
+                                          IconStart="@(new Icons.Regular.Size20.Archive())"
+                                          OnClick="SolicitarInativacaoDisciplinaAsync">
+                                Inativar
+                            </FluentButton>
+                        }
+                        else
+                        {
+                            <FluentButton Appearance="ButtonAppearance.Primary"
+                                          IconStart="@(new Icons.Regular.Size20.ArrowUndo())"
+                                          Loading="_reativandoDisciplina"
+                                          OnClick="ReativarDisciplinaAsync">
+                                Reativar
+                            </FluentButton>
+                        }
+                    </Acoes>
+                </PageHeader>
+
+                @if (_aviso is not null)
+                {
+                    <FluentMessageBar @key="_avisoId"
+                                      Intent="@(_aviso.Erro ? MessageBarIntent.Error : MessageBarIntent.Success)"
+                                      Title="@_aviso.Titulo"
+                                      AllowDismiss="true">
+                        @_aviso.Mensagem
+                    </FluentMessageBar>
+                }
+
+                @if (!disciplina.Ativo)
+                {
+                    <FluentMessageBar Intent="MessageBarIntent.Warning" Title="Disciplina inativa" AllowDismiss="false">
+                        Reative a disciplina para adicionar, editar ou reativar subdisciplinas.
+                    </FluentMessageBar>
+                }
+
+                <section class="secao-card" aria-labelledby="subdisciplinas-titulo">
+                    <div class="secao-cabecalho">
+                        <div class="secao-titulo">
+                            <FluentText As="TextTag.H2" Id="subdisciplinas-titulo" Size="TextSize.Size600" Weight="TextWeight.Semibold">
+                                Subdisciplinas
+                            </FluentText>
+                            <span class="secao-contagem" role="status">@TextoContagemSub</span>
+                        </div>
+
+                        <div class="secao-acoes">
+                            <FluentSwitch Label="Mostrar inativas" @bind-Value="_mostrarInativas" />
+                            <FluentButton Appearance="ButtonAppearance.Primary"
+                                          IconStart="@(new Icons.Regular.Size20.Add())"
+                                          Disabled="!disciplina.Ativo"
+                                          OnClick="NovaSubDisciplinaAsync">
+                                Nova subdisciplina
+                            </FluentButton>
+                        </div>
+                    </div>
+
+                    <p class="texto-suave">
+                        Divida a disciplina em partes avaliadas separadamente, como Álgebra e Geometria em Matemática.
+                    </p>
+
+                    @if (_erroSub is not null)
+                    {
+                        <FluentMessageBar Intent="MessageBarIntent.Error" Title="@_erroSub.Title" AllowDismiss="false">
+                            <ChildContent>@_erroSub.Message</ChildContent>
+                            <ActionsTemplate>
+                                <FluentButton Appearance="ButtonAppearance.Default" OnClick="CarregarSubDisciplinasAsync">Tentar novamente</FluentButton>
+                            </ActionsTemplate>
+                        </FluentMessageBar>
+                    }
+                    else if (_subDisciplinas is null)
+                    {
+                        <div class="carregando" aria-busy="true" aria-label="Carregando subdisciplinas">
+                            @for (var i = 0; i < 3; i++)
+                            {
+                                <FluentSkeleton Height="56px" Shimmer="true" />
+                            }
+                        </div>
+                    }
+                    else if (SubDisciplinasVisiveis.Count == 0)
+                    {
+                        <EmptyState Titulo="@TituloVazioSub" Descricao="@DescricaoVazioSub" Icone="@(new Icons.Regular.Size24.TextBulletListSquare())">
+                            @if (disciplina.Ativo && QuantidadeInativas == 0)
+                            {
+                                <FluentButton Appearance="ButtonAppearance.Primary" OnClick="NovaSubDisciplinaAsync">Adicionar subdisciplina</FluentButton>
+                            }
+                        </EmptyState>
+                    }
+                    else
+                    {
+                        <ul class="sub-lista" aria-labelledby="subdisciplinas-titulo">
+                            @foreach (var sub in SubDisciplinasVisiveis)
+                            {
+                                <li class="sub-item @(sub.Ativo ? null : "sub-item--inativa")" @key="sub.Id">
+                                    <span class="sub-marcador" aria-hidden="true">@Iniciais(sub.Nome)</span>
+                                    <div class="sub-textos">
+                                        <span class="sub-nome">@sub.Nome</span>
+                                        <span class="sub-descricao">@(string.IsNullOrWhiteSpace(sub.Descricao) ? "Sem descrição" : sub.Descricao)</span>
+                                    </div>
+
+                                    <StatusBadge Ativo="sub.Ativo" />
+
+                                    <div class="sub-acoes">
+                                        <FluentButton Appearance="ButtonAppearance.Subtle"
+                                                      IconStart="@(new Icons.Regular.Size20.Edit())"
+                                                      Disabled="!disciplina.Ativo"
+                                                      Title="@($"Editar {sub.Nome}")"
+                                                      aria-label="@($"Editar {sub.Nome}")"
+                                                      OnClick="@(() => EditarSubDisciplinaAsync(sub))">
+                                            Editar
+                                        </FluentButton>
+                                        @if (sub.Ativo)
+                                        {
+                                            <FluentButton Appearance="ButtonAppearance.Subtle"
+                                                          IconStart="@(new Icons.Regular.Size20.Archive())"
+                                                          Title="@($"Inativar {sub.Nome}")"
+                                                          aria-label="@($"Inativar {sub.Nome}")"
+                                                          OnClick="@(() => SolicitarInativacaoSubAsync(sub))">
+                                                Inativar
+                                            </FluentButton>
+                                        }
+                                        else
+                                        {
+                                            <FluentButton Appearance="ButtonAppearance.Subtle"
+                                                          IconStart="@(new Icons.Regular.Size20.ArrowUndo())"
+                                                          Disabled="!disciplina.Ativo"
+                                                          Title="@($"Reativar {sub.Nome}")"
+                                                          aria-label="@($"Reativar {sub.Nome}")"
+                                                          OnClick="@(() => ReativarSubAsync(sub))">
+                                                Reativar
+                                            </FluentButton>
+                                        }
+                                    </div>
+                                </li>
+                            }
+                        </ul>
+                    }
+                </section>
+            }
+        </div>
+
+        <DisciplinaFormDialog @ref="_formDisciplina" OnSalva="AoSalvarDisciplina" />
+        <SubDisciplinaFormDialog @ref="_formSub" NomeDisciplina="@(_disciplina?.Nome ?? string.Empty)" OnSalva="AoSalvarSubDisciplina" />
+
+        <ConfirmDialog @ref="_confirmarDisciplina"
+                       Titulo="Inativar disciplina"
+                       TextoConfirmar="Inativar"
+                       Perigo="true"
+                       Processando="_processando"
+                       Erro="_erroConfirmacao"
+                       OnConfirmar="ConfirmarInativacaoDisciplinaAsync">
+            <p>Deseja inativar <strong>@_disciplina?.Nome</strong>?</p>
+            <p class="texto-suave">
+                Notas, presenças e subdisciplinas já cadastradas são mantidas. Enquanto estiver inativa,
+                as subdisciplinas não podem ser alteradas.
+            </p>
+        </ConfirmDialog>
+
+        <ConfirmDialog @ref="_confirmarSub"
+                       Titulo="Inativar subdisciplina"
+                       TextoConfirmar="Inativar"
+                       Perigo="true"
+                       Processando="_processando"
+                       Erro="_erroConfirmacao"
+                       OnConfirmar="ConfirmarInativacaoSubAsync">
+            <p>Deseja inativar <strong>@_alvoSub?.Nome</strong>?</p>
+            <p class="texto-suave">Avaliações e notas já lançadas são mantidas. Você pode reativá-la depois.</p>
+        </ConfirmDialog>
+    </Authorized>
+    <NotAuthorized>
+        <AcessoNegadoOuLogin />
+    </NotAuthorized>
+</AuthorizeView>

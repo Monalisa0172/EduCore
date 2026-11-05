@@ -1,0 +1,237 @@
+@page "/disciplinas"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+
+<PageTitle>Disciplinas | EduCore</PageTitle>
+
+<AuthorizeView Roles="@Roles.Admin">
+    <Authorized Context="autenticacao">
+        <div class="pagina">
+            <PageHeader Titulo="Disciplinas"
+                        Secao="Acadêmico"
+                        Icone="@(new Icons.Regular.Size24.BookOpen())"
+                        Trilha="Trilha"
+                        Descricao="Cadastre as disciplinas da escola e organize as subdisciplinas de cada uma.">
+                <Acoes>
+                    <FluentButton Appearance="ButtonAppearance.Primary"
+                                  IconStart="@(new Icons.Regular.Size20.Add())"
+                                  OnClick="NovaAsync">
+                        Nova disciplina
+                    </FluentButton>
+                </Acoes>
+            </PageHeader>
+
+            @if (_aviso is not null)
+            {
+                <FluentMessageBar @key="_avisoId"
+                                  Intent="@(_aviso.Erro ? MessageBarIntent.Error : MessageBarIntent.Success)"
+                                  Title="@_aviso.Titulo"
+                                  AllowDismiss="true">
+                    @_aviso.Mensagem
+                </FluentMessageBar>
+            }
+
+            @if (_erroLista is null)
+            {
+                <section class="indicadores" aria-label="Resumo das disciplinas">
+                    <KpiCard Label="Disciplinas ativas"
+                             Icon="@(new Icons.Regular.Size24.BookOpen())"
+                             Value="@(_carregando ? null : QuantidadeAtivas)"
+                             Descricao="@TextoInativas" />
+                    <KpiCard Label="Subdisciplinas ativas"
+                             Icon="@(new Icons.Regular.Size24.TextBulletListSquare())"
+                             Value="@(_carregando ? null : QuantidadeSubDisciplinas)"
+                             Descricao="Somadas nas disciplinas ativas"
+                             Secondary="true" />
+                    <KpiCard Label="Cadastros incompletos"
+                             Icon="@(QuantidadeIncompletas > 0 ? new Icons.Regular.Size24.DocumentError() : new Icons.Regular.Size24.DocumentCheckmark())"
+                             Value="@(_carregando ? null : QuantidadeIncompletas)"
+                             Descricao="@(QuantidadeIncompletas > 0 ? "Sem código ou carga horária" : "Tudo em dia")"
+                             Secondary="@(QuantidadeIncompletas > 0)">
+                        <Acao>
+                            @if (!_carregando && QuantidadeIncompletas > 0 && !_somenteIncompletas)
+                            {
+                                <FluentButton Appearance="ButtonAppearance.Subtle"
+                                              Size="ButtonSize.Small"
+                                              IconEnd="@(new Icons.Regular.Size16.ArrowRight())"
+                                              OnClick="MostrarIncompletasAsync">
+                                    Ver e corrigir
+                                </FluentButton>
+                            }
+                        </Acao>
+                    </KpiCard>
+                </section>
+            }
+
+            <section class="secao-card" aria-labelledby="disciplinas-titulo">
+                <div class="secao-titulo">
+                    <FluentText As="TextTag.H2" Id="disciplinas-titulo" Size="TextSize.Size600" Weight="TextWeight.Semibold">
+                        Lista de disciplinas
+                    </FluentText>
+                    <span class="secao-contagem" role="status">@TextoContagem</span>
+                </div>
+
+                <div class="lista-toolbar">
+                    <SeletorSegmentado TValor="FiltroStatus"
+                                       Rotulo="Exibir"
+                                       Opcoes="OpcoesFiltro"
+                                       @bind-Valor="_filtro"
+                                       @bind-Valor:after="AoAlterarFiltroAsync" />
+
+                    <FluentTextInput Id="busca-disciplinas"
+                                     Label="Buscar"
+                                     Placeholder="Nome ou código"
+                                     TextInputType="TextInputType.Search"
+                                     AutoComplete="off"
+                                     @bind-Value="_busca"
+                                     @bind-Value:after="AplicarFiltrosAsync"
+                                     Immediate="true"
+                                     ImmediateDelay="300"
+                                     Width="280px">
+                        <StartTemplate>
+                            <FluentIcon Value="@(new Icons.Regular.Size20.Search())" />
+                        </StartTemplate>
+                    </FluentTextInput>
+                </div>
+
+                @if (_somenteIncompletas)
+                {
+                    <FluentMessageBar Intent="MessageBarIntent.Warning" Title="Cadastros incompletos" AllowDismiss="false">
+                        <ChildContent>Mostrando só as disciplinas sem código ou carga horária. Clique em "Completar" em cada linha.</ChildContent>
+                        <ActionsTemplate>
+                            <FluentButton Appearance="ButtonAppearance.Default" OnClick="MostrarTodasAsync">Mostrar todas</FluentButton>
+                        </ActionsTemplate>
+                    </FluentMessageBar>
+                }
+
+                @if (_erroLista is not null)
+                {
+                    <FluentMessageBar Intent="MessageBarIntent.Error" Title="@_erroLista.Title" AllowDismiss="false">
+                        <ChildContent>@_erroLista.Message</ChildContent>
+                        <ActionsTemplate>
+                            <FluentButton Appearance="ButtonAppearance.Default" OnClick="CarregarAsync">Tentar novamente</FluentButton>
+                        </ActionsTemplate>
+                    </FluentMessageBar>
+                }
+                else
+                {
+                    <div class="lista-grid">
+                        <FluentDataGrid @ref="_grid"
+                                        TGridItem="DisciplinaItem"
+                                        Items="_itensVisiveis"
+                                        Pagination="_paginacao"
+                                        Loading="_carregando"
+                                        ItemKey="@(d => d.Id)"
+                                        GridTemplateColumns="minmax(240px, 2fr) 130px minmax(150px, 1fr) 110px 72px"
+                                        ShowHover="true"
+                                        MultiLine="true"
+                                        aria-labelledby="disciplinas-titulo">
+                            <ChildContent>
+                                <TemplateColumn Title="Disciplina"
+                                                Sortable="true"
+                                                SortBy="_ordenarPorNome"
+                                                IsDefaultSortColumn="true"
+                                                InitialSortDirection="DataGridSortDirection.Ascending">
+                                    <div class="disciplina-celula">
+                                        <a class="disciplina-nome" href="@($"disciplinas/{context.Id}")">@context.Nome</a>
+                                        <span class="disciplina-linha2">
+                                            <span class="disciplina-codigo @(context.TemCodigo ? null : "disciplina-codigo--vazio")">@context.CodigoTexto</span>
+                                            @if (context.Incompleta)
+                                            {
+                                                <button type="button"
+                                                        class="chip-atencao chip-acao"
+                                                        title="@($"Informar o que falta em {context.Nome}")"
+                                                        @onclick="@(() => CompletarAsync(context))">
+                                                    <FluentIcon Value="@(new Icons.Filled.Size12.Warning())" Color="Color.Custom" CustomColor="currentColor" aria-hidden="true" />
+                                                    Incompleta · Completar
+                                                </button>
+                                            }
+                                        </span>
+                                    </div>
+                                </TemplateColumn>
+
+                                <TemplateColumn Title="Carga horária" Sortable="true" SortBy="_ordenarPorCarga">
+                                    @context.CargaHorariaTexto
+                                </TemplateColumn>
+
+                                <TemplateColumn Title="Subdisciplinas" Sortable="true" SortBy="_ordenarPorSubDisciplinas">
+                                    <span class="@(context.QuantidadeSubDisciplinas == 0 ? "texto-suave" : null)">
+                                        @context.SubDisciplinasTexto
+                                    </span>
+                                </TemplateColumn>
+
+                                <TemplateColumn Title="Status">
+                                    <StatusBadge Ativo="context.Ativo" />
+                                </TemplateColumn>
+
+                                <TemplateColumn Title="Ações" Align="DataGridCellAlignment.End">
+                                    <div class="acoes-celula">
+                                        <FluentButton Id="@IdBotaoAcoes(context)"
+                                                      Appearance="ButtonAppearance.Subtle"
+                                                      IconOnly="true"
+                                                      IconStart="@(new Icons.Regular.Size20.MoreHorizontal())"
+                                                      Title="@($"Ações para {context.Nome}")"
+                                                      aria-label="@($"Ações para {context.Nome}")" />
+                                        <FluentMenu Trigger="@IdBotaoAcoes(context)">
+                                            <FluentMenuList>
+                                                <FluentMenuItem IconStart="@(new Icons.Regular.Size20.TextBulletListSquare())" OnClick="@(() => Abrir(context))">
+                                                    Ver subdisciplinas
+                                                </FluentMenuItem>
+                                                <FluentMenuItem IconStart="@(new Icons.Regular.Size20.Edit())" OnClick="@(() => EditarAsync(context))">
+                                                    Editar
+                                                </FluentMenuItem>
+                                                @if (context.Ativo)
+                                                {
+                                                    <FluentMenuItem IconStart="@(new Icons.Regular.Size20.Archive())" OnClick="@(() => SolicitarInativacaoAsync(context))">
+                                                        Inativar
+                                                    </FluentMenuItem>
+                                                }
+                                                else
+                                                {
+                                                    <FluentMenuItem IconStart="@(new Icons.Regular.Size20.ArrowUndo())" OnClick="@(() => ReativarAsync(context))">
+                                                        Reativar
+                                                    </FluentMenuItem>
+                                                }
+                                            </FluentMenuList>
+                                        </FluentMenu>
+                                    </div>
+                                </TemplateColumn>
+                            </ChildContent>
+
+                            <EmptyContent>
+                                <EmptyState Titulo="@TituloVazio" Descricao="@DescricaoVazio" Icone="@(new Icons.Regular.Size24.BookOpen())">
+                                    @if (!TemBusca && _filtro == FiltroStatus.Ativos)
+                                    {
+                                        <FluentButton Appearance="ButtonAppearance.Primary" OnClick="NovaAsync">Cadastrar disciplina</FluentButton>
+                                    }
+                                </EmptyState>
+                            </EmptyContent>
+                        </FluentDataGrid>
+                    </div>
+
+                    <FluentPaginator State="_paginacao">
+                        <SummaryTemplate>@TextoResumoPaginacao</SummaryTemplate>
+                        <PaginationTextTemplate>Página @(_paginacao.CurrentPageIndex + 1) de @((_paginacao.LastPageIndex ?? 0) + 1)</PaginationTextTemplate>
+                    </FluentPaginator>
+                }
+            </section>
+        </div>
+
+        <DisciplinaFormDialog @ref="_formulario" OnSalva="AoSalvarAsync" />
+
+        <ConfirmDialog @ref="_confirmarInativacao"
+                       Titulo="Inativar disciplina"
+                       TextoConfirmar="Inativar"
+                       Perigo="true"
+                       Processando="_processando"
+                       Erro="_erroInativacao"
+                       OnConfirmar="ConfirmarInativacaoAsync">
+            <p>Deseja inativar <strong>@_alvoInativacao?.Nome</strong>?</p>
+            <p class="texto-suave">
+                Notas, presenças e subdisciplinas já cadastradas são mantidas. Você pode reativar a disciplina a qualquer momento.
+            </p>
+        </ConfirmDialog>
+    </Authorized>
+    <NotAuthorized>
+        <AcessoNegadoOuLogin />
+    </NotAuthorized>
+</AuthorizeView>

@@ -1,0 +1,17 @@
+.seletor {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.seletor-rotulo {
+    font-size: var(--fontSizeBase300, 14px);
+    font-weight: var(--fontWeightSemibold, 600);
+    color: var(--colorNeutralForeground1);
+}
+
+.seletor-opcoes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
