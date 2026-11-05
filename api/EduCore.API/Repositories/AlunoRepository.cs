@@ -44,6 +44,12 @@ public class AlunoRepository : IAlunoRepository
             .FirstOrDefaultAsync();
     }
 
+    public Task<int?> GetIdAtivoPorUsuarioAsync(int usuarioId)
+        => _context.Alunos
+            .Where(a => a.UsuarioId == usuarioId && a.Usuario!.Ativo)
+            .Select(a => (int?)a.Id)
+            .FirstOrDefaultAsync();
+
     public async Task AddAsync(Aluno aluno)
     {
         await _context.Alunos.AddAsync(aluno);

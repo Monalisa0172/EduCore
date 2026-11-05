@@ -9,4 +9,7 @@ public interface IProfessorRepository
     Task<ProfessorResponseDTO?> GetByIdAsync(int id);
     Task AddAsync(Professor professor);
     Task<Professor?> GetEntityByIdAsync(int id);
+
+    /// <summary>Id do professor do usuário (nulo se o usuário não for professor ou estiver inativo).</summary>
+    Task<int?> GetIdAtivoPorUsuarioAsync(int usuarioId);
 }

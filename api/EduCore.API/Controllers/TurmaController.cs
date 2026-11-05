@@ -21,8 +21,9 @@ public class TurmaController : ControllerBase
 
     /// <summary>
     /// Lista as turmas (ativas e inativas), do ano letivo mais recente para o mais antigo.
+    /// Só admin: o professor vê as turmas dele em api/me/atribuicoes.
     /// </summary>
-    [Authorize]
+    [Authorize(Roles = Roles.Admin)]
     [HttpGet]
     [ProducesResponseType(typeof(List<TurmaResponseDTO>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll()
@@ -33,7 +34,7 @@ public class TurmaController : ControllerBase
     /// <summary>
     /// Busca uma turma pelo ID.
     /// </summary>
-    [Authorize]
+    [Authorize(Roles = Roles.Admin)]
     [HttpGet("{id:int}")]
     [ProducesResponseType(typeof(TurmaResponseDTO), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]

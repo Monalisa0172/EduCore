@@ -4,6 +4,7 @@ using EduCore.API.Entities;
 using EduCore.API.Enums;
 using EduCore.API.Interfaces.Repositories;
 using EduCore.API.Services;
+using EduCore.API.Services.Acesso;
 using FluentAssertions;
 using Moq;
 
@@ -21,6 +22,7 @@ public class AvaliacaoServiceTests
     private readonly Mock<ITurmaRepository> _turmaRepository = new();
     private readonly Mock<IDisciplinaRepository> _disciplinaRepository = new();
     private readonly Mock<ISubDisciplinaRepository> _subDisciplinaRepository = new();
+    private readonly Mock<IAcessoAcademico> _acesso = new();
 
     private readonly AvaliacaoService _service;
 
@@ -31,7 +33,12 @@ public class AvaliacaoServiceTests
             _atribuicaoRepository.Object,
             _turmaRepository.Object,
             _disciplinaRepository.Object,
-            _subDisciplinaRepository.Object);
+            _subDisciplinaRepository.Object,
+            _acesso.Object);
+
+        // Padrao: admin (pode tudo). Os testes de professor sobrescrevem.
+        _acesso.SetupGet(x => x.EhAdmin).Returns(true);
+        _acesso.Setup(x => x.PodeGerenciarAvaliacaoAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<int?>())).ReturnsAsync(true);
 
         _turmaRepository.Setup(x => x.GetEntityByIdAsync(TurmaId))
             .ReturnsAsync(new Turma { Id = TurmaId, Nome = "1º Ano A", Ativo = true });
@@ -221,6 +228,59 @@ public class AvaliacaoServiceTests
         resultado.Sucesso.Should().BeTrue();
         avaliacao.Ativo.Should().BeFalse();
         _avaliacaoRepository.Verify(x => x.SalvarAsync(), Times.Once);
+    }
+
+    private void ComoProfessorSemAcesso(int professorId = 5)
+    {
+        _acesso.SetupGet(x => x.EhAdmin).Returns(false);
+        _acesso.Setup(x => x.ProfessorIdAsync()).ReturnsAsync(professorId);
+        _acesso.Setup(x => x.PodeGerenciarAvaliacaoAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<int?>())).ReturnsAsync(false);
+    }
+
+    [Fact]
+    public async Task Professor_Lista_So_O_Que_Leciona()
+    {
+        ComoProfessorSemAcesso(professorId: 5);
+
+        await _service.ListarAsync(TurmaId, null, null, null);
+
+        _avaliacaoRepository.Verify(x => x.ListarAsync(TurmaId, null, null, null, 5), Times.Once);
+    }
+
+    [Fact]
+    public async Task Professor_Nao_Ve_Avaliacao_De_Outro()
+    {
+        ComoProfessorSemAcesso();
+
+        var dto = await _service.GetByIdAsync(7);
+
+        dto.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Professor_Nao_Cria_Onde_Nao_Leciona()
+    {
+        ComoProfessorSemAcesso();
+
+        var resultado = await _service.CriarAsync(Request());
+
+        resultado.Falha.Should().Be(FalhaOperacao.Invalido);
+        resultado.Mensagem.Should().Contain("não leciona");
+        _avaliacaoRepository.Verify(x => x.AddAsync(It.IsAny<Avaliacao>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Professor_Nao_Edita_Avaliacao_De_Outro()
+    {
+        ComoProfessorSemAcesso();
+        var avaliacao = new Avaliacao { Id = 7, TurmaId = TurmaId, DisciplinaId = MatematicaId, Peso = 50, Bimestre = 1, Ativo = true, Nome = "Original" };
+        _avaliacaoRepository.Setup(x => x.GetEntityByIdAsync(7)).ReturnsAsync(avaliacao);
+
+        var resultado = await _service.AtualizarAsync(7, Request());
+
+        resultado.Falha.Should().Be(FalhaOperacao.NaoEncontrado);
+        avaliacao.Nome.Should().Be("Original");
+        _avaliacaoRepository.Verify(x => x.SalvarAsync(), Times.Never);
     }
 
     [Fact]

@@ -89,7 +89,7 @@ EduCore/
 - [x] Admin: turmas por ano letivo, com os alunos matriculados
 - [x] Modelo acadêmico: atribuição de professores (professor × turma × disciplina/subdisciplina) e avaliações por turma com pesos por bimestre somando até 100 (API)
 - [ ] Admin: tela de atribuição de professores
-- [ ] Lançamento de notas por avaliação e chamada em lote
+- [x] Lançamento de notas por avaliação e chamada em lote, boletim com média ponderada e frequência, endpoints `/me` e acesso restrito ao que cada professor leciona (API)
 - [ ] Professor: minhas turmas, avaliações, lançamento de notas e chamada
 - [ ] Aluno: boletim e frequência
 - [ ] Dashboards, CI no GitHub Actions e deploy gratuito

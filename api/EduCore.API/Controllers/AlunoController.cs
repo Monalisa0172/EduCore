@@ -11,10 +11,12 @@ using Microsoft.AspNetCore.Mvc;
 public class AlunoController : ControllerBase
 {
     private readonly AlunoService _alunoService;
+    private readonly BoletimService _boletimService;
 
-    public AlunoController(AlunoService alunoService)
+    public AlunoController(AlunoService alunoService, BoletimService boletimService)
     {
         _alunoService = alunoService;
+        _boletimService = boletimService;
     }
 
     /// <summary>
@@ -30,10 +32,10 @@ public class AlunoController : ControllerBase
     }
 
     /// <summary>
-    /// Retorna um aluno pelo ID.
+    /// Retorna um aluno pelo ID. Só admin: o aluno consulta os próprios dados em api/me.
     /// </summary>
-    [Authorize]
-    [HttpGet("{id}")]
+    [Authorize(Roles = Roles.Admin)]
+    [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id)
     {
         var aluno = await _alunoService.GetByIdAsync(id);
@@ -45,6 +47,20 @@ public class AlunoController : ControllerBase
             });
 
         return Ok(aluno);
+    }
+
+    /// <summary>
+    /// Boletim do aluno no ano letivo (padrão: o mais recente com matrícula).
+    /// </summary>
+    /// <param name="id">Id do aluno.</param>
+    /// <param name="anoLetivo">Ano letivo; vazio para o mais recente.</param>
+    [Authorize(Roles = Roles.Admin)]
+    [HttpGet("{id:int}/boletim")]
+    [ProducesResponseType(typeof(DTOs.Response.BoletimDTO), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Boletim(int id, [FromQuery] int? anoLetivo)
+    {
+        return this.ParaResposta(await _boletimService.ObterAsync(id, anoLetivo), Ok);
     }
 
     /// <summary>
