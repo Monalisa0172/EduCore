@@ -32,7 +32,7 @@ public static class MenuPorPerfil
             new("Disciplinas", "disciplinas",
                 new Icons.Regular.Size20.BookOpen(), new Icons.Filled.Size20.BookOpen()),
             new("Turmas", "turmas",
-                new Icons.Regular.Size20.PeopleTeam(), new Icons.Filled.Size20.PeopleTeam(), Disponivel: false),
+                new Icons.Regular.Size20.PeopleTeam(), new Icons.Filled.Size20.PeopleTeam()),
         ]),
     ];
 

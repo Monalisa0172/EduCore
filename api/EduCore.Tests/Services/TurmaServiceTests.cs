@@ -10,215 +10,195 @@ namespace EduCore.Tests.Services;
 
 public class TurmaServiceTests
 {
-    private readonly Mock<ITurmaRepository>
-        _turmaRepository;
+    private readonly Mock<ITurmaRepository> _turmaRepository = new();
 
-    private readonly TurmaService
-        _service;
+    private readonly TurmaService _service;
 
     public TurmaServiceTests()
     {
-        _turmaRepository =
-            new Mock<ITurmaRepository>();
-
-        _service =
-            new TurmaService(
-                _turmaRepository.Object);
+        _service = new TurmaService(_turmaRepository.Object);
     }
+
+    private static CreateTurmaRequest Request(string nome = "1º Ano A", int ano = 2026) => new()
+    {
+        Nome = nome,
+        AnoLetivo = ano
+    };
 
     [Fact]
     public async Task Deve_Criar_Turma_Com_Sucesso()
     {
-        // Arrange
-
         _turmaRepository
-            .Setup(x =>
-                x.GetByNomeAsync(It.IsAny<string>()))
-            .ReturnsAsync((Turma?)null);
+            .Setup(x => x.GetByIdAsync(It.IsAny<int>()))
+            .ReturnsAsync(new TurmaResponseDTO { Id = 1, Nome = "1º Ano A", AnoLetivo = 2026, Ativo = true });
 
-        _turmaRepository
-            .Setup(x =>
-                x.AddAsync(It.IsAny<Turma>()))
-            .Returns(Task.CompletedTask);
+        var resultado = await _service.CreateAsync(Request(nome: "  1º Ano A "));
 
-        _turmaRepository
-            .Setup(x =>
-                x.GetByIdAsync(It.IsAny<int>()))
-            .ReturnsAsync(new TurmaResponseDTO
-            {
-                Id = 1,
-                Nome = "1º Ano A",
-                AnoLetivo = 2026,
-                Ativo = true
-            });
+        resultado.Sucesso.Should().BeTrue();
+        resultado.Valor!.Nome.Should().Be("1º Ano A");
+        resultado.Valor.AnoLetivo.Should().Be(2026);
+        resultado.Valor.Ativo.Should().BeTrue();
 
-        var request =
-            new CreateTurmaRequest
-            {
-                Nome = "1º Ano A",
-                AnoLetivo = 2026
-            };
-
-        // Act
-
-        var resultado =
-            await _service.CreateAsync(request);
-
-        // Assert
-
-        resultado.Should().NotBeNull();
-
-        resultado!.Nome.Should()
-            .Be("1º Ano A");
-
-        resultado.AnoLetivo.Should()
-            .Be(2026);
-
-        resultado.Ativo.Should()
-            .BeTrue();
-
-        _turmaRepository.Verify(
-            x => x.AddAsync(It.IsAny<Turma>()),
-            Times.Once);
+        _turmaRepository.Verify(x => x.AddAsync(It.Is<Turma>(t => t.Nome == "1º Ano A" && t.Ativo)), Times.Once);
     }
 
     [Fact]
-    public async Task Nao_Deve_Criar_Turma_Duplicada()
+    public async Task Nao_Deve_Criar_Turma_Duplicada_No_Mesmo_Ano()
     {
-        // Arrange
-
         _turmaRepository
-            .Setup(x =>
-                x.GetByNomeAsync(It.IsAny<string>()))
-            .ReturnsAsync(new Turma());
+            .Setup(x => x.GetByNomeEAnoAsync("1º Ano A", 2026))
+            .ReturnsAsync(new Turma { Id = 9 });
 
-        var request =
-            new CreateTurmaRequest
-            {
-                Nome = "1º Ano A",
-                AnoLetivo = 2026
-            };
+        var resultado = await _service.CreateAsync(Request());
 
-        // Act
+        resultado.Falha.Should().Be(FalhaOperacao.Conflito);
+        resultado.Campo.Should().Be(nameof(CreateTurmaRequest.Nome));
+        _turmaRepository.Verify(x => x.AddAsync(It.IsAny<Turma>()), Times.Never);
+    }
 
-        Func<Task> act =
-            async () =>
-                await _service.CreateAsync(request);
+    [Fact]
+    public async Task Deve_Criar_Turma_Com_Mesmo_Nome_Em_Outro_Ano()
+    {
+        // So existe "1º Ano A" em 2025: criar em 2026 e permitido.
+        _turmaRepository
+            .Setup(x => x.GetByNomeEAnoAsync("1º Ano A", 2025))
+            .ReturnsAsync(new Turma { Id = 9 });
 
-        // Assert
+        var resultado = await _service.CreateAsync(Request(ano: 2026));
 
-        await act.Should()
-            .ThrowAsync<Exception>()
-            .WithMessage("Turma já cadastrada");
+        resultado.Sucesso.Should().BeTrue();
+        _turmaRepository.Verify(x => x.AddAsync(It.IsAny<Turma>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Deve_Atualizar_Turma_Com_Sucesso()
+    {
+        var turma = new Turma { Id = 1, Nome = "1º Ano A", AnoLetivo = 2025, Ativo = true };
+        _turmaRepository.Setup(x => x.GetEntityByIdAsync(1)).ReturnsAsync(turma);
+
+        var resultado = await _service.UpdateAsync(1, Request(nome: "1º Ano B", ano: 2026));
+
+        resultado.Sucesso.Should().BeTrue();
+        turma.Nome.Should().Be("1º Ano B");
+        turma.AnoLetivo.Should().Be(2026);
+        _turmaRepository.Verify(x => x.UpdateAsync(turma), Times.Once);
+    }
+
+    [Fact]
+    public async Task Deve_Atualizar_Mantendo_O_Proprio_Nome()
+    {
+        var turma = new Turma { Id = 1, Nome = "1º Ano A", AnoLetivo = 2026, Ativo = true };
+        _turmaRepository.Setup(x => x.GetEntityByIdAsync(1)).ReturnsAsync(turma);
+        _turmaRepository.Setup(x => x.GetByNomeEAnoAsync("1º Ano A", 2026)).ReturnsAsync(turma);
+
+        var resultado = await _service.UpdateAsync(1, Request());
+
+        resultado.Sucesso.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Nao_Deve_Atualizar_Com_Nome_De_Outra_Turma_Do_Mesmo_Ano()
+    {
+        var turma = new Turma { Id = 1, Nome = "1º Ano A", AnoLetivo = 2026, Ativo = true };
+        _turmaRepository.Setup(x => x.GetEntityByIdAsync(1)).ReturnsAsync(turma);
+        _turmaRepository.Setup(x => x.GetByNomeEAnoAsync("1º Ano B", 2026)).ReturnsAsync(new Turma { Id = 2 });
+
+        var resultado = await _service.UpdateAsync(1, Request(nome: "1º Ano B"));
+
+        resultado.Falha.Should().Be(FalhaOperacao.Conflito);
+        turma.Nome.Should().Be("1º Ano A");
+        _turmaRepository.Verify(x => x.UpdateAsync(It.IsAny<Turma>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Nao_Deve_Atualizar_Turma_Inexistente()
+    {
+        _turmaRepository.Setup(x => x.GetEntityByIdAsync(It.IsAny<int>())).ReturnsAsync((Turma?)null);
+
+        var resultado = await _service.UpdateAsync(999, Request());
+
+        resultado.Falha.Should().Be(FalhaOperacao.NaoEncontrado);
     }
 
     [Fact]
     public async Task Deve_Inativar_Turma_Com_Sucesso()
     {
-        // Arrange
+        var turma = new Turma { Id = 1, Nome = "1º Ano A", AnoLetivo = 2026, Ativo = true };
+        _turmaRepository.Setup(x => x.GetEntityByIdAsync(1)).ReturnsAsync(turma);
 
-        var turma = new Turma
-        {
-            Id = 1,
-            Nome = "1º Ano A",
-            AnoLetivo = 2026,
-            Ativo = true
-        };
+        var resultado = await _service.InativarAsync(1);
 
-        _turmaRepository
-            .Setup(x =>
-                x.GetEntityByIdAsync(1))
-            .ReturnsAsync(turma);
-
-        _turmaRepository
-            .Setup(x =>
-                x.UpdateAsync(It.IsAny<Turma>()))
-            .Returns(Task.CompletedTask);
-
-        // Act
-
-        var resultado =
-            await _service.InativarAsync(1);
-
-        // Assert
-
-        resultado.Should().BeTrue();
-
+        resultado.Sucesso.Should().BeTrue();
         turma.Ativo.Should().BeFalse();
-
-        _turmaRepository.Verify(
-            x => x.UpdateAsync(It.IsAny<Turma>()),
-            Times.Once);
+        _turmaRepository.Verify(x => x.UpdateAsync(It.IsAny<Turma>()), Times.Once);
     }
 
     [Fact]
     public async Task Nao_Deve_Inativar_Turma_Inexistente()
     {
-        // Arrange
+        _turmaRepository.Setup(x => x.GetEntityByIdAsync(It.IsAny<int>())).ReturnsAsync((Turma?)null);
 
+        var resultado = await _service.InativarAsync(999);
+
+        resultado.Falha.Should().Be(FalhaOperacao.NaoEncontrado);
+        _turmaRepository.Verify(x => x.UpdateAsync(It.IsAny<Turma>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Deve_Reativar_Turma_Inativa()
+    {
+        var turma = new Turma { Id = 1, Nome = "1º Ano A", AnoLetivo = 2025, Ativo = false };
+        _turmaRepository.Setup(x => x.GetEntityByIdAsync(1)).ReturnsAsync(turma);
+
+        var resultado = await _service.ReativarAsync(1);
+
+        resultado.Sucesso.Should().BeTrue();
+        turma.Ativo.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Deve_Listar_Alunos_Da_Turma()
+    {
+        _turmaRepository.Setup(x => x.GetEntityByIdAsync(1)).ReturnsAsync(new Turma { Id = 1 });
         _turmaRepository
-            .Setup(x =>
-                x.GetEntityByIdAsync(It.IsAny<int>()))
-            .ReturnsAsync((Turma?)null);
+            .Setup(x => x.GetAlunosAsync(1))
+            .ReturnsAsync([new TurmaAlunoDTO { AlunoId = 3, UsuarioId = 10, Nome = "Ana", Ativo = true }]);
 
-        // Act
+        var alunos = await _service.GetAlunosAsync(1);
 
-        var resultado =
-            await _service.InativarAsync(999);
+        alunos.Should().ContainSingle(a => a.Nome == "Ana");
+    }
 
-        // Assert
+    [Fact]
+    public async Task Alunos_De_Turma_Inexistente_Retorna_Null()
+    {
+        _turmaRepository.Setup(x => x.GetEntityByIdAsync(It.IsAny<int>())).ReturnsAsync((Turma?)null);
 
-        resultado.Should().BeFalse();
+        var alunos = await _service.GetAlunosAsync(999);
 
-        _turmaRepository.Verify(
-            x => x.UpdateAsync(It.IsAny<Turma>()),
-            Times.Never);
+        alunos.Should().BeNull();
+        _turmaRepository.Verify(x => x.GetAlunosAsync(It.IsAny<int>()), Times.Never);
     }
 
     [Fact]
     public async Task Deve_Buscar_Turma_Por_Id()
     {
-        // Arrange
-
         _turmaRepository
             .Setup(x => x.GetByIdAsync(1))
-            .ReturnsAsync(new TurmaResponseDTO
-            {
-                Id = 1,
-                Nome = "1º Ano A",
-                AnoLetivo = 2026,
-                Ativo = true
-            });
+            .ReturnsAsync(new TurmaResponseDTO { Id = 1, Nome = "1º Ano A", AnoLetivo = 2026, Ativo = true });
 
-        // Act
-
-        var resultado =
-            await _service.GetByIdAsync(1);
-
-        // Assert
+        var resultado = await _service.GetByIdAsync(1);
 
         resultado.Should().NotBeNull();
-
-        resultado!.Id.Should().Be(1);
-
-        resultado.Nome.Should().Be("1º Ano A");
+        resultado!.Nome.Should().Be("1º Ano A");
     }
 
     [Fact]
     public async Task Deve_Retornar_Null_Quando_Turma_Nao_Existir()
     {
-        // Arrange
+        _turmaRepository.Setup(x => x.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((TurmaResponseDTO?)null);
 
-        _turmaRepository
-            .Setup(x => x.GetByIdAsync(It.IsAny<int>()))
-            .ReturnsAsync((TurmaResponseDTO?)null);
-
-        // Act
-
-        var resultado =
-            await _service.GetByIdAsync(999);
-
-        // Assert
+        var resultado = await _service.GetByIdAsync(999);
 
         resultado.Should().BeNull();
     }
@@ -226,26 +206,13 @@ public class TurmaServiceTests
     [Fact]
     public async Task Deve_Retornar_Todas_As_Turmas()
     {
-        var turmas =
-            new List<TurmaResponseDTO>
-            {
-            new()
-            {
-                Id = 1,
-                Nome = "1º Ano A"
-            }
-            };
-
         _turmaRepository
             .Setup(x => x.GetAllAsync())
-            .ReturnsAsync(turmas);
+            .ReturnsAsync([new TurmaResponseDTO { Id = 1, Nome = "1º Ano A" }]);
 
-        var resultado =
-            await _service.GetAllAsync();
+        var resultado = await _service.GetAllAsync();
 
         resultado.Should().HaveCount(1);
-
-        resultado[0].Nome.Should()
-            .Be("1º Ano A");
+        resultado[0].Nome.Should().Be("1º Ano A");
     }
 }

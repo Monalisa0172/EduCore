@@ -1,0 +1,115 @@
+.carregando {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* ---------- Dados da turma no cabecalho ---------- */
+.turma-dados {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 24px;
+    margin: 4px 0 0;
+}
+
+    .turma-dados div {
+        display: flex;
+        align-items: baseline;
+        gap: 6px;
+    }
+
+    .turma-dados dt {
+        font-size: var(--fontSizeBase200, 12px);
+        color: var(--colorNeutralForeground3);
+    }
+
+    .turma-dados dd {
+        margin: 0;
+        font-weight: var(--fontWeightSemibold, 600);
+    }
+
+/* ---------- Alunos ---------- */
+.secao-acoes {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px;
+}
+
+.aluno-lista {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    border: 1px solid var(--colorNeutralStroke2);
+    border-radius: var(--borderRadiusLarge, 8px);
+}
+
+.aluno-item {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 16px;
+}
+
+    .aluno-item + .aluno-item {
+        border-top: 1px solid var(--colorNeutralStroke2);
+    }
+
+.aluno-item--inativo .aluno-nome,
+.aluno-item--inativo .aluno-email {
+    color: var(--colorNeutralForegroundDisabled, var(--colorNeutralForeground3));
+}
+
+.aluno-textos {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.aluno-nome {
+    font-weight: var(--fontWeightSemibold, 600);
+}
+
+.aluno-email {
+    overflow: hidden;
+    font-size: var(--fontSizeBase200, 12px);
+    color: var(--colorNeutralForeground3);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.aluno-abrir {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border-radius: var(--borderRadiusMedium, 4px);
+    font-size: var(--fontSizeBase300, 14px);
+    font-weight: var(--fontWeightSemibold, 600);
+    color: var(--educore-primary-text);
+    text-decoration: none;
+}
+
+    .aluno-abrir:hover {
+        background: var(--colorSubtleBackgroundHover);
+    }
+
+    .aluno-abrir:focus-visible {
+        outline: 2px solid var(--colorStrokeFocus2);
+        outline-offset: 2px;
+    }
+
+@media (max-width: 600px) {
+    .aluno-item {
+        grid-template-columns: auto minmax(0, 1fr) auto;
+    }
+
+    .aluno-abrir {
+        grid-column: 2 / -1;
+        justify-self: start;
+    }
+}

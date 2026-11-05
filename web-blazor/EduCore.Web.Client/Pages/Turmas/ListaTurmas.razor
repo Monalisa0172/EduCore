@@ -1,0 +1,230 @@
+@page "/turmas"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+
+<PageTitle>Turmas | EduCore</PageTitle>
+
+<AuthorizeView Roles="@Roles.Admin">
+    <Authorized Context="autenticacao">
+        <div class="pagina">
+            <PageHeader Titulo="Turmas"
+                        Secao="Acadêmico"
+                        Icone="@(new Icons.Regular.Size24.PeopleTeam())"
+                        Trilha="Trilha"
+                        Descricao="Organize as turmas por ano letivo e acompanhe os alunos matriculados em cada uma.">
+                <Acoes>
+                    <FluentButton Appearance="ButtonAppearance.Primary"
+                                  IconStart="@(new Icons.Regular.Size20.Add())"
+                                  OnClick="NovaAsync">
+                        Nova turma
+                    </FluentButton>
+                </Acoes>
+            </PageHeader>
+
+            @if (_aviso is not null)
+            {
+                <FluentMessageBar @key="_avisoId"
+                                  Intent="@(_aviso.Erro ? MessageBarIntent.Error : MessageBarIntent.Success)"
+                                  Title="@_aviso.Titulo"
+                                  AllowDismiss="true">
+                    @_aviso.Mensagem
+                </FluentMessageBar>
+            }
+
+            @if (_erroLista is null)
+            {
+                <section class="indicadores" aria-label="Resumo das turmas">
+                    <KpiCard Label="Turmas ativas"
+                             Icon="@(new Icons.Regular.Size24.PeopleTeam())"
+                             Value="@(_carregando ? null : QuantidadeAtivas)"
+                             Descricao="@TextoInativas" />
+                    <KpiCard Label="Matrículas ativas"
+                             Icon="@(new Icons.Regular.Size24.HatGraduation())"
+                             Value="@(_carregando ? null : QuantidadeMatriculas)"
+                             Descricao="Alunos ativos nas turmas ativas"
+                             Secondary="true" />
+                    <KpiCard Label="Turmas sem alunos"
+                             Icon="@(QuantidadeSemAlunos > 0 ? new Icons.Regular.Size24.PeopleError() : new Icons.Regular.Size24.PeopleCheckmark())"
+                             Value="@(_carregando ? null : QuantidadeSemAlunos)"
+                             Descricao="@(QuantidadeSemAlunos > 0 ? "Ativas e ainda sem matrícula" : "Todas com alunos")"
+                             Secondary="@(QuantidadeSemAlunos > 0)">
+                        <Acao>
+                            @if (!_carregando && QuantidadeSemAlunos > 0 && !_somenteSemAlunos)
+                            {
+                                <FluentButton Appearance="ButtonAppearance.Subtle"
+                                              Size="ButtonSize.Small"
+                                              IconEnd="@(new Icons.Regular.Size16.ArrowRight())"
+                                              OnClick="MostrarSemAlunosAsync">
+                                    Ver turmas
+                                </FluentButton>
+                            }
+                        </Acao>
+                    </KpiCard>
+                </section>
+            }
+
+            <section class="secao-card" aria-labelledby="turmas-titulo">
+                <div class="secao-titulo">
+                    <FluentText As="TextTag.H2" Id="turmas-titulo" Size="TextSize.Size600" Weight="TextWeight.Semibold">
+                        Lista de turmas
+                    </FluentText>
+                    <span class="secao-contagem" role="status">@TextoContagem</span>
+                </div>
+
+                <div class="lista-toolbar">
+                    <SeletorSegmentado TValor="FiltroStatus"
+                                       Rotulo="Exibir"
+                                       Opcoes="OpcoesFiltro"
+                                       @bind-Valor="_filtro"
+                                       @bind-Valor:after="AoAlterarFiltroAsync" />
+
+                    <FluentTextInput Id="busca-turmas"
+                                     Label="Buscar"
+                                     Placeholder="Nome ou ano letivo"
+                                     TextInputType="TextInputType.Search"
+                                     AutoComplete="off"
+                                     @bind-Value="_busca"
+                                     @bind-Value:after="AplicarFiltrosAsync"
+                                     Immediate="true"
+                                     ImmediateDelay="300"
+                                     Width="280px">
+                        <StartTemplate>
+                            <FluentIcon Value="@(new Icons.Regular.Size20.Search())" />
+                        </StartTemplate>
+                    </FluentTextInput>
+                </div>
+
+                @if (_somenteSemAlunos)
+                {
+                    <FluentMessageBar Intent="MessageBarIntent.Warning" Title="Turmas sem alunos" AllowDismiss="false">
+                        <ChildContent>Mostrando só as turmas ativas sem matrícula. Abra a turma para ver como matricular alunos.</ChildContent>
+                        <ActionsTemplate>
+                            <FluentButton Appearance="ButtonAppearance.Default" OnClick="MostrarTodasAsync">Mostrar todas</FluentButton>
+                        </ActionsTemplate>
+                    </FluentMessageBar>
+                }
+
+                @if (_erroLista is not null)
+                {
+                    <FluentMessageBar Intent="MessageBarIntent.Error" Title="@_erroLista.Title" AllowDismiss="false">
+                        <ChildContent>@_erroLista.Message</ChildContent>
+                        <ActionsTemplate>
+                            <FluentButton Appearance="ButtonAppearance.Default" OnClick="CarregarAsync">Tentar novamente</FluentButton>
+                        </ActionsTemplate>
+                    </FluentMessageBar>
+                }
+                else
+                {
+                    <div class="lista-grid">
+                        <FluentDataGrid @ref="_grid"
+                                        TGridItem="TurmaItem"
+                                        Items="_itensVisiveis"
+                                        Pagination="_paginacao"
+                                        Loading="_carregando"
+                                        ItemKey="@(t => t.Id)"
+                                        GridTemplateColumns="minmax(240px, 2fr) minmax(150px, 1fr) 110px 72px"
+                                        ShowHover="true"
+                                        MultiLine="true"
+                                        aria-labelledby="turmas-titulo">
+                            <ChildContent>
+                                <TemplateColumn Title="Turma"
+                                                Sortable="true"
+                                                SortBy="_ordenarPorAno"
+                                                IsDefaultSortColumn="true"
+                                                InitialSortDirection="DataGridSortDirection.Ascending">
+                                    <div class="turma-celula">
+                                        <a class="turma-nome" href="@($"turmas/{context.Id}")">@context.Nome</a>
+                                        <span class="turma-ano">Ano letivo @context.AnoLetivo</span>
+                                    </div>
+                                </TemplateColumn>
+
+                                <TemplateColumn Title="Alunos" Sortable="true" SortBy="_ordenarPorAlunos">
+                                    @if (context.SemAlunos && context.Ativo)
+                                    {
+                                        <span class="chip-atencao">
+                                            <FluentIcon Value="@(new Icons.Filled.Size12.Warning())" Color="Color.Custom" CustomColor="currentColor" aria-hidden="true" />
+                                            Sem alunos
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="@(context.SemAlunos ? "texto-suave" : null)">@context.AlunosTexto</span>
+                                    }
+                                </TemplateColumn>
+
+                                <TemplateColumn Title="Status">
+                                    <StatusBadge Ativo="context.Ativo" />
+                                </TemplateColumn>
+
+                                <TemplateColumn Title="Ações" Align="DataGridCellAlignment.End">
+                                    <div class="acoes-celula">
+                                        <FluentButton Id="@IdBotaoAcoes(context)"
+                                                      Appearance="ButtonAppearance.Subtle"
+                                                      IconOnly="true"
+                                                      IconStart="@(new Icons.Regular.Size20.MoreHorizontal())"
+                                                      Title="@($"Ações para {context.Nome}")"
+                                                      aria-label="@($"Ações para {context.Nome}")" />
+                                        <FluentMenu Trigger="@IdBotaoAcoes(context)">
+                                            <FluentMenuList>
+                                                <FluentMenuItem IconStart="@(new Icons.Regular.Size20.PeopleList())" OnClick="@(() => Abrir(context))">
+                                                    Ver alunos
+                                                </FluentMenuItem>
+                                                <FluentMenuItem IconStart="@(new Icons.Regular.Size20.Edit())" OnClick="@(() => EditarAsync(context))">
+                                                    Editar
+                                                </FluentMenuItem>
+                                                @if (context.Ativo)
+                                                {
+                                                    <FluentMenuItem IconStart="@(new Icons.Regular.Size20.Archive())" OnClick="@(() => SolicitarInativacaoAsync(context))">
+                                                        Inativar
+                                                    </FluentMenuItem>
+                                                }
+                                                else
+                                                {
+                                                    <FluentMenuItem IconStart="@(new Icons.Regular.Size20.ArrowUndo())" OnClick="@(() => ReativarAsync(context))">
+                                                        Reativar
+                                                    </FluentMenuItem>
+                                                }
+                                            </FluentMenuList>
+                                        </FluentMenu>
+                                    </div>
+                                </TemplateColumn>
+                            </ChildContent>
+
+                            <EmptyContent>
+                                <EmptyState Titulo="@TituloVazio" Descricao="@DescricaoVazio" Icone="@(new Icons.Regular.Size24.PeopleTeam())">
+                                    @if (!TemBusca && _filtro == FiltroStatus.Ativos)
+                                    {
+                                        <FluentButton Appearance="ButtonAppearance.Primary" OnClick="NovaAsync">Cadastrar turma</FluentButton>
+                                    }
+                                </EmptyState>
+                            </EmptyContent>
+                        </FluentDataGrid>
+                    </div>
+
+                    <FluentPaginator State="_paginacao">
+                        <SummaryTemplate>@TextoResumoPaginacao</SummaryTemplate>
+                        <PaginationTextTemplate>Página @(_paginacao.CurrentPageIndex + 1) de @((_paginacao.LastPageIndex ?? 0) + 1)</PaginationTextTemplate>
+                    </FluentPaginator>
+                }
+            </section>
+        </div>
+
+        <TurmaFormDialog @ref="_formulario" OnSalva="AoSalvarAsync" />
+
+        <ConfirmDialog @ref="_confirmarInativacao"
+                       Titulo="Inativar turma"
+                       TextoConfirmar="Inativar"
+                       Perigo="true"
+                       Processando="_processando"
+                       Erro="_erroInativacao"
+                       OnConfirmar="ConfirmarInativacaoAsync">
+            <p>Deseja inativar <strong>@_alvoInativacao?.Nome</strong> (@_alvoInativacao?.AnoLetivo)?</p>
+            <p class="texto-suave">
+                As matrículas ficam no histórico dos alunos, mas a turma deixa de aparecer como opção de matrícula.
+                Você pode reativá-la a qualquer momento.
+            </p>
+        </ConfirmDialog>
+    </Authorized>
+    <NotAuthorized>
+        <AcessoNegadoOuLogin />
+    </NotAuthorized>
+</AuthorizeView>
