@@ -37,6 +37,7 @@ public static class DependencyInjection
         services.AddScoped<NotaService>();
         services.AddScoped<ChamadaService>();
         services.AddScoped<BoletimService>();
+        services.AddScoped<DiarioService>();
 
         services.AddScoped<IAlunoRepository, AlunoRepository>();
         services.AddScoped<IUsuarioRepository, UsuarioRepository>();

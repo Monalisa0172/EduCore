@@ -1,0 +1,109 @@
+.avaliacoes-carregando {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* Pesos do bimestre: barra azul que fecha em 100 */
+.pesos {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 12px 16px;
+    border-radius: var(--borderRadiusLarge, 8px);
+    background: var(--colorNeutralBackground2);
+}
+
+.pesos-linha {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.pesos-rotulo {
+    font-weight: var(--fontWeightSemibold, 600);
+}
+
+.pesos-barra {
+    height: 8px;
+    overflow: hidden;
+    border-radius: var(--borderRadiusCircular, 999px);
+    background: var(--colorNeutralStroke2);
+}
+
+    .pesos-barra span {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+        background: var(--educore-secondary);
+        transition: width 200ms ease-out;
+    }
+
+.pesos--completo .pesos-barra span {
+    background: var(--educore-primary);
+}
+
+.avaliacoes {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.avaliacao {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 12px 16px;
+    padding: 12px 0;
+    border-top: 1px solid var(--colorNeutralStroke2);
+}
+
+    .avaliacao:first-child {
+        border-top: none;
+    }
+
+.avaliacao--inativa .avaliacao-principal {
+    opacity: 0.6;
+}
+
+.avaliacao-principal {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.avaliacao-nome {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    font-weight: var(--fontWeightSemibold, 600);
+}
+
+.avaliacao-sub {
+    padding: 0 8px;
+    border-radius: var(--borderRadiusCircular, 999px);
+    background: var(--colorNeutralBackground3);
+    font-size: var(--fontSizeBase200, 12px);
+    font-weight: var(--fontWeightRegular, 400);
+}
+
+.avaliacao-acoes {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 4px;
+}
+
+@media (max-width: 720px) {
+    .avaliacao {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .avaliacao-acoes {
+        justify-content: flex-start;
+    }
+}

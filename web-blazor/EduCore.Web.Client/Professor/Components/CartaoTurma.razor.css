@@ -1,0 +1,71 @@
+.cartao-turma {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 0;
+    padding: 20px;
+    border: 1px solid var(--colorNeutralStroke2);
+    border-top: 3px solid var(--educore-primary);
+    border-radius: var(--borderRadiusXLarge, 12px);
+    background: var(--colorNeutralBackground1);
+}
+
+.cartao-turma--anterior {
+    border-top-color: var(--colorNeutralStroke1);
+}
+
+.cartao-turma-cabecalho {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.cartao-turma-icone {
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: var(--borderRadiusLarge, 8px);
+    background: var(--educore-primary-tint);
+}
+
+.cartao-turma-textos {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.cartao-turma-disciplinas {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+    .cartao-turma-disciplinas > li {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px 12px;
+        padding: 10px 0;
+        border-top: 1px solid var(--colorNeutralStroke2);
+    }
+
+.cartao-turma-disciplina {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.cartao-turma-disciplina-nome {
+    font-weight: var(--fontWeightSemibold, 600);
+}
+
+.cartao-turma-atalhos {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}

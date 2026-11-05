@@ -1,0 +1,226 @@
+@implements IDisposable
+@using System.Globalization
+@inject IDiarioApiClient DiarioApi
+@inject TimeProvider Relogio
+
+@* Nova avaliacao / edicao. Sugere o peso que falta para fechar 100 no bimestre e so pergunta a
+   subdisciplina quando o professor leciona mais de uma. *@
+<FormDialog @ref="_moldura"
+            Titulo="@(_modelo.Edicao ? "Editar avaliação" : "Nova avaliação")"
+            Descricao="@($"{Diario.TurmaNome} · {Diario.DisciplinaNome}. Campos com * são obrigatórios.")"
+            EditContext="_editContext"
+            NomeFormulario="avaliacao"
+            TextoSalvar="@(_modelo.Edicao ? "Salvar alterações" : "Criar avaliação")"
+            Salvando="_salvando"
+            Erro="_erro"
+            OnSalvar="SalvarAsync">
+    <div class="avaliacao-campos">
+        <FluentTextInput Id="avaliacao-nome"
+                         Label="Nome"
+                         Placeholder="Ex.: Prova bimestral, Trabalho em grupo"
+                         @bind-Value="_modelo.Nome"
+                         Required="true"
+                         MaxLength="100"
+                         AutoComplete="off"
+                         Immediate="true"
+                         ImmediateDelay="0" />
+
+        @if (SubDisciplinas.Count == 1 && !Diario.DisciplinaInteira)
+        {
+            <p class="avaliacao-sub-fixa">Subdisciplina: <strong>@SubDisciplinas[0].SubDisciplinaNome</strong></p>
+        }
+        else if (SubDisciplinas.Count > 1)
+        {
+            <FluentSelect TOption="DiarioAtribuicao"
+                          TValue="int?"
+                          Id="avaliacao-subdisciplina"
+                          Label="Subdisciplina"
+                          Placeholder="Selecione a subdisciplina"
+                          Items="SubDisciplinas"
+                          OptionText="@(s => s.SubDisciplinaNome ?? string.Empty)"
+                          OptionValue="@(s => s.SubDisciplinaId)"
+                          @bind-Value="_modelo.SubDisciplinaId"
+                          Required="true"
+                          Width="100%" />
+        }
+
+        <SeletorSegmentado TValor="int" Rotulo="Bimestre" Opcoes="OpcoesBimestre" Valor="_modelo.Bimestre" ValorChanged="TrocarBimestre" />
+
+        <div class="avaliacao-linha">
+            <FluentDatePicker TValue="DateOnly?"
+                              Id="avaliacao-data"
+                              Label="Data de aplicação"
+                              Placeholder="dd/mm/aaaa"
+                              @bind-Value="_modelo.DataAplicacao"
+                              Required="true"
+                              Culture="PtBr" />
+
+            <FluentNumberInput TValue="decimal?"
+                               Id="avaliacao-peso"
+                               Label="Peso"
+                               Placeholder="Ex.: 40"
+                               @bind-Value="_modelo.Peso"
+                               Min="0.01m"
+                               Max="100m"
+                               Step="5m"
+                               Culture="PtBr"
+                               Required="true"
+                               Immediate="true"
+                               ImmediateDelay="0" />
+        </div>
+
+        <p class="avaliacao-dica" role="status">
+            @if (Disponivel <= 0)
+            {
+                @:Os pesos do @(_modelo.Bimestre)º bimestre já somam 100. Ajuste ou inative outra avaliação, ou escolha outro bimestre.
+            }
+            else
+            {
+                @:Disponível no @(_modelo.Bimestre)º bimestre: <strong>@Disponivel.ToString("0.##", PtBr)</strong> de 100.
+            }
+        </p>
+    </div>
+</FormDialog>
+
+@code {
+    private static readonly CultureInfo PtBr = CultureInfo.GetCultureInfo("pt-BR");
+
+    private readonly CancellationTokenSource _cts = new();
+
+    private FormDialog _moldura = default!;
+    private AvaliacaoFormModel _modelo = new();
+    private EditContext _editContext = default!;
+    private ValidationMessageStore _mensagensServidor = default!;
+    private AvaliacaoItem? _original;
+    private ApiError? _erro;
+    private bool _salvando;
+
+    [Parameter, EditorRequired]
+    public DiarioInfo Diario { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback<AvaliacaoSalva> OnSalva { get; set; }
+
+    private IReadOnlyList<DiarioAtribuicao> SubDisciplinas => Diario.SubDisciplinas;
+
+    private static readonly IReadOnlyList<OpcaoSeletor<int>> OpcoesBimestre =
+        [new(1, "1º"), new(2, "2º"), new(3, "3º"), new(4, "4º")];
+
+    /// <summary>Quanto cabe no bimestre escolhido, devolvendo o peso da própria avaliação (edição no mesmo bimestre).</summary>
+    private decimal Disponivel
+    {
+        get
+        {
+            var livre = Diario.Bimestre(_modelo.Bimestre).PesoDisponivel;
+            return _original is { Ativo: true } o && o.Bimestre == _modelo.Bimestre ? livre + o.Peso : livre;
+        }
+    }
+
+    protected override void OnInitialized() => Preparar(new AvaliacaoFormModel { Bimestre = 1 });
+
+    public Task AbrirNovaAsync(int bimestre)
+    {
+        _original = null;
+        var modelo = new AvaliacaoFormModel
+        {
+            Bimestre = bimestre,
+            DataAplicacao = DateOnly.FromDateTime(Relogio.GetLocalNow().DateTime),
+            SubDisciplinaObrigatoria = !Diario.DisciplinaInteira,
+            // Uma unica subdisciplina: ja vem escolhida.
+            SubDisciplinaId = !Diario.DisciplinaInteira && SubDisciplinas.Count == 1 ? SubDisciplinas[0].SubDisciplinaId : null
+        };
+        Preparar(modelo);
+        modelo.Peso = Disponivel > 0 ? Disponivel : null;
+
+        return AbrirAsync();
+    }
+
+    public Task AbrirEdicaoAsync(AvaliacaoItem avaliacao)
+    {
+        _original = avaliacao;
+        Preparar(new AvaliacaoFormModel
+        {
+            Id = avaliacao.Id,
+            Nome = avaliacao.Nome,
+            Peso = avaliacao.Peso,
+            DataAplicacao = avaliacao.Data,
+            Bimestre = avaliacao.Bimestre,
+            SubDisciplinaId = avaliacao.SubDisciplinaId,
+            SubDisciplinaObrigatoria = !Diario.DisciplinaInteira
+        });
+
+        return AbrirAsync();
+    }
+
+    private async Task AbrirAsync()
+    {
+        StateHasChanged();
+        await Task.Yield();
+        await _moldura.AbrirAsync();
+    }
+
+    private void Preparar(AvaliacaoFormModel modelo)
+    {
+        if (_editContext is not null)
+        {
+            _editContext.OnFieldChanged -= AoAlterarCampo;
+        }
+
+        _modelo = modelo;
+        _erro = null;
+        _editContext = new EditContext(modelo);
+        _mensagensServidor = new ValidationMessageStore(_editContext);
+        _editContext.OnFieldChanged += AoAlterarCampo;
+    }
+
+    private void AoAlterarCampo(object? sender, FieldChangedEventArgs e) => _mensagensServidor.Clear(e.FieldIdentifier);
+
+    private void TrocarBimestre(int bimestre)
+    {
+        _modelo.Bimestre = bimestre;
+        _mensagensServidor.Clear(_editContext.Field(nameof(AvaliacaoFormModel.Peso)));
+        _editContext.NotifyValidationStateChanged();
+    }
+
+    private async Task SalvarAsync()
+    {
+        if (_salvando)
+        {
+            return;
+        }
+
+        _erro = null;
+        _mensagensServidor.Clear();
+
+        if (!_editContext.Validate())
+        {
+            return;
+        }
+
+        _salvando = true;
+
+        var request = _modelo.ParaRequest(Diario.TurmaId, Diario.DisciplinaId);
+        var resultado = _modelo.Edicao
+            ? await DiarioApi.AtualizarAvaliacaoAsync(_modelo.Id!.Value, request, _cts.Token)
+            : await DiarioApi.CriarAvaliacaoAsync(request, _cts.Token);
+
+        _salvando = false;
+
+        if (resultado.Succeeded)
+        {
+            await _moldura.FecharAsync();
+            await OnSalva.InvokeAsync(new AvaliacaoSalva(resultado.Value!, Nova: !_modelo.Edicao));
+            return;
+        }
+
+        _erro = ErrosDeFormulario.Aplicar(resultado.Error, _mensagensServidor, _modelo, AvaliacaoFormModel.Campos);
+        _editContext.NotifyValidationStateChanged();
+    }
+
+    public void Dispose()
+    {
+        _editContext.OnFieldChanged -= AoAlterarCampo;
+        _cts.Cancel();
+        _cts.Dispose();
+    }
+}

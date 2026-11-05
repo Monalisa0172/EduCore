@@ -1,0 +1,21 @@
+@page "/professor/turmas"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+
+<PageTitle>Minhas turmas | EduCore</PageTitle>
+
+<AuthorizeView Roles="@Roles.Professor">
+    <Authorized>
+        <div class="pagina">
+            <PageHeader Titulo="Minhas turmas"
+                        Secao="Sala de aula"
+                        Icone="@(new Icons.Regular.Size24.PeopleTeam())"
+                        Descricao="Turmas e disciplinas que você leciona. Abra a chamada do dia ou as avaliações para lançar notas."
+                        Trilha="@([ItemTrilha.Inicio, new("Minhas turmas")])" />
+
+            <MinhasTurmasLista />
+        </div>
+    </Authorized>
+    <NotAuthorized>
+        <AcessoNegadoOuLogin />
+    </NotAuthorized>
+</AuthorizeView>

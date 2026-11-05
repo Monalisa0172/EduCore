@@ -91,7 +91,7 @@ EduCore/
 - [x] Admin: atribuição de professores na tela da turma
 - [x] Dados de demonstração (turma completa com notas e chamadas)
 - [x] Lançamento de notas por avaliação e chamada em lote, boletim com média ponderada e frequência, endpoints `/me` e acesso restrito ao que cada professor leciona (API)
-- [ ] Professor: minhas turmas, avaliações, lançamento de notas e chamada
+- [x] Professor: minhas turmas, diário de classe (avaliações com pesos por bimestre), lançamento de notas e chamada
 - [ ] Aluno: boletim e frequência
 - [ ] Dashboards, CI no GitHub Actions e deploy gratuito
 - [ ] Front em React + TypeScript

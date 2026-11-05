@@ -1,0 +1,351 @@
+@implements IDisposable
+@inject IDiarioApiClient DiarioApi
+@inject TimeProvider Relogio
+
+@* Avaliacoes da disciplina por bimestre: pesos do bimestre (fecha em 100), situacao das notas de cada
+   avaliacao e as acoes (lancar notas, editar, inativar). *@
+<section class="secao-card" aria-labelledby="avaliacoes-titulo">
+    <div class="secao-cabecalho">
+        <div class="secao-titulo">
+            <FluentText As="TextTag.H2" Id="avaliacoes-titulo" Size="TextSize.Size600" Weight="TextWeight.Semibold">
+                Avaliações
+            </FluentText>
+            <span class="secao-contagem" role="status">@TextoContagem</span>
+        </div>
+
+        <div class="secao-acoes">
+            @if (QuantidadeInativas > 0)
+            {
+                <FluentSwitch Label="Mostrar inativas" @bind-Value="_mostrarInativas" />
+            }
+            @if (Diario.TurmaAtiva)
+            {
+                <FluentButton Appearance="ButtonAppearance.Primary"
+                              IconStart="@(new Icons.Regular.Size20.Add())"
+                              Disabled="_avaliacoes is null"
+                              OnClick="NovaAsync">
+                    Nova avaliação
+                </FluentButton>
+            }
+        </div>
+    </div>
+
+    <SeletorSegmentado TValor="int" Rotulo="Bimestre" Opcoes="OpcoesBimestre" Valor="_bimestre" ValorChanged="TrocarBimestre" />
+
+    @{ var resumo = Diario.Bimestre(_bimestre); }
+    <div class="pesos @(resumo.Completo ? "pesos--completo" : null)">
+        <div class="pesos-linha">
+            <span class="pesos-rotulo">Pesos do @(_bimestre)º bimestre</span>
+            <span class="pesos-valor"><strong>@Formatar(resumo.PesoTotal)</strong> de 100</span>
+        </div>
+        <div class="pesos-barra" role="progressbar" aria-label="@($"Pesos do {_bimestre}º bimestre")"
+             aria-valuemin="0" aria-valuemax="100" aria-valuenow="@Formatar(resumo.PesoTotal)">
+            <span style="width: @(Math.Min(100, resumo.PesoTotal).ToString(System.Globalization.CultureInfo.InvariantCulture))%"></span>
+        </div>
+        <span class="texto-suave">
+            @if (resumo.Completo)
+            {
+                @:Pesos completos: a média do bimestre fecha quando todas as notas forem lançadas.
+            }
+            else if (resumo.PesoTotal == 0)
+            {
+                @:Nenhuma avaliação ainda. Os pesos do bimestre somam 100 (ex.: prova 60 + trabalho 40).
+            }
+            else
+            {
+                @:Faltam <strong>@Formatar(resumo.PesoDisponivel)</strong> para fechar 100. A média fica parcial até lá.
+            }
+            @if (!Diario.DisciplinaInteira)
+            {
+                @: O total inclui as avaliações dos outros professores da disciplina.
+            }
+        </span>
+    </div>
+
+    @if (_erro is not null)
+    {
+        <FluentMessageBar Intent="MessageBarIntent.Error" Title="@_erro.Title" AllowDismiss="false">
+            <ChildContent>@_erro.Message</ChildContent>
+            <ActionsTemplate>
+                <FluentButton Appearance="ButtonAppearance.Default" OnClick="CarregarAsync">Tentar novamente</FluentButton>
+            </ActionsTemplate>
+        </FluentMessageBar>
+    }
+    else if (_avaliacoes is null)
+    {
+        <div class="avaliacoes-carregando" aria-busy="true" aria-label="Carregando avaliações">
+            @for (var i = 0; i < 2; i++)
+            {
+                <FluentSkeleton Height="64px" Shimmer="true" />
+            }
+        </div>
+    }
+    else if (Visiveis.Count == 0)
+    {
+        <EmptyState Titulo="@($"Nenhuma avaliação no {_bimestre}º bimestre")"
+                    Descricao="@(Diario.TurmaAtiva ? "Crie as avaliações do bimestre; depois é só lançar as notas da turma." : "Esta turma não teve avaliações neste bimestre.")"
+                    Icone="@(new Icons.Regular.Size24.ClipboardTask())">
+            @if (Diario.TurmaAtiva)
+            {
+                <FluentButton Appearance="ButtonAppearance.Primary" IconStart="@(new Icons.Regular.Size20.Add())" OnClick="NovaAsync">
+                    Nova avaliação
+                </FluentButton>
+            }
+        </EmptyState>
+    }
+    else
+    {
+        <ul class="avaliacoes" aria-labelledby="avaliacoes-titulo">
+            @foreach (var avaliacao in Visiveis)
+            {
+                <li class="avaliacao @(avaliacao.Ativo ? null : "avaliacao--inativa")" @key="avaliacao.Id">
+                    <div class="avaliacao-principal">
+                        <span class="avaliacao-nome">
+                            @avaliacao.Nome
+                            @if (avaliacao.SubDisciplinaNome is not null)
+                            {
+                                <span class="avaliacao-sub">@avaliacao.SubDisciplinaNome</span>
+                            }
+                        </span>
+                        <span class="texto-suave">@avaliacao.Data.ToString("dd/MM/yyyy") · Peso @Formatar(avaliacao.Peso)</span>
+                    </div>
+
+                    <div class="avaliacao-situacao">
+                        @if (!avaliacao.Ativo)
+                        {
+                            <StatusBadge Ativo="false" TextoInativo="Inativa" />
+                        }
+                        else if (avaliacao.Data > Hoje && avaliacao.QuantidadeNotas == 0)
+                        {
+                            <span class="texto-suave">Aplicação em @avaliacao.Data.ToString("dd/MM")</span>
+                        }
+                        else if (Diario.AlunosAtivos > 0 && avaliacao.QuantidadeNotas >= Diario.AlunosAtivos)
+                        {
+                            <span class="chip-ok">Notas lançadas</span>
+                        }
+                        else
+                        {
+                            <span class="chip-atencao">@avaliacao.QuantidadeNotas de @Diario.AlunosAtivos notas</span>
+                        }
+                    </div>
+
+                    <div class="avaliacao-acoes">
+                        <a class="atalho @(avaliacao.Ativo && Diario.TurmaAtiva ? "atalho--destaque" : null)"
+                           href="@($"professor/turmas/{Diario.TurmaId}/disciplinas/{Diario.DisciplinaId}/avaliacoes/{avaliacao.Id}/notas")">
+                            <FluentIcon Value="@(new Icons.Regular.Size16.TaskListSquareLtr())" Color="Color.Custom" CustomColor="currentColor" aria-hidden="true" />
+                            @(avaliacao.Ativo && Diario.TurmaAtiva ? "Lançar notas" : "Ver notas")
+                        </a>
+                        @if (Diario.TurmaAtiva)
+                        {
+                            @if (avaliacao.Ativo)
+                            {
+                                <FluentButton Appearance="ButtonAppearance.Subtle"
+                                              Size="ButtonSize.Small"
+                                              IconStart="@(new Icons.Regular.Size16.Edit())"
+                                              aria-label="@($"Editar {avaliacao.Nome}")"
+                                              OnClick="@(() => _formulario.AbrirEdicaoAsync(avaliacao))">
+                                    Editar
+                                </FluentButton>
+                                <FluentButton Appearance="ButtonAppearance.Subtle"
+                                              Size="ButtonSize.Small"
+                                              IconStart="@(new Icons.Regular.Size16.Archive())"
+                                              aria-label="@($"Inativar {avaliacao.Nome}")"
+                                              OnClick="@(() => SolicitarInativacaoAsync(avaliacao))">
+                                    Inativar
+                                </FluentButton>
+                            }
+                            else
+                            {
+                                <FluentButton Appearance="ButtonAppearance.Subtle"
+                                              Size="ButtonSize.Small"
+                                              IconStart="@(new Icons.Regular.Size16.ArrowUndo())"
+                                              aria-label="@($"Reativar {avaliacao.Nome}")"
+                                              OnClick="@(() => ReativarAsync(avaliacao))">
+                                    Reativar
+                                </FluentButton>
+                            }
+                        }
+                    </div>
+                </li>
+            }
+        </ul>
+    }
+</section>
+
+<AvaliacaoFormDialog @ref="_formulario" Diario="Diario" OnSalva="AoSalvarAsync" />
+
+<ConfirmDialog @ref="_confirmarInativacao"
+               Titulo="Inativar avaliação"
+               TextoConfirmar="Inativar"
+               Perigo="true"
+               Processando="_processando"
+               Erro="_erroConfirmacao"
+               OnConfirmar="ConfirmarInativacaoAsync">
+    <p>Deseja inativar <strong>@_alvo?.Nome</strong>?</p>
+    <p class="texto-suave">
+        As notas já lançadas ficam guardadas, mas o peso dela sai da média do bimestre. Você pode reativá-la depois.
+    </p>
+</ConfirmDialog>
+
+@code {
+    private static readonly System.Globalization.CultureInfo PtBr = System.Globalization.CultureInfo.GetCultureInfo("pt-BR");
+
+    private readonly CancellationTokenSource _cts = new();
+
+    private List<AvaliacaoItem>? _avaliacoes;
+    private ApiError? _erro;
+    private int _bimestre;
+    private bool _mostrarInativas;
+
+    private AvaliacaoFormDialog _formulario = default!;
+    private ConfirmDialog _confirmarInativacao = default!;
+    private AvaliacaoItem? _alvo;
+    private ApiError? _erroConfirmacao;
+    private bool _processando;
+
+    [Parameter, EditorRequired]
+    public DiarioInfo Diario { get; set; } = default!;
+
+    /// <summary>Bimestre a abrir; sem valor, abre no vigente.</summary>
+    [Parameter]
+    public int? BimestreInicial { get; set; }
+
+    [Parameter]
+    public EventCallback<AvisoPagina> OnAviso { get; set; }
+
+    /// <summary>Uma avaliação mudou de peso ou de situação: a página relê os pesos do bimestre.</summary>
+    [Parameter]
+    public EventCallback OnPesosAlterados { get; set; }
+
+    private DateOnly Hoje => DateOnly.FromDateTime(Relogio.GetLocalNow().DateTime);
+
+    private IReadOnlyList<OpcaoSeletor<int>> OpcoesBimestre
+        => Enumerable.Range(1, 4)
+            .Select(b => new OpcaoSeletor<int>(b, b == Diario.BimestreVigente ? $"{b}º · atual" : $"{b}º"))
+            .ToList();
+
+    private IReadOnlyList<AvaliacaoItem> DoBimestre => (_avaliacoes ?? []).Where(a => a.Bimestre == _bimestre).ToList();
+
+    private IReadOnlyList<AvaliacaoItem> Visiveis => DoBimestre.Where(a => _mostrarInativas || a.Ativo).ToList();
+
+    private int QuantidadeInativas => DoBimestre.Count(a => !a.Ativo);
+
+    private string TextoContagem => _avaliacoes is null
+        ? "Carregando..."
+        : DoBimestre.Count(a => a.Ativo) switch
+        {
+            0 => $"nenhuma no {_bimestre}º bimestre",
+            1 => $"1 no {_bimestre}º bimestre",
+            var n => $"{n} no {_bimestre}º bimestre"
+        };
+
+    protected override async Task OnInitializedAsync()
+    {
+        _bimestre = BimestreInicial is >= 1 and <= 4 ? BimestreInicial.Value : Diario.BimestreVigente;
+        await CarregarAsync();
+    }
+
+    private async Task CarregarAsync()
+    {
+        _erro = null;
+        _avaliacoes = null;
+
+        var resultado = await DiarioApi.ListarAvaliacoesAsync(Diario.TurmaId, Diario.DisciplinaId, _cts.Token);
+
+        if (resultado.Succeeded)
+        {
+            _avaliacoes = [.. resultado.Value!];
+        }
+        else
+        {
+            _erro = resultado.Error;
+        }
+    }
+
+    private void TrocarBimestre(int bimestre)
+    {
+        _bimestre = bimestre;
+        _mostrarInativas = false;
+    }
+
+    private Task NovaAsync() => _formulario.AbrirNovaAsync(_bimestre);
+
+    private async Task AoSalvarAsync(AvaliacaoSalva salva)
+    {
+        Substituir(salva.Avaliacao);
+        _bimestre = salva.Avaliacao.Bimestre;
+
+        await OnPesosAlterados.InvokeAsync();
+        await OnAviso.InvokeAsync(salva.Nova
+            ? new AvisoPagina("Avaliação criada", $"{salva.Avaliacao.Nome} entrou no {salva.Avaliacao.Bimestre}º bimestre. Já dá para lançar as notas.")
+            : new AvisoPagina("Avaliação atualizada", $"As alterações em {salva.Avaliacao.Nome} foram salvas."));
+    }
+
+    private async Task SolicitarInativacaoAsync(AvaliacaoItem avaliacao)
+    {
+        _alvo = avaliacao;
+        _erroConfirmacao = null;
+        await _confirmarInativacao.AbrirAsync();
+    }
+
+    private async Task ConfirmarInativacaoAsync()
+    {
+        if (_alvo is not { } alvo || _processando)
+        {
+            return;
+        }
+
+        _processando = true;
+        _erroConfirmacao = null;
+
+        var resultado = await DiarioApi.InativarAvaliacaoAsync(alvo.Id, _cts.Token);
+
+        _processando = false;
+
+        if (!resultado.Succeeded)
+        {
+            _erroConfirmacao = resultado.Error;
+            return;
+        }
+
+        await _confirmarInativacao.FecharAsync();
+        _alvo = null;
+        Substituir(resultado.Value!);
+
+        await OnPesosAlterados.InvokeAsync();
+        await OnAviso.InvokeAsync(new AvisoPagina("Avaliação inativada", $"{alvo.Nome} saiu da média do bimestre. As notas continuam guardadas."));
+    }
+
+    private async Task ReativarAsync(AvaliacaoItem avaliacao)
+    {
+        var resultado = await DiarioApi.ReativarAvaliacaoAsync(avaliacao.Id, _cts.Token);
+
+        if (!resultado.Succeeded)
+        {
+            // Ex.: o peso dela nao cabe mais no bimestre.
+            await OnAviso.InvokeAsync(new AvisoPagina("Não foi possível reativar", resultado.Error.Message, Erro: true));
+            return;
+        }
+
+        Substituir(resultado.Value!);
+
+        await OnPesosAlterados.InvokeAsync();
+        await OnAviso.InvokeAsync(new AvisoPagina("Avaliação reativada", $"{avaliacao.Nome} voltou a contar na média do bimestre."));
+    }
+
+    private void Substituir(AvaliacaoItem avaliacao)
+    {
+        _avaliacoes ??= [];
+        _avaliacoes.RemoveAll(a => a.Id == avaliacao.Id);
+        _avaliacoes.Add(avaliacao);
+        _avaliacoes = [.. _avaliacoes.OrderBy(a => a.Bimestre).ThenBy(a => a.DataAplicacao).ThenBy(a => a.Nome)];
+    }
+
+    private static string Formatar(decimal valor) => valor.ToString("0.##", PtBr);
+
+    public void Dispose()
+    {
+        _cts.Cancel();
+        _cts.Dispose();
+    }
+}

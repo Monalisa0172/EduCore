@@ -1,0 +1,26 @@
+.diario-carregando {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.diario-dados {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 24px;
+    margin: 0;
+}
+
+    .diario-dados div {
+        display: flex;
+        gap: 6px;
+    }
+
+    .diario-dados dt {
+        color: var(--colorNeutralForeground3);
+    }
+
+    .diario-dados dd {
+        margin: 0;
+        font-weight: var(--fontWeightSemibold, 600);
+    }
