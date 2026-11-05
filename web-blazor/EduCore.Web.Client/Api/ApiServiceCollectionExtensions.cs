@@ -1,3 +1,4 @@
+using EduCore.Web.Client.Atribuicoes.Services;
 using EduCore.Web.Client.Auth.Services;
 using EduCore.Web.Client.Disciplinas.Services;
 using EduCore.Web.Client.Turmas.Services;
@@ -38,6 +39,7 @@ public static class ApiServiceCollectionExtensions
         services.AddHttpClient<ITurmaApiClient, TurmaApiClient>(ConfigureClient);
         services.AddHttpClient<IDisciplinaApiClient, DisciplinaApiClient>(ConfigureClient);
         services.AddHttpClient<ISubDisciplinaApiClient, SubDisciplinaApiClient>(ConfigureClient);
+        services.AddHttpClient<IAtribuicaoApiClient, AtribuicaoApiClient>(ConfigureClient);
 
         return services;
 

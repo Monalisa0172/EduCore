@@ -1,0 +1,317 @@
+@implements IDisposable
+@inject IAtribuicaoApiClient AtribuicaoApi
+@inject IDisciplinaApiClient DisciplinaApi
+
+@* Secao "Professores e disciplinas" da turma: quem leciona cada disciplina (inteira ou por subdisciplina),
+   o que esta sem professor (com o atalho para atribuir) e as acoes de trocar e encerrar. *@
+<section class="secao-card" aria-labelledby="professores-titulo">
+    <div class="secao-cabecalho">
+        <div class="secao-titulo">
+            <FluentText As="TextTag.H2" Id="professores-titulo" Size="TextSize.Size600" Weight="TextWeight.Semibold">
+                Professores e disciplinas
+            </FluentText>
+            <span class="secao-contagem" role="status">@TextoContagem</span>
+        </div>
+
+        @if (TurmaAtiva)
+        {
+            <div class="secao-acoes">
+                <FluentButton Appearance="ButtonAppearance.Primary"
+                              IconStart="@(new Icons.Regular.Size20.PersonAdd())"
+                              Disabled="_grupos is null"
+                              OnClick="@(() => _dialogo.AbrirNovaAsync())">
+                    Atribuir professor
+                </FluentButton>
+            </div>
+        }
+    </div>
+
+    @if (_erro is not null)
+    {
+        <FluentMessageBar Intent="MessageBarIntent.Error" Title="@_erro.Title" AllowDismiss="false">
+            <ChildContent>@_erro.Message</ChildContent>
+            <ActionsTemplate>
+                <FluentButton Appearance="ButtonAppearance.Default" OnClick="CarregarAsync">Tentar novamente</FluentButton>
+            </ActionsTemplate>
+        </FluentMessageBar>
+    }
+    else if (_grupos is null)
+    {
+        <div class="carregando" aria-busy="true" aria-label="Carregando professores">
+            @for (var i = 0; i < 3; i++)
+            {
+                <FluentSkeleton Height="48px" Shimmer="true" />
+            }
+        </div>
+    }
+    else if (_grupos.Count == 0)
+    {
+        <EmptyState Titulo="Nenhuma disciplina ativa"
+                    Descricao="Cadastre as disciplinas para depois atribuir os professores desta turma."
+                    Icone="@(new Icons.Regular.Size24.BookOpen())">
+            <FluentButton Appearance="ButtonAppearance.Primary" OnClick="@(() => Navigation.NavigateTo("disciplinas"))">Ver disciplinas</FluentButton>
+        </EmptyState>
+    }
+    else
+    {
+        <ul class="atribuicoes" aria-labelledby="professores-titulo">
+            @foreach (var grupo in _grupos)
+            {
+                <li class="atribuicao-grupo" @key="grupo.DisciplinaId">
+                    <div class="atribuicao-disciplina">
+                        <span class="atribuicao-disciplina-nome">@grupo.Nome</span>
+                        @if (!string.IsNullOrWhiteSpace(grupo.Codigo))
+                        {
+                            @* Codigo distingue disciplinas de mesmo nome *@
+                            <span class="atribuicao-codigo">@grupo.Codigo</span>
+                        }
+                        @if (grupo.Atribuicoes.Count == 0)
+                        {
+                            <span class="chip-atencao">Sem professor</span>
+                            @if (TurmaAtiva)
+                            {
+                                <FluentButton Appearance="ButtonAppearance.Subtle"
+                                              Size="ButtonSize.Small"
+                                              IconStart="@(new Icons.Regular.Size16.PersonAdd())"
+                                              aria-label="@($"Atribuir professor a {grupo.Nome}")"
+                                              OnClick="@(() => _dialogo.AbrirNovaAsync(grupo.DisciplinaId))">
+                                    Atribuir
+                                </FluentButton>
+                            }
+                        }
+                        else if (grupo.Dividida)
+                        {
+                            <span class="texto-suave">Dividida por subdisciplina</span>
+                        }
+                    </div>
+
+                    @foreach (var atribuicao in grupo.Atribuicoes)
+                    {
+                        <div class="atribuicao-linha" @key="atribuicao.Id">
+                            <span class="atribuicao-item">@(atribuicao.SubDisciplinaNome ?? "Disciplina inteira")</span>
+                            <span class="atribuicao-professor">
+                                <FluentAvatar Name="@atribuicao.ProfessorNome" Size="AvatarSize.Size24" Color="AvatarColor.Colorful" aria-hidden="true" />
+                                @atribuicao.ProfessorNome
+                            </span>
+                            @if (TurmaAtiva)
+                            {
+                                <div class="atribuicao-acoes">
+                                    <FluentButton Appearance="ButtonAppearance.Subtle"
+                                                  Size="ButtonSize.Small"
+                                                  IconStart="@(new Icons.Regular.Size16.ArrowSwap())"
+                                                  aria-label="@($"Trocar o professor de {atribuicao.ItemTexto}")"
+                                                  OnClick="@(() => _dialogo.AbrirTrocaAsync(atribuicao))">
+                                        Trocar professor
+                                    </FluentButton>
+                                    <FluentButton Appearance="ButtonAppearance.Subtle"
+                                                  Size="ButtonSize.Small"
+                                                  IconStart="@(new Icons.Regular.Size16.PersonDelete())"
+                                                  aria-label="@($"Encerrar a atribuição de {atribuicao.ProfessorNome} em {atribuicao.ItemTexto}")"
+                                                  OnClick="@(() => SolicitarEncerramentoAsync(atribuicao))">
+                                        Encerrar
+                                    </FluentButton>
+                                </div>
+                            }
+                        </div>
+                    }
+
+                    @if (TurmaAtiva && grupo.Dividida)
+                    {
+                        <FluentButton Appearance="ButtonAppearance.Subtle"
+                                      Size="ButtonSize.Small"
+                                      IconStart="@(new Icons.Regular.Size16.Add())"
+                                      Class="atribuicao-mais"
+                                      OnClick="@(() => _dialogo.AbrirNovaAsync(grupo.DisciplinaId))">
+                            Atribuir outra subdisciplina
+                        </FluentButton>
+                    }
+                </li>
+            }
+        </ul>
+    }
+</section>
+
+<AtribuirProfessorDialog @ref="_dialogo"
+                         TurmaId="TurmaId"
+                         TurmaNome="@TurmaNome"
+                         Disciplinas="_disciplinasAtivas"
+                         Atribuicoes="_atribuicoes"
+                         OnSalva="AoSalvarAsync" />
+
+<ConfirmDialog @ref="_confirmarEncerramento"
+               Titulo="Encerrar atribuição"
+               TextoConfirmar="Encerrar"
+               Perigo="true"
+               Processando="_processando"
+               Erro="_erroConfirmacao"
+               OnConfirmar="ConfirmarEncerramentoAsync">
+    <p><strong>@_alvo?.ProfessorNome</strong> deixa de lecionar <strong>@_alvo?.ItemTexto</strong> em @TurmaNome?</p>
+    <p class="texto-suave">
+        Avaliações, notas e chamadas já lançadas continuam na turma. Depois, atribua outro professor para seguir com os lançamentos.
+    </p>
+</ConfirmDialog>
+
+@code {
+    private readonly CancellationTokenSource _cts = new();
+
+    private AtribuirProfessorDialog _dialogo = default!;
+    private ConfirmDialog _confirmarEncerramento = default!;
+    private List<AtribuicaoItem> _atribuicoes = [];
+    private List<DisciplinaItem> _disciplinasAtivas = [];
+    private List<GrupoDisciplina>? _grupos;
+    private ApiError? _erro;
+    private AtribuicaoItem? _alvo;
+    private ApiError? _erroConfirmacao;
+    private bool _processando;
+    private int _turmaCarregada;
+
+    [Parameter, EditorRequired]
+    public int TurmaId { get; set; }
+
+    [Parameter, EditorRequired]
+    public string TurmaNome { get; set; } = string.Empty;
+
+    /// <summary>Turma inativa: só consulta (sem atribuir, trocar ou encerrar).</summary>
+    [Parameter]
+    public bool TurmaAtiva { get; set; }
+
+    /// <summary>Mensagem de sucesso para a página exibir no topo.</summary>
+    [Parameter]
+    public EventCallback<AvisoPagina> OnAviso { get; set; }
+
+    [Inject]
+    private NavigationManager Navigation { get; set; } = default!;
+
+    /// <summary>Disciplina e quem a leciona (vazio = sem professor).</summary>
+    private sealed record GrupoDisciplina(int DisciplinaId, string Nome, string? Codigo, IReadOnlyList<AtribuicaoItem> Atribuicoes)
+    {
+        public bool Dividida => Atribuicoes.Any(a => !a.DisciplinaInteira);
+    }
+
+    private string TextoContagem
+    {
+        get
+        {
+            if (_grupos is null)
+            {
+                return "Carregando...";
+            }
+
+            var comProfessor = _grupos.Count(g => g.Atribuicoes.Count > 0);
+            return $"{comProfessor} de {_grupos.Count} {(_grupos.Count == 1 ? "disciplina" : "disciplinas")} com professor";
+        }
+    }
+
+    protected override Task OnParametersSetAsync() => _turmaCarregada == TurmaId ? Task.CompletedTask : CarregarAsync();
+
+    private async Task CarregarAsync()
+    {
+        _turmaCarregada = TurmaId;
+        _erro = null;
+        _grupos = null;
+
+        var atribuicoesTask = AtribuicaoApi.ListarDaTurmaAsync(TurmaId, _cts.Token);
+        var disciplinasTask = DisciplinaApi.ListarAsync(_cts.Token);
+
+        var atribuicoes = await atribuicoesTask;
+        var disciplinas = await disciplinasTask;
+
+        if (!atribuicoes.Succeeded)
+        {
+            _erro = atribuicoes.Error;
+            return;
+        }
+
+        if (!disciplinas.Succeeded)
+        {
+            _erro = disciplinas.Error;
+            return;
+        }
+
+        _atribuicoes = [.. atribuicoes.Value!];
+        _disciplinasAtivas = disciplinas.Value!.Where(d => d.Ativo).OrderBy(d => d.Nome, StringComparer.CurrentCulture).ToList();
+        MontarGrupos();
+    }
+
+    /// <summary>
+    /// Uma linha por disciplina ativa, mais as inativas que ainda têm atribuição (para poder encerrá-las).
+    /// </summary>
+    private void MontarGrupos()
+    {
+        var nomes = _disciplinasAtivas.ToDictionary(d => d.Id, d => d.Nome);
+        foreach (var a in _atribuicoes)
+        {
+            nomes.TryAdd(a.DisciplinaId, a.DisciplinaNome);
+        }
+
+        var codigos = _disciplinasAtivas.Where(d => d.TemCodigo).ToDictionary(d => d.Id, d => d.Codigo);
+
+        _grupos = nomes
+            .Select(d => new GrupoDisciplina(
+                d.Key,
+                d.Value,
+                codigos.GetValueOrDefault(d.Key),
+                _atribuicoes
+                    .Where(a => a.DisciplinaId == d.Key)
+                    .OrderBy(a => a.SubDisciplinaNome ?? string.Empty, StringComparer.CurrentCulture)
+                    .ToList()))
+            .OrderBy(g => g.Nome, StringComparer.CurrentCulture)
+            .ToList();
+    }
+
+    private async Task AoSalvarAsync(AtribuicaoSalva salva)
+    {
+        var a = salva.Atribuicao;
+        _atribuicoes.RemoveAll(x => x.Id == a.Id);
+        _atribuicoes.Add(a);
+        MontarGrupos();
+
+        await OnAviso.InvokeAsync(salva.Troca
+            ? new AvisoPagina("Professor trocado", $"{a.ProfessorNome} agora leciona {a.ItemTexto} em {TurmaNome}.")
+            : new AvisoPagina("Professor atribuído", $"{a.ProfessorNome} vai lecionar {a.ItemTexto} em {TurmaNome}."));
+    }
+
+    private async Task SolicitarEncerramentoAsync(AtribuicaoItem atribuicao)
+    {
+        _alvo = atribuicao;
+        _erroConfirmacao = null;
+        await _confirmarEncerramento.AbrirAsync();
+    }
+
+    private async Task ConfirmarEncerramentoAsync()
+    {
+        if (_alvo is not { } alvo || _processando)
+        {
+            return;
+        }
+
+        _processando = true;
+        _erroConfirmacao = null;
+
+        var resultado = await AtribuicaoApi.EncerrarAsync(alvo.Id, _cts.Token);
+
+        _processando = false;
+
+        // 404: ja foi encerrada por outra pessoa; a lista local tambem deve refletir isso.
+        if (!resultado.Succeeded && resultado.Error.Kind != ApiErrorKind.NotFound)
+        {
+            _erroConfirmacao = resultado.Error;
+            return;
+        }
+
+        await _confirmarEncerramento.FecharAsync();
+        _alvo = null;
+        _atribuicoes.RemoveAll(a => a.Id == alvo.Id);
+        MontarGrupos();
+
+        await OnAviso.InvokeAsync(new AvisoPagina(
+            "Atribuição encerrada",
+            $"{alvo.ProfessorNome} não leciona mais {alvo.ItemTexto} em {TurmaNome}."));
+    }
+
+    public void Dispose()
+    {
+        _cts.Cancel();
+        _cts.Dispose();
+    }
+}
