@@ -19,7 +19,7 @@
 
 .usuario-resumo-email {
     font-size: var(--fontSizeBase200, 12px);
-    color: var(--colorNeutralForeground3 
+    color: var(--colorNeutralForeground3);
     overflow-wrap: anywhere;
 }
 

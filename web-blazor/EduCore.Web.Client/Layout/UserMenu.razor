@@ -6,7 +6,7 @@
 <AuthorizeView>
     <Authorized>
         <div class="user-menu">
-            <span class="user-menu-email">@context.User.Identity?.Name</span>
+            <span class="user-menu-email" title="@context.User.Email()">@context.User.NomeExibicao()</span>
             <FluentButton Appearance="ButtonAppearance.Transparent"
                           Color="var(--colorNeutralForegroundOnBrand)"
                           IconStart="@(new Icons.Regular.Size20.SignOut())"
