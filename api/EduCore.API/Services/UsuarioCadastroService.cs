@@ -151,7 +151,7 @@ public class UsuarioCadastroService
         }
 
         var removidas = aluno.Matriculas
-            .Where(m => m.Turma is { Ativo: true } && !turmaIds.Contains(m.TurmaId!.Value))
+            .Where(m => m.Turma is { Ativo: true } && !turmaIds.Contains(m.TurmaId))
             .ToList();
 
         _usuarioRepository.RemoverMatriculas(removidas);
@@ -207,7 +207,7 @@ public class UsuarioCadastroService
         var turmaIds = usuario.Alunos
             .SelectMany(a => a.Matriculas)
             .Where(m => m.Turma is { Ativo: true })
-            .Select(m => m.TurmaId!.Value)
+            .Select(m => m.TurmaId)
             .Distinct()
             .Order()
             .ToList();

@@ -1,4 +1,5 @@
-﻿using EduCore.API.Data;
+﻿using System.Linq.Expressions;
+using EduCore.API.Data;
 using EduCore.API.DTOs.Response;
 using EduCore.API.Entities;
 using EduCore.API.Enums;
@@ -9,143 +10,67 @@ namespace EduCore.API.Repositories;
 
 public class AvaliacaoRepository : IAvaliacaoRepository
 {
+    private static readonly Expression<Func<Avaliacao, AvaliacaoResponseDTO>> ParaDto = a => new AvaliacaoResponseDTO
+    {
+        Id = a.Id,
+        TurmaId = a.TurmaId,
+        TurmaNome = a.Turma!.Nome ?? string.Empty,
+        DisciplinaId = a.DisciplinaId,
+        DisciplinaNome = a.Disciplina!.Nome ?? string.Empty,
+        SubDisciplinaId = a.SubDisciplinaId,
+        SubDisciplinaNome = a.SubDisciplina != null ? a.SubDisciplina.Nome : null,
+        Nome = a.Nome,
+        Peso = a.Peso,
+        DataAplicacao = a.DataAplicacao,
+        Bimestre = (BimestreEnum)a.Bimestre,
+        Ativo = a.Ativo,
+        QuantidadeNotas = a.Notas.Count
+    };
+
     private readonly AppDbContext _context;
 
-    public AvaliacaoRepository(
-        AppDbContext context)
+    public AvaliacaoRepository(AppDbContext context)
     {
         _context = context;
     }
 
-    public async Task<List<AvaliacaoResponseDTO>> GetAllAsync()
+    public async Task<List<AvaliacaoResponseDTO>> ListarAsync(int? turmaId, int? disciplinaId, int? bimestre, bool? ativo)
     {
-        return await _context.Avaliacoes
-            .Include(x => x.Disciplina)
-            .Include(x => x.SubDisciplina)
-            .Select(x => new AvaliacaoResponseDTO
-            {
-                Id = x.Id,
+        var query = _context.Avaliacoes.AsNoTracking();
 
-                DisciplinaId =
-                    x.DisciplinaId,
+        if (turmaId.HasValue) query = query.Where(a => a.TurmaId == turmaId);
+        if (disciplinaId.HasValue) query = query.Where(a => a.DisciplinaId == disciplinaId);
+        if (bimestre.HasValue) query = query.Where(a => a.Bimestre == bimestre);
+        if (ativo.HasValue) query = query.Where(a => a.Ativo == ativo);
 
-                SubDisciplinaId =
-                    x.SubDisciplinaId,
-
-                Nome =
-                    x.Nome,
-
-                Peso =
-                    x.Peso,
-
-                DataAplicacao =
-                    x.DataAplicacao,
-
-                Bimestre =
-                    (BimestreEnum)x.Bimestre,
-
-                Ativo =
-                    x.Ativo,
-
-                SubDisciplina =
-                    x.SubDisciplina != null
-                        ? x.SubDisciplina.Nome
-                        : null
-            })
+        return await query
+            .OrderBy(a => a.Bimestre)
+            .ThenBy(a => a.DataAplicacao)
+            .ThenBy(a => a.Nome)
+            .Select(ParaDto)
             .ToListAsync();
     }
 
-    public async Task<AvaliacaoResponseDTO?> GetByIdAsync(int id)
-    {
-        return await _context.Avaliacoes
-            .Include(x => x.Disciplina)
-            .Where(x => x.Id == id)
-            .Select(x => new AvaliacaoResponseDTO
-            {
-                Id = x.Id,
-                DisciplinaId = x.DisciplinaId,
-                SubDisciplinaId = x.SubDisciplinaId,
-                SubDisciplina = x.SubDisciplina != null ? x.SubDisciplina.Nome : null,
-                Nome = x.Nome,
-                Peso = x.Peso,
-                DataAplicacao = x.DataAplicacao,
-                Bimestre = (BimestreEnum)x.Bimestre,
-                Ativo = x.Ativo
-            })
-            .FirstOrDefaultAsync();
-    }
+    public Task<AvaliacaoResponseDTO?> GetByIdAsync(int id)
+        => _context.Avaliacoes.AsNoTracking().Where(a => a.Id == id).Select(ParaDto).FirstOrDefaultAsync();
 
-    public async Task<List<AvaliacaoResponseDTO>> GetByDisciplinaAsync(int disciplinaId)
-    {
-        return await _context.Avaliacoes
-            .Where(x =>
-                x.DisciplinaId == disciplinaId &&
-                x.Ativo)
-            .Select(x => new AvaliacaoResponseDTO
-            {
-                Id = x.Id,
-                DisciplinaId = x.DisciplinaId,
-                SubDisciplinaId = x.SubDisciplinaId,
-                SubDisciplina = x.SubDisciplina != null ? x.SubDisciplina.Nome : null,
-                Nome = x.Nome,
-                Peso = x.Peso,
-                DataAplicacao = x.DataAplicacao,
-                Bimestre = (BimestreEnum)x.Bimestre,
-                Ativo = x.Ativo
-            })
-            .ToListAsync();
-    }
+    public Task<Avaliacao?> GetEntityByIdAsync(int id)
+        => _context.Avaliacoes.FirstOrDefaultAsync(a => a.Id == id);
 
-    public async Task<Avaliacao?> GetEntityByIdAsync(int id)
-    {
-        return await _context.Avaliacoes
-            .FirstOrDefaultAsync(x => x.Id == id);
-    }
+    public Task<decimal> GetPesoTotalAsync(int turmaId, int disciplinaId, int bimestre, int? avaliacaoIgnoradaId = null)
+        => _context.Avaliacoes
+            .Where(a => a.Ativo
+                && a.TurmaId == turmaId
+                && a.DisciplinaId == disciplinaId
+                && a.Bimestre == bimestre
+                && a.Id != avaliacaoIgnoradaId)
+            .SumAsync(a => a.Peso);
 
     public async Task AddAsync(Avaliacao avaliacao)
     {
-        await _context.Avaliacoes
-            .AddAsync(avaliacao);
-
+        await _context.Avaliacoes.AddAsync(avaliacao);
         await _context.SaveChangesAsync();
     }
 
-    public async Task UpdateAsync(Avaliacao avaliacao)
-    {
-        _context.Avaliacoes
-            .Update(avaliacao);
-
-        await _context.SaveChangesAsync();
-    }
-
-    public async Task<decimal> GetPesoTotalByDisciplinaEBimestreAsync(int disciplinaId, int bimestre)
-    {
-        return await _context.Avaliacoes
-            .Where(x =>
-                x.DisciplinaId == disciplinaId &&
-                x.Bimestre == bimestre &&
-                x.Ativo)
-            .SumAsync(x => x.Peso);
-    }
-
-    public async Task<decimal>
-    GetPesoTotalByDisciplinaEBimestreAsync(
-        int disciplinaId,
-        BimestreEnum bimestre,
-        int? avaliacaoIgnoradaId = null)
-    {
-        var query = _context.Avaliacoes
-            .Where(x =>
-                x.Ativo &&
-                x.DisciplinaId == disciplinaId &&
-                x.Bimestre == (int)bimestre);
-
-        if (avaliacaoIgnoradaId.HasValue)
-        {
-            query = query.Where(x =>
-                x.Id != avaliacaoIgnoradaId.Value);
-        }
-
-        return await query.SumAsync(x => x.Peso);
-    }
+    public Task SalvarAsync() => _context.SaveChangesAsync();
 }

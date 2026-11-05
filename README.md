@@ -44,7 +44,7 @@ EduCore/
 │  ├─ EduCore.Web/          host do Blazor Web App
 │  └─ EduCore.Web.Client/   páginas e componentes (WebAssembly)
 ├─ web-react/               front em React (planejado)
-├─ database/                scripts SQL versionados (em construção)
+├─ database/scripts/        scripts SQL versionados (aplicados em ordem)
 └─ EduCore.slnx             solution com API, testes e front Blazor
 ```
 
@@ -66,7 +66,7 @@ EduCore/
 **Pré-requisitos:** .NET SDK 10 (a versão é fixada em `global.json`), SQL Server e Visual Studio 2026 ou superior.
 
 1. Clone o repositório e abra `EduCore.slnx`.
-2. Configure a connection string em `api/EduCore.API/appsettings.json` (banco `EscolaDB`).
+2. Configure a connection string em `api/EduCore.API/appsettings.json` (banco `EscolaDB`) e aplique os scripts de `database/scripts` em ordem (veja o [README dos scripts](database/scripts/README.md)).
 3. Defina a chave do JWT (mínimo de 32 caracteres) com User Secrets:
    ```bash
    dotnet user-secrets set "Jwt:Key" "<sua-chave-secreta>" --project api/EduCore.API
@@ -74,7 +74,7 @@ EduCore/
 4. No Visual Studio: **Configure Startup Projects** → **Multiple startup projects** → `EduCore.API` e `EduCore.Web`.
 5. Execute (F5). A API publica o Swagger e o front abre na tela de login.
 
-> Os scripts de criação do banco e os dados de demonstração estão sendo organizados em `database/`.
+> Os dados de demonstração estão sendo organizados em `database/scripts`.
 
 ---
 
@@ -87,8 +87,9 @@ EduCore/
 - [x] Menu lateral por perfil
 - [x] Admin: disciplinas e subdisciplinas (cadastro, edição, inativação e reativação)
 - [x] Admin: turmas por ano letivo, com os alunos matriculados
-- [ ] Admin: atribuição de professores (professor × turma × disciplina)
-- [ ] Notas por avaliação (pesos por bimestre somando 100) e chamada
+- [x] Modelo acadêmico: atribuição de professores (professor × turma × disciplina/subdisciplina) e avaliações por turma com pesos por bimestre somando até 100 (API)
+- [ ] Admin: tela de atribuição de professores
+- [ ] Lançamento de notas por avaliação e chamada em lote
 - [ ] Professor: minhas turmas, avaliações, lançamento de notas e chamada
 - [ ] Aluno: boletim e frequência
 - [ ] Dashboards, CI no GitHub Actions e deploy gratuito

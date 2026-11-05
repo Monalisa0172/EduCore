@@ -1,10 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using EduCore.API.Entities;
+﻿using EduCore.API.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace EduCore.API.Data;
 
+/// <summary>
+/// Banco database-first: o esquema é mantido pelos scripts em database/scripts.
+/// Este mapeamento deve refletir o que os scripts criam (nomes, índices únicos e filtros).
+/// </summary>
 public partial class AppDbContext : DbContext
 {
     public AppDbContext()
@@ -18,6 +20,10 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<Aluno> Alunos { get; set; }
 
+    public virtual DbSet<Atribuicao> Atribuicoes { get; set; }
+
+    public virtual DbSet<Avaliacao> Avaliacoes { get; set; }
+
     public virtual DbSet<Contato> Contatos { get; set; }
 
     public virtual DbSet<Disciplina> Disciplinas { get; set; }
@@ -28,7 +34,7 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<Matricula> Matriculas { get; set; }
 
-    public virtual DbSet<Notum> Nota { get; set; }
+    public virtual DbSet<Nota> Notas { get; set; }
 
     public virtual DbSet<Presenca> Presencas { get; set; }
 
@@ -40,21 +46,36 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<Usuario> Usuarios { get; set; }
 
-    public virtual DbSet<ProfessorSubDisciplina> ProfessorSubDisciplinas { get; set; }
-
-    public virtual DbSet<ProfessorTurma> ProfessorTurmas { get; set; }
-
-    public virtual DbSet<Avaliacao> Avaliacoes { get; set; }
-
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Aluno>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK__Aluno__3214EC0745EFD30B");
 
+            entity.HasIndex(e => e.UsuarioId, "UX_Aluno_Usuario")
+                .IsUnique()
+                .HasFilter("[UsuarioId] IS NOT NULL");
+
             entity.HasOne(d => d.Usuario)
                 .WithMany(p => p.Alunos)
                 .HasConstraintName("FK__Aluno__UsuarioId__3C69FB99");
+        });
+
+        modelBuilder.Entity<Atribuicao>(entity =>
+        {
+            entity.Property(e => e.Ativo).HasDefaultValue(true);
+
+            // Uma atribuicao ativa por turma + disciplina + subdisciplina (NULL = disciplina inteira).
+            entity.HasIndex(e => new { e.TurmaId, e.DisciplinaId, e.SubDisciplinaId }, "UX_Atribuicao_Ativa")
+                .IsUnique()
+                .HasFilter("[Ativo] = 1");
+
+            entity.HasIndex(e => new { e.ProfessorId, e.Ativo }, "IX_Atribuicao_Professor");
+        });
+
+        modelBuilder.Entity<Avaliacao>(entity =>
+        {
+            entity.HasIndex(e => new { e.TurmaId, e.DisciplinaId, e.Bimestre }, "IX_Avaliacao_Turma_Disciplina_Bimestre");
         });
 
         modelBuilder.Entity<Contato>(entity =>
@@ -94,44 +115,28 @@ public partial class AppDbContext : DbContext
         {
             entity.HasKey(e => e.Id).HasName("PK__Matricul__3214EC07702D739C");
 
-            entity.HasOne(d => d.Aluno)
-                .WithMany(p => p.Matriculas)
-                .HasConstraintName("FK__Matricula__Aluno__49C3F6B7");
-
-            entity.HasOne(d => d.Turma)
-                .WithMany(p => p.Matriculas)
-                .HasConstraintName("FK__Matricula__Turma__4AB81AF0");
+            entity.HasIndex(e => new { e.TurmaId, e.AlunoId }, "UX_Matricula_Turma_Aluno").IsUnique();
         });
 
-        modelBuilder.Entity<Notum>(entity =>
+        modelBuilder.Entity<Nota>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK__Nota__3214EC07A7A801C1");
 
-            entity.HasOne(d => d.Aluno)
-                .WithMany(p => p.Nota)
-                .HasConstraintName("FK__Nota__AlunoId__4D94879B");
-
-            entity.HasOne(d => d.Disciplina)
-                .WithMany(p => p.Nota)
-                .HasConstraintName("FK__Nota__Disciplina__4E88ABD4");
+            entity.HasIndex(e => new { e.AvaliacaoId, e.AlunoId }, "UX_Nota_Avaliacao_Aluno").IsUnique();
         });
 
         modelBuilder.Entity<Presenca>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK__Presenca__3214EC074F832E32");
 
-            entity.HasOne(d => d.Aluno)
-                .WithMany(p => p.Presencas)
-                .HasConstraintName("FK__Presenca__AlunoI__5165187F");
-
-            entity.HasOne(d => d.Disciplina)
-                .WithMany(p => p.Presencas)
-                .HasConstraintName("FK__Presenca__Discip__52593CB8");
+            entity.HasIndex(e => new { e.TurmaId, e.DisciplinaId, e.Data, e.AlunoId }, "UX_Presenca_Aula_Aluno").IsUnique();
         });
 
         modelBuilder.Entity<Professor>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK__Professo__3214EC07B5375209");
+
+            entity.HasIndex(e => e.FuncionarioId, "UX_Professor_Funcionario").IsUnique();
 
             entity.HasOne(d => d.Funcionario)
                 .WithOne(p => p.Professor)
@@ -157,45 +162,6 @@ public partial class AppDbContext : DbContext
         modelBuilder.Entity<Usuario>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK__Usuario__3214EC077A86FEDD");
-        });
-
-        modelBuilder.Entity<ProfessorSubDisciplina>(entity =>
-        {
-            entity.HasKey(e => e.Id);
-
-            entity.HasOne(d => d.Professor)
-                .WithMany(p => p.ProfessorSubDisciplinas)
-                .HasForeignKey(d => d.ProfessorId);
-
-            entity.HasOne(d => d.SubDisciplina)
-                .WithMany()
-                .HasForeignKey(d => d.SubDisciplinaId);
-        });
-
-        modelBuilder.Entity<ProfessorTurma>(entity =>
-        {
-            entity.HasKey(e => e.Id);
-
-            entity.HasOne(d => d.Professor)
-                .WithMany(p => p.ProfessorTurmas)
-                .HasForeignKey(d => d.ProfessorId);
-
-            entity.HasOne(d => d.Turma)
-                .WithMany(t => t.ProfessorTurmas)
-                .HasForeignKey(d => d.TurmaId);
-        });
-
-        modelBuilder.Entity<Avaliacao>(entity =>
-        {
-            entity.HasKey(e => e.Id);
-
-            entity.HasOne(d => d.Disciplina)
-                .WithMany(p => p.Avaliacoes)
-                .HasForeignKey(d => d.DisciplinaId);
-
-            entity.HasOne(x => x.SubDisciplina)
-                .WithMany(x => x.Avaliacoes)
-                .HasForeignKey(x => x.SubDisciplinaId);
         });
 
         OnModelCreatingPartial(modelBuilder);

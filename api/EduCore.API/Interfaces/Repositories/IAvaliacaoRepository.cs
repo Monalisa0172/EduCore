@@ -1,16 +1,21 @@
 ﻿using EduCore.API.DTOs.Response;
 using EduCore.API.Entities;
-using EduCore.API.Enums;
 
 namespace EduCore.API.Interfaces.Repositories;
 
 public interface IAvaliacaoRepository
 {
-    Task<List<AvaliacaoResponseDTO>> GetAllAsync();
+    /// <summary>Lista com nomes resolvidos; filtros nulos são ignorados.</summary>
+    Task<List<AvaliacaoResponseDTO>> ListarAsync(int? turmaId, int? disciplinaId, int? bimestre, bool? ativo);
+
     Task<AvaliacaoResponseDTO?> GetByIdAsync(int id);
-    Task<List<AvaliacaoResponseDTO>> GetByDisciplinaAsync(int disciplinaId);
+
     Task<Avaliacao?> GetEntityByIdAsync(int id);
+
+    /// <summary>Soma dos pesos das avaliações ativas de turma + disciplina + bimestre.</summary>
+    Task<decimal> GetPesoTotalAsync(int turmaId, int disciplinaId, int bimestre, int? avaliacaoIgnoradaId = null);
+
     Task AddAsync(Avaliacao avaliacao);
-    Task UpdateAsync(Avaliacao avaliacao);
-    Task<decimal> GetPesoTotalByDisciplinaEBimestreAsync(int disciplinaId, BimestreEnum bimestre, int? avaliacaoIgnoradaId = null);
+
+    Task SalvarAsync();
 }

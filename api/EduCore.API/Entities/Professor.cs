@@ -20,15 +20,6 @@ public partial class Professor
     [InverseProperty("Professor")]
     public virtual Funcionario Funcionario { get; set; } = null!;
 
-    [InverseProperty("Professor")]
-    public virtual ICollection<ProfessorSubDisciplina>
-        ProfessorSubDisciplinas
-    { get; set; }
-            = new List<ProfessorSubDisciplina>();
-
-    [InverseProperty("Professor")]
-    public virtual ICollection<ProfessorTurma>
-        ProfessorTurmas
-    { get; set; }
-            = new List<ProfessorTurma>();
+    [InverseProperty(nameof(Atribuicao.Professor))]
+    public virtual ICollection<Atribuicao> Atribuicoes { get; set; } = new List<Atribuicao>();
 }

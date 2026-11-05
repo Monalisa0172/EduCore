@@ -1,8 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using Microsoft.EntityFrameworkCore;
 
 namespace EduCore.API.Entities;
 
@@ -14,13 +11,13 @@ public partial class Aluno
 
     public int? UsuarioId { get; set; }
 
-    [InverseProperty("Aluno")]
+    [InverseProperty(nameof(Matricula.Aluno))]
     public virtual ICollection<Matricula> Matriculas { get; set; } = new List<Matricula>();
 
-    [InverseProperty("Aluno")]
-    public virtual ICollection<Notum> Nota { get; set; } = new List<Notum>();
+    [InverseProperty(nameof(Nota.Aluno))]
+    public virtual ICollection<Nota> Notas { get; set; } = new List<Nota>();
 
-    [InverseProperty("Aluno")]
+    [InverseProperty(nameof(Presenca.Aluno))]
     public virtual ICollection<Presenca> Presencas { get; set; } = new List<Presenca>();
 
     [ForeignKey("UsuarioId")]
