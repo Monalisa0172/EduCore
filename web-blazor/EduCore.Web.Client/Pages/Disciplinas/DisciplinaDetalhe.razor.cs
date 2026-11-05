@@ -146,7 +146,13 @@ public partial class DisciplinaDetalhe : IDisposable
 
     // ---------- Disciplina ----------
 
+    private static readonly IReadOnlyList<ItemTrilha> TrilhaBase =
+        [ItemTrilha.Inicio, new("Disciplinas", "disciplinas"), new("Disciplina")];
+
     private Task EditarDisciplinaAsync() => _formDisciplina.AbrirEdicaoAsync(_disciplina!);
+
+    // Abre a edicao ja destacando os campos que faltam (codigo e carga horaria).
+    private Task CompletarCadastroAsync() => _formDisciplina.AbrirEdicaoAsync(_disciplina!, destacarPendencias: true);
 
     private void AoSalvarDisciplina(DisciplinaSalva salva)
     {

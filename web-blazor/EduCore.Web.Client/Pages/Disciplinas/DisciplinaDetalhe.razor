@@ -17,7 +17,7 @@
             }
             else if (_erroDisciplina is { Kind: ApiErrorKind.NotFound })
             {
-                <PageHeader Titulo="Disciplina não encontrada" VoltarHref="disciplinas" VoltarTexto="Disciplinas" />
+                <PageHeader Titulo="Disciplina não encontrada" Trilha="TrilhaBase" />
                 <section class="secao-card">
                     <EmptyState Titulo="Esta disciplina não existe"
                                 Descricao="O endereço pode estar incorreto. Volte para a lista e escolha uma disciplina."
@@ -28,7 +28,7 @@
             }
             else if (_erroDisciplina is not null)
             {
-                <PageHeader Titulo="Disciplina" VoltarHref="disciplinas" VoltarTexto="Disciplinas" />
+                <PageHeader Titulo="Disciplina" Trilha="TrilhaBase" />
                 <FluentMessageBar Intent="MessageBarIntent.Error" Title="@_erroDisciplina.Title" AllowDismiss="false">
                     <ChildContent>@_erroDisciplina.Message</ChildContent>
                     <ActionsTemplate>
@@ -42,16 +42,18 @@
                             Secao="Acadêmico · Disciplina"
                             Icone="@(new Icons.Regular.Size24.BookOpen())"
                             Descricao="@disciplina.Descricao"
-                            VoltarHref="disciplinas"
-                            VoltarTexto="Disciplinas">
+                            Trilha="@([ItemTrilha.Inicio, new("Disciplinas", "disciplinas"), new(disciplina.Nome)])">
                     <Selo>
                         <StatusBadge Ativo="disciplina.Ativo" />
                         @if (disciplina.Incompleta)
                         {
-                            <span class="chip-atencao" title="Clique em Editar para informar código e carga horária.">
+                            <button type="button"
+                                    class="chip-atencao chip-acao"
+                                    title="Informar o código e a carga horária que faltam"
+                                    @onclick="CompletarCadastroAsync">
                                 <FluentIcon Value="@(new Icons.Filled.Size12.Warning())" Color="Color.Custom" CustomColor="currentColor" aria-hidden="true" />
-                                Cadastro incompleto
-                            </span>
+                                Cadastro incompleto · Completar
+                            </button>
                         }
                     </Selo>
                     <Detalhes>

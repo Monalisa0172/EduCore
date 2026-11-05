@@ -1,12 +1,29 @@
-@* Cabecalho padrao das paginas: link de volta (opcional), titulo, descricao e acoes. *@
+@* Cabecalho padrao das paginas: trilha de navegacao, titulo, descricao e acoes. *@
 <header class="page-header">
-    @if (!string.IsNullOrWhiteSpace(VoltarHref))
+    @if (Trilha is { Count: > 0 })
     {
-        <nav aria-label="Navegação da página" class="page-header-nav">
-            <a class="page-header-voltar" href="@VoltarHref">
-                <FluentIcon Value="@(new Icons.Regular.Size20.ArrowLeft())" Color="Color.Custom" CustomColor="currentColor" aria-hidden="true" />
-                @VoltarTexto
-            </a>
+        <nav aria-label="Trilha de navegação">
+            <ol class="trilha">
+                @foreach (var item in Trilha)
+                {
+                    <li>
+                        @if (item.Href is not null)
+                        {
+                            <a href="@item.Href">
+                                @if (ReferenceEquals(item, ItemTrilha.Inicio))
+                                {
+                                    <FluentIcon Value="@(new Icons.Regular.Size16.Home())" Color="Color.Custom" CustomColor="currentColor" aria-hidden="true" />
+                                }
+                                @item.Texto
+                            </a>
+                        }
+                        else
+                        {
+                            <span aria-current="page">@item.Texto</span>
+                        }
+                    </li>
+                }
+            </ol>
         </nav>
     }
 
@@ -68,9 +85,9 @@
     [Parameter]
     public RenderFragment? Acoes { get; set; }
 
+    /// <summary>
+    /// Caminho até a página (ex.: Início › Disciplinas › Ciências). O último item, sem Href, é a página atual.
+    /// </summary>
     [Parameter]
-    public string? VoltarHref { get; set; }
-
-    [Parameter]
-    public string VoltarTexto { get; set; } = "Voltar";
+    public IReadOnlyList<ItemTrilha>? Trilha { get; set; }
 }

@@ -1,4 +1,10 @@
+/* Cards lado a lado com a mesma altura, mesmo quando um deles tem botao de acao */
+.kpi {
+    height: 100%;
+}
+
 .kpi ::deep .kpi-card {
+    height: 100%;
     display: flex;
     align-items: center;
     gap: 16px;
@@ -40,6 +46,14 @@
     font-weight: var(--fontWeightSemibold, 600);
     color: var(--colorNeutralForeground1);
 }
+
+.kpi-acao {
+    margin-top: 6px;
+}
+
+    .kpi-acao:empty {
+        display: none;
+    }
 
 .kpi-descricao {
     font-size: var(--fontSizeBase200, 12px);

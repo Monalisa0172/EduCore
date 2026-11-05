@@ -15,6 +15,8 @@ public partial class ListaDisciplinas : IDisposable
 
     private static readonly CompareInfo Comparador = CultureInfo.InvariantCulture.CompareInfo;
 
+    private static readonly IReadOnlyList<ItemTrilha> Trilha = [ItemTrilha.Inicio, new("Disciplinas")];
+
     private static readonly IReadOnlyList<OpcaoSeletor<FiltroStatus>> OpcoesFiltro =
     [
         new(FiltroStatus.Ativos, "Ativas"),
@@ -36,6 +38,9 @@ public partial class ListaDisciplinas : IDisposable
     private bool _carregando = true;
     private FiltroStatus _filtro = FiltroStatus.Ativos;
     private string _busca = string.Empty;
+
+    // Atalho do card "Cadastros incompletos": lista so as pendencias ate o usuario sair ou resolver todas.
+    private bool _somenteIncompletas;
 
     private FluentDataGrid<DisciplinaItem>? _grid;
     private DisciplinaFormDialog _formulario = default!;
@@ -142,6 +147,7 @@ public partial class ListaDisciplinas : IDisposable
 
         _itensVisiveis = _disciplinas
             .Where(d => _filtro.Aceita(d.Ativo))
+            .Where(d => !_somenteIncompletas || d.Incompleta)
             .Where(d => termo.Length == 0 || Contem(d.Nome, termo) || Contem(d.Codigo, termo))
             .ToList()
             .AsQueryable();
@@ -173,6 +179,29 @@ public partial class ListaDisciplinas : IDisposable
 
     private void Abrir(DisciplinaItem disciplina) => Navigation.NavigateTo($"disciplinas/{disciplina.Id}");
 
+    private Task AoAlterarFiltroAsync()
+    {
+        // Escolher outro status sai do atalho de pendencias.
+        _somenteIncompletas = false;
+        return AplicarFiltrosAsync();
+    }
+
+    private Task MostrarIncompletasAsync()
+    {
+        _somenteIncompletas = true;
+        _filtro = FiltroStatus.Ativos;
+        _busca = string.Empty;
+        return AplicarFiltrosAsync();
+    }
+
+    private Task MostrarTodasAsync()
+    {
+        _somenteIncompletas = false;
+        return AplicarFiltrosAsync();
+    }
+
+    private Task CompletarAsync(DisciplinaItem disciplina) => _formulario.AbrirEdicaoAsync(disciplina, destacarPendencias: true);
+
     private Task NovaAsync() => _formulario.AbrirNovaAsync();
 
     private Task EditarAsync(DisciplinaItem disciplina) => _formulario.AbrirEdicaoAsync(disciplina);
@@ -181,6 +210,14 @@ public partial class ListaDisciplinas : IDisposable
     {
         var disciplina = salva.Disciplina;
         await SubstituirNaListaAsync(disciplina);
+
+        // Resolveu a ultima pendencia: volta para a lista completa e confirma.
+        if (_somenteIncompletas && QuantidadeIncompletas == 0)
+        {
+            await MostrarTodasAsync();
+            MostrarAviso(new AvisoPagina("Tudo em dia", "Todas as disciplinas ativas estão com código e carga horária."));
+            return;
+        }
 
         MostrarAviso(salva.Nova
             ? new AvisoPagina("Disciplina cadastrada", $"{disciplina.Nome} ({disciplina.Codigo}) foi cadastrada. Abra a disciplina para adicionar subdisciplinas.")

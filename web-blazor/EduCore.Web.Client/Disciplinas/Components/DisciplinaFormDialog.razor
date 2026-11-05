@@ -4,8 +4,9 @@
 @* Cadastro e edicao de disciplina em dialogo. Campos com Immediate: o valor chega ao modelo a cada tecla,
    entao clicar direto em "Salvar" nunca envia o valor antigo. *@
 <FormDialog @ref="_moldura"
-            Titulo="@(_modelo.Edicao ? "Editar disciplina" : "Nova disciplina")"
+            Titulo="@(_destacarPendencias ? "Completar cadastro" : _modelo.Edicao ? "Editar disciplina" : "Nova disciplina")"
             Descricao="Campos com * são obrigatórios."
+            Aviso="@(_destacarPendencias ? TextoPendencias : null)"
             EditContext="_editContext"
             NomeFormulario="disciplina"
             TextoSalvar="@(_modelo.Edicao ? "Salvar alterações" : "Cadastrar disciplina")"
@@ -64,6 +65,7 @@
     private ValidationMessageStore _mensagensServidor = default!;
     private ApiError? _erro;
     private bool _salvando;
+    private bool _destacarPendencias;
 
     /// <summary>Disparado depois que a API confirmou a gravação.</summary>
     [Parameter]
@@ -71,18 +73,50 @@
 
     protected override void OnInitialized() => Preparar(_modelo);
 
-    public Task AbrirNovaAsync() => AbrirAsync(DisciplinaFormModel.Nova());
+    public Task AbrirNovaAsync() => AbrirAsync(DisciplinaFormModel.Nova(), destacarPendencias: false);
 
-    public Task AbrirEdicaoAsync(DisciplinaItem disciplina) => AbrirAsync(DisciplinaFormModel.De(disciplina));
+    /// <param name="destacarPendencias">
+    /// Abre já validado: os campos obrigatórios vazios (ex.: código de disciplinas antigas) aparecem em vermelho.
+    /// </param>
+    public Task AbrirEdicaoAsync(DisciplinaItem disciplina, bool destacarPendencias = false)
+        => AbrirAsync(DisciplinaFormModel.De(disciplina), destacarPendencias);
 
-    private async Task AbrirAsync(DisciplinaFormModel modelo)
+    private async Task AbrirAsync(DisciplinaFormModel modelo, bool destacarPendencias)
     {
         Preparar(modelo);
+        _destacarPendencias = destacarPendencias;
         StateHasChanged();
 
         // Deixa o dialogo renderizar com o modelo novo antes de abrir.
         await Task.Yield();
         await _moldura.AbrirAsync();
+
+        if (destacarPendencias)
+        {
+            _editContext.Validate();
+            StateHasChanged();
+        }
+    }
+
+    private string TextoPendencias
+    {
+        get
+        {
+            var faltando = new List<string>();
+            if (string.IsNullOrWhiteSpace(_modelo.Codigo))
+            {
+                faltando.Add("o código");
+            }
+
+            if (_modelo.CargaHoraria is not > 0)
+            {
+                faltando.Add("a carga horária");
+            }
+
+            return faltando.Count == 0
+                ? "O cadastro já está completo. Revise e salve."
+                : $"Esta disciplina foi cadastrada sem {string.Join(" e ", faltando)}. Preencha os campos destacados e salve.";
+        }
     }
 
     private void Preparar(DisciplinaFormModel modelo)

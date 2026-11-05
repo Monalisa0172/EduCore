@@ -4,36 +4,78 @@
     gap: 8px;
 }
 
-.page-header-voltar {
-    display: inline-flex;
+/* ---------- Trilha de navegacao (breadcrumb) ---------- */
+.trilha {
+    display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
     font-size: var(--fontSizeBase300, 14px);
-    color: var(--educore-primary-text);
-    text-decoration: none;
 }
 
-    .page-header-voltar:hover {
-        text-decoration: underline;
+    .trilha li {
+        display: inline-flex;
+        align-items: center;
+        min-width: 0;
     }
 
-    .page-header-voltar:focus-visible {
-        outline: 2px solid var(--colorStrokeFocus2);
-        outline-offset: 2px;
-        border-radius: 4px;
+        /* Separador entre niveis */
+        .trilha li + li::before {
+            content: "›";
+            margin: 0 8px;
+            color: var(--colorNeutralForeground3);
+        }
+
+    .trilha a {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        color: var(--educore-primary-text);
+        text-decoration: none;
     }
+
+        .trilha a:hover {
+            text-decoration: underline;
+        }
+
+        .trilha a:focus-visible {
+            outline: 2px solid var(--colorStrokeFocus2);
+            outline-offset: 2px;
+            border-radius: 4px;
+        }
+
+    .trilha [aria-current="page"] {
+        overflow: hidden;
+        max-width: 280px;
+        color: var(--colorNeutralForeground3);
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+/* Celular: so o nivel anterior, como "voltar" */
+@media (max-width: 600px) {
+    .trilha li {
+        display: none;
+    }
+
+        .trilha li:nth-last-child(2) {
+            display: inline-flex;
+        }
+
+            .trilha li:nth-last-child(2)::before {
+                content: "←";
+                margin: 0 6px 0 0;
+                color: var(--educore-primary-text);
+            }
+}
 
 .page-header-linha {
     display: flex;
     flex-wrap: wrap;
     align-items: flex-end;
     gap: 16px;
-}
-
-@media (max-width: 600px) {
-    .page-header-icone {
-        display: none;
-    }
 }
 
 .page-header-textos {
@@ -94,4 +136,11 @@
     margin-inline-start: auto;
     flex-wrap: wrap;
     gap: 8px;
+}
+
+/* Celular: sem o quadro do icone (fica no fim para vencer a regra base) */
+@media (max-width: 600px) {
+    .page-header-icone {
+        display: none;
+    }
 }

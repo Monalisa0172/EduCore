@@ -9,6 +9,7 @@
             <PageHeader Titulo="Disciplinas"
                         Secao="Acadêmico"
                         Icone="@(new Icons.Regular.Size24.BookOpen())"
+                        Trilha="Trilha"
                         Descricao="Cadastre as disciplinas da escola e organize as subdisciplinas de cada uma.">
                 <Acoes>
                     <FluentButton Appearance="ButtonAppearance.Primary"
@@ -42,9 +43,22 @@
                              Descricao="Somadas nas disciplinas ativas"
                              Secondary="true" />
                     <KpiCard Label="Cadastros incompletos"
-                             Icon="@(new Icons.Regular.Size24.DocumentError())"
+                             Icon="@(QuantidadeIncompletas > 0 ? new Icons.Regular.Size24.DocumentError() : new Icons.Regular.Size24.DocumentCheckmark())"
                              Value="@(_carregando ? null : QuantidadeIncompletas)"
-                             Descricao="Sem código ou carga horária" />
+                             Descricao="@(QuantidadeIncompletas > 0 ? "Sem código ou carga horária" : "Tudo em dia")"
+                             Secondary="@(QuantidadeIncompletas > 0)">
+                        <Acao>
+                            @if (!_carregando && QuantidadeIncompletas > 0 && !_somenteIncompletas)
+                            {
+                                <FluentButton Appearance="ButtonAppearance.Subtle"
+                                              Size="ButtonSize.Small"
+                                              IconEnd="@(new Icons.Regular.Size16.ArrowRight())"
+                                              OnClick="MostrarIncompletasAsync">
+                                    Ver e corrigir
+                                </FluentButton>
+                            }
+                        </Acao>
+                    </KpiCard>
                 </section>
             }
 
@@ -61,7 +75,7 @@
                                        Rotulo="Exibir"
                                        Opcoes="OpcoesFiltro"
                                        @bind-Valor="_filtro"
-                                       @bind-Valor:after="AplicarFiltrosAsync" />
+                                       @bind-Valor:after="AoAlterarFiltroAsync" />
 
                     <FluentTextInput Id="busca-disciplinas"
                                      Label="Buscar"
@@ -78,6 +92,16 @@
                         </StartTemplate>
                     </FluentTextInput>
                 </div>
+
+                @if (_somenteIncompletas)
+                {
+                    <FluentMessageBar Intent="MessageBarIntent.Warning" Title="Cadastros incompletos" AllowDismiss="false">
+                        <ChildContent>Mostrando só as disciplinas sem código ou carga horária. Clique em "Completar" em cada linha.</ChildContent>
+                        <ActionsTemplate>
+                            <FluentButton Appearance="ButtonAppearance.Default" OnClick="MostrarTodasAsync">Mostrar todas</FluentButton>
+                        </ActionsTemplate>
+                    </FluentMessageBar>
+                }
 
                 @if (_erroLista is not null)
                 {
@@ -113,10 +137,13 @@
                                             <span class="disciplina-codigo @(context.TemCodigo ? null : "disciplina-codigo--vazio")">@context.CodigoTexto</span>
                                             @if (context.Incompleta)
                                             {
-                                                <span class="chip-atencao" title="Edite a disciplina para informar código e carga horária.">
+                                                <button type="button"
+                                                        class="chip-atencao chip-acao"
+                                                        title="@($"Informar o que falta em {context.Nome}")"
+                                                        @onclick="@(() => CompletarAsync(context))">
                                                     <FluentIcon Value="@(new Icons.Filled.Size12.Warning())" Color="Color.Custom" CustomColor="currentColor" aria-hidden="true" />
-                                                    Incompleta
-                                                </span>
+                                                    Incompleta · Completar
+                                                </button>
                                             }
                                         </span>
                                     </div>

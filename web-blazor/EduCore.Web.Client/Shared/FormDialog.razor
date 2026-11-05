@@ -13,6 +13,11 @@
                     <p class="form-dialog-descricao">@Descricao</p>
                 }
 
+                @if (!string.IsNullOrWhiteSpace(Aviso))
+                {
+                    <FluentMessageBar Intent="MessageBarIntent.Warning" AllowDismiss="false">@Aviso</FluentMessageBar>
+                }
+
                 @ChildContent
 
                 @if (Erro is not null)
@@ -48,6 +53,10 @@
 
     [Parameter]
     public string? Descricao { get; set; }
+
+    /// <summary>Orientação em destaque no topo do formulário (ex.: o que falta preencher).</summary>
+    [Parameter]
+    public string? Aviso { get; set; }
 
     [Parameter, EditorRequired]
     public EditContext EditContext { get; set; } = default!;

@@ -6,6 +6,7 @@
 <AuthorizeView Roles="@Roles.Admin">
     <Authorized>
         <UsuarioPagina Titulo="Novo usuário"
+                       Icone="@(new Icons.Regular.Size24.PersonAdd())"
                        Descricao="Cadastre um aluno ou professor. Campos com * são obrigatórios.">
             <UsuarioForm Model="_modelo"
                          OnSalvar="CriarAsync"

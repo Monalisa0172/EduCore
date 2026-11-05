@@ -21,6 +21,10 @@
         {
             <span class="kpi-descricao">@Descricao</span>
         }
+        @if (Acao is not null)
+        {
+            <div class="kpi-acao">@Acao</div>
+        }
     </div>
 </FluentCard>
 </div>
@@ -41,6 +45,10 @@
     /// <summary>Texto curto abaixo do valor (ex.: o que o número significa).</summary>
     [Parameter]
     public string? Descricao { get; set; }
+
+    /// <summary>O que fazer com o indicador (ex.: botão "Ver e corrigir" quando há pendências).</summary>
+    [Parameter]
+    public RenderFragment? Acao { get; set; }
 
     /// <summary>Usa a cor secundária da marca (âmbar) no ícone.</summary>
     [Parameter]
