@@ -1,0 +1,334 @@
+@implements IDisposable
+@inject IAtribuicaoApiClient AtribuicaoApi
+@inject ISubDisciplinaApiClient SubDisciplinaApi
+
+@* Atribuir professor a uma disciplina da turma (inteira ou por subdisciplina), ou trocar o professor de uma atribuicao.
+   O dialogo antecipa as regras da API: mostra quem ja leciona e so oferece o que esta livre. *@
+<FormDialog @ref="_moldura"
+            Titulo="@(_troca is null ? "Atribuir professor" : "Trocar professor")"
+            Descricao="@Descricao"
+            Aviso="@Aviso"
+            EditContext="_editContext"
+            NomeFormulario="atribuicao"
+            TextoSalvar="@(_troca is null ? "Atribuir" : "Trocar professor")"
+            Salvando="_salvando"
+            Erro="_erro"
+            OnSalvar="SalvarAsync">
+    <div class="atribuicao-campos">
+        @if (_troca is { } troca)
+        {
+            <div class="atribuicao-resumo">
+                <span class="atribuicao-resumo-rotulo">Lecionando agora</span>
+                <span class="atribuicao-resumo-valor">@troca.ItemTexto · @troca.ProfessorNome</span>
+            </div>
+        }
+        else
+        {
+            <FluentSelect TOption="DisciplinaItem"
+                          TValue="int?"
+                          Id="atribuicao-disciplina"
+                          Label="Disciplina"
+                          Placeholder="Selecione a disciplina"
+                          Items="Disciplinas"
+                          OptionText="@(d => d.TemCodigo ? $"{d.Nome} ({d.Codigo})" : d.Nome)"
+                          OptionValue="@(d => d.Id)"
+                          @bind-Value="_modelo.DisciplinaId"
+                          @bind-Value:after="AoTrocarDisciplinaAsync"
+                          Required="true"
+                          Width="100%" />
+
+            @if (DisciplinaSelecionada is not null && AtribuicaoInteira is null)
+            {
+                @if (Dividida)
+                {
+                    <p class="atribuicao-dica">
+                        Dividida nesta turma: @string.Join(", ", AtribuicoesDaDisciplina.Select(a => $"{a.SubDisciplinaNome} ({a.ProfessorNome})")).
+                    </p>
+                }
+                else if (_subDisciplinas is { Count: > 0 })
+                {
+                    <SeletorSegmentado TValor="bool"
+                                       Rotulo="Como será lecionada"
+                                       Opcoes="Modos"
+                                       Valor="_modelo.PorSubDisciplina"
+                                       ValorChanged="AoTrocarModo" />
+                }
+
+                @if (_modelo.PorSubDisciplina)
+                {
+                    @if (_subDisciplinas is null)
+                    {
+                        <FluentSkeleton Height="32px" Shimmer="true" />
+                    }
+                    else if (SubDisciplinasLivres.Count == 0)
+                    {
+                        <p class="atribuicao-dica">Todas as subdisciplinas de @DisciplinaSelecionada.Nome já têm professor nesta turma.</p>
+                    }
+                    else
+                    {
+                        <FluentSelect TOption="SubDisciplinaItem"
+                                      TValue="int?"
+                                      Id="atribuicao-subdisciplina"
+                                      Label="Subdisciplina"
+                                      Placeholder="Selecione a subdisciplina"
+                                      Items="SubDisciplinasLivres"
+                                      OptionText="@(s => s.Nome)"
+                                      OptionValue="@(s => s.Id)"
+                                      @bind-Value="_modelo.SubDisciplinaId"
+                                      Required="true"
+                                      Width="100%" />
+                    }
+                }
+            }
+        }
+
+        @if (_erroProfessores is not null)
+        {
+            <FluentMessageBar Intent="MessageBarIntent.Error" Title="@_erroProfessores.Title" AllowDismiss="false">
+                <ChildContent>@_erroProfessores.Message</ChildContent>
+                <ActionsTemplate>
+                    <FluentButton Appearance="ButtonAppearance.Default" OnClick="CarregarProfessoresAsync">Tentar novamente</FluentButton>
+                </ActionsTemplate>
+            </FluentMessageBar>
+        }
+        else if (_professores is null)
+        {
+            <FluentSkeleton Height="32px" Shimmer="true" />
+        }
+        else if (AtribuicaoInteira is null)
+        {
+            <FluentSelect TOption="ProfessorOpcao"
+                          TValue="int?"
+                          Id="atribuicao-professor"
+                          Label="@(_troca is null ? "Professor" : "Novo professor")"
+                          Placeholder="Selecione o professor"
+                          Items="ProfessoresDisponiveis"
+                          OptionText="@(p => p.Texto)"
+                          OptionValue="@(p => p.Id)"
+                          @bind-Value="_modelo.ProfessorId"
+                          Required="true"
+                          Width="100%" />
+        }
+    </div>
+</FormDialog>
+
+@code {
+    private static readonly IReadOnlyList<OpcaoSeletor<bool>> Modos =
+        [new(false, "Disciplina inteira"), new(true, "Por subdisciplina")];
+
+    private readonly CancellationTokenSource _cts = new();
+
+    private FormDialog _moldura = default!;
+    private AtribuicaoFormModel _modelo = new();
+    private EditContext _editContext = default!;
+    private ValidationMessageStore _mensagensServidor = default!;
+    private AtribuicaoItem? _troca;
+    private List<ProfessorOpcao>? _professores;
+    private ApiError? _erroProfessores;
+    private List<SubDisciplinaItem>? _subDisciplinas;
+    private ApiError? _erro;
+    private bool _salvando;
+
+    [Parameter, EditorRequired]
+    public int TurmaId { get; set; }
+
+    [Parameter, EditorRequired]
+    public string TurmaNome { get; set; } = string.Empty;
+
+    /// <summary>Disciplinas ativas (opções do formulário).</summary>
+    [Parameter, EditorRequired]
+    public IReadOnlyList<DisciplinaItem> Disciplinas { get; set; } = [];
+
+    /// <summary>Atribuições ativas da turma: o diálogo mostra quem já leciona e oferece só o que está livre.</summary>
+    [Parameter, EditorRequired]
+    public IReadOnlyList<AtribuicaoItem> Atribuicoes { get; set; } = [];
+
+    [Parameter]
+    public EventCallback<AtribuicaoSalva> OnSalva { get; set; }
+
+    private DisciplinaItem? DisciplinaSelecionada => Disciplinas.FirstOrDefault(d => d.Id == _modelo.DisciplinaId);
+
+    private IReadOnlyList<AtribuicaoItem> AtribuicoesDaDisciplina
+        => Atribuicoes.Where(a => a.DisciplinaId == _modelo.DisciplinaId).ToList();
+
+    private AtribuicaoItem? AtribuicaoInteira => _troca is null ? AtribuicoesDaDisciplina.FirstOrDefault(a => a.DisciplinaInteira) : null;
+
+    private bool Dividida => AtribuicoesDaDisciplina.Any(a => !a.DisciplinaInteira);
+
+    private IReadOnlyList<SubDisciplinaItem> SubDisciplinasLivres
+    {
+        get
+        {
+            var ocupadas = AtribuicoesDaDisciplina.Select(a => a.SubDisciplinaId).ToHashSet();
+            return (_subDisciplinas ?? []).Where(s => !ocupadas.Contains(s.Id)).ToList();
+        }
+    }
+
+    private IReadOnlyList<ProfessorOpcao> ProfessoresDisponiveis
+        => (_professores ?? []).Where(p => p.Id != _troca?.ProfessorId).ToList();
+
+    private string Descricao => _troca is null
+        ? $"Turma {TurmaNome}. Cada disciplina tem um professor, ou é dividida entre professores por subdisciplina."
+        : "Avaliações, notas e chamadas já lançadas continuam na turma; o novo professor passa a vê-las.";
+
+    private string? Aviso => AtribuicaoInteira is { } inteira
+        ? $"{inteira.DisciplinaNome} já é lecionada por {inteira.ProfessorNome} nesta turma. Para substituir, use \"Trocar professor\" na lista."
+        : null;
+
+    protected override void OnInitialized() => Preparar(new AtribuicaoFormModel());
+
+    /// <summary>Nova atribuição; com <paramref name="disciplinaId"/>, a disciplina já vem escolhida.</summary>
+    public async Task AbrirNovaAsync(int? disciplinaId = null)
+    {
+        _troca = null;
+        Preparar(new AtribuicaoFormModel { DisciplinaId = disciplinaId });
+        await AbrirAsync();
+
+        if (disciplinaId is not null)
+        {
+            await AoTrocarDisciplinaAsync();
+        }
+    }
+
+    public async Task AbrirTrocaAsync(AtribuicaoItem atribuicao)
+    {
+        _troca = atribuicao;
+        Preparar(new AtribuicaoFormModel
+        {
+            DisciplinaId = atribuicao.DisciplinaId,
+            PorSubDisciplina = !atribuicao.DisciplinaInteira,
+            SubDisciplinaId = atribuicao.SubDisciplinaId
+        });
+        await AbrirAsync();
+    }
+
+    private async Task AbrirAsync()
+    {
+        StateHasChanged();
+        await Task.Yield();
+        await _moldura.AbrirAsync();
+
+        if (_professores is null)
+        {
+            await CarregarProfessoresAsync();
+        }
+    }
+
+    private void Preparar(AtribuicaoFormModel modelo)
+    {
+        if (_editContext is not null)
+        {
+            _editContext.OnFieldChanged -= AoAlterarCampo;
+        }
+
+        _modelo = modelo;
+        _erro = null;
+        _subDisciplinas = null;
+        _editContext = new EditContext(modelo);
+        _mensagensServidor = new ValidationMessageStore(_editContext);
+        _editContext.OnFieldChanged += AoAlterarCampo;
+    }
+
+    private void AoAlterarCampo(object? sender, FieldChangedEventArgs e) => _mensagensServidor.Clear(e.FieldIdentifier);
+
+    private async Task CarregarProfessoresAsync()
+    {
+        _erroProfessores = null;
+        _professores = null;
+        StateHasChanged();
+
+        var resultado = await AtribuicaoApi.ListarProfessoresAtivosAsync(_cts.Token);
+
+        if (resultado.Succeeded)
+        {
+            _professores = [.. resultado.Value!];
+        }
+        else
+        {
+            _erroProfessores = resultado.Error;
+        }
+
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Nova disciplina: limpa a subdisciplina, carrega as subdisciplinas dela e escolhe o modo:
+    /// já dividida na turma = por subdisciplina; caso contrário, disciplina inteira.
+    /// </summary>
+    private async Task AoTrocarDisciplinaAsync()
+    {
+        _modelo.SubDisciplinaId = null;
+        _modelo.PorSubDisciplina = Dividida;
+        _subDisciplinas = null;
+        _mensagensServidor.Clear();
+
+        if (_modelo.DisciplinaId is not { } disciplinaId)
+        {
+            return;
+        }
+
+        StateHasChanged();
+
+        var resultado = await SubDisciplinaApi.ListarPorDisciplinaAsync(disciplinaId, _cts.Token);
+
+        // O usuario pode ter trocado de disciplina enquanto carregava.
+        if (_modelo.DisciplinaId != disciplinaId)
+        {
+            return;
+        }
+
+        _subDisciplinas = resultado.Succeeded
+            ? resultado.Value!.Where(s => s.Ativo).OrderBy(s => s.Nome, StringComparer.CurrentCulture).ToList()
+            : [];
+
+        StateHasChanged();
+    }
+
+    private void AoTrocarModo(bool porSubDisciplina)
+    {
+        _modelo.PorSubDisciplina = porSubDisciplina;
+        _modelo.SubDisciplinaId = null;
+        _editContext.NotifyFieldChanged(_editContext.Field(nameof(AtribuicaoFormModel.SubDisciplinaId)));
+    }
+
+    private async Task SalvarAsync()
+    {
+        if (_salvando)
+        {
+            return;
+        }
+
+        _erro = null;
+        _mensagensServidor.Clear();
+
+        if (AtribuicaoInteira is not null || !_editContext.Validate())
+        {
+            return;
+        }
+
+        _salvando = true;
+
+        var resultado = _troca is { } troca
+            ? await AtribuicaoApi.TrocarProfessorAsync(troca.Id, new TrocarProfessorRequest(_modelo.ProfessorId!.Value), _cts.Token)
+            : await AtribuicaoApi.CriarAsync(_modelo.ParaRequest(TurmaId), _cts.Token);
+
+        _salvando = false;
+
+        if (resultado.Succeeded)
+        {
+            await _moldura.FecharAsync();
+            await OnSalva.InvokeAsync(new AtribuicaoSalva(resultado.Value!, Troca: _troca is not null));
+            return;
+        }
+
+        _erro = ErrosDeFormulario.Aplicar(resultado.Error, _mensagensServidor, _modelo, AtribuicaoFormModel.Campos);
+        _editContext.NotifyValidationStateChanged();
+    }
+
+    public void Dispose()
+    {
+        _editContext.OnFieldChanged -= AoAlterarCampo;
+        _cts.Cancel();
+        _cts.Dispose();
+    }
+}

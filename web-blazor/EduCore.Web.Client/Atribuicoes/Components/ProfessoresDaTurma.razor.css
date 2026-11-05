@@ -1,0 +1,91 @@
+.carregando {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.atribuicoes {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.atribuicao-grupo {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 12px 0;
+    border-top: 1px solid var(--colorNeutralStroke2);
+}
+
+    .atribuicao-grupo:first-child {
+        border-top: none;
+    }
+
+.atribuicao-disciplina {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    min-height: 32px;
+}
+
+.atribuicao-disciplina-nome {
+    font-weight: var(--fontWeightSemibold, 600);
+}
+
+.atribuicao-codigo {
+    font-size: var(--fontSizeBase200, 12px);
+    color: var(--colorNeutralForeground3);
+}
+
+/* Linha de quem leciona: item (disciplina inteira ou subdisciplina), professor e acoes */
+.atribuicao-linha {
+    display: grid;
+    grid-template-columns: minmax(140px, 1fr) minmax(180px, 2fr) auto;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 8px 6px 16px;
+    border-left: 3px solid var(--educore-primary-tint);
+    border-radius: 0 var(--borderRadiusMedium, 4px) var(--borderRadiusMedium, 4px) 0;
+}
+
+    .atribuicao-linha:hover {
+        background: var(--colorSubtleBackgroundHover);
+    }
+
+.atribuicao-item {
+    color: var(--colorNeutralForeground2);
+}
+
+.atribuicao-professor {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.atribuicao-acoes {
+    display: flex;
+    justify-content: flex-end;
+    gap: 4px;
+}
+
+::deep .atribuicao-mais {
+    align-self: flex-start;
+    margin-left: 8px;
+}
+
+/* Celular: acoes vao para a linha de baixo */
+@media (max-width: 640px) {
+    .atribuicao-linha {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 4px;
+    }
+
+    .atribuicao-acoes {
+        justify-content: flex-start;
+    }
+}
