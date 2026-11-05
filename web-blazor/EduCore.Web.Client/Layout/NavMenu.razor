@@ -1,5 +1,43 @@
-﻿@rendermode InteractiveAuto
+﻿@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@using EduCore.Web.Client.Layout.Navegacao
 
+@* Menu por perfil (ver MenuPorPerfil). Roda so no WebAssembly porque o token fica no navegador. *@
 <FluentNav Id="main-menu" Width="260px">
-    <FluentNavItem Href="/" Match="NavLinkMatch.All" IconRest="@(new Icons.Regular.Size20.Home())" IconActive="@(new Icons.Filled.Size20.Home())">Início</FluentNavItem>
+    <AuthorizeView>
+        <Authorized>
+            @foreach (var secao in MenuPorPerfil.Para(context.User))
+            {
+                if (secao.Titulo is not null)
+                {
+                    <FluentNavSectionHeader Title="@secao.Titulo" />
+                }
+
+                foreach (var item in secao.Itens)
+                {
+                    if (item.Disponivel)
+                    {
+                        <FluentNavItem @key="item.Href"
+                                       Href="@item.Href"
+                                       Match="item.Match"
+                                       IconRest="item.IconeRepouso"
+                                       IconActive="item.IconeAtivo">
+                            @item.Titulo
+                        </FluentNavItem>
+                    }
+                    else
+                    {
+                        <FluentNavItem @key="item.Href"
+                                       Disabled="true"
+                                       IconRest="item.IconeRepouso"
+                                       Tooltip="Tela em desenvolvimento">
+                            <span class="nav-item-planejado">
+                                <span>@item.Titulo</span>
+                                <span class="nav-item-badge">Em breve</span>
+                            </span>
+                        </FluentNavItem>
+                    }
+                }
+            }
+        </Authorized>
+    </AuthorizeView>
 </FluentNav>
