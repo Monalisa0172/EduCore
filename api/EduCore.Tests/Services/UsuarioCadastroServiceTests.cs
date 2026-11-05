@@ -335,7 +335,7 @@ public class UsuarioCadastroServiceTests
     private static Usuario ComTurmasCarregadas(Usuario usuario)
     {
         foreach (var matricula in usuario.Alunos.SelectMany(a => a.Matriculas))
-            matricula.Turma ??= new Turma { Id = matricula.TurmaId!.Value, Ativo = true };
+            matricula.Turma ??= new Turma { Id = matricula.TurmaId, Ativo = true };
 
         return usuario;
     }

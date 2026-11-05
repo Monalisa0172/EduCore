@@ -26,14 +26,15 @@ public partial class Disciplina
 
     public bool Ativo { get; set; }
 
-    [InverseProperty("Disciplina")]
-    public virtual ICollection<Notum> Nota { get; set; } = new List<Notum>();
-
-    [InverseProperty("Disciplina")]
+    [InverseProperty(nameof(Presenca.Disciplina))]
     public virtual ICollection<Presenca> Presencas { get; set; } = new List<Presenca>();
 
-    [InverseProperty("Disciplina")]
+    [InverseProperty(nameof(SubDisciplina.Disciplina))]
     public virtual ICollection<SubDisciplina> SubDisciplinas { get; set; } = new List<SubDisciplina>();
 
+    [InverseProperty(nameof(Avaliacao.Disciplina))]
     public virtual ICollection<Avaliacao> Avaliacoes { get; set; } = new List<Avaliacao>();
+
+    [InverseProperty(nameof(Atribuicao.Disciplina))]
+    public virtual ICollection<Atribuicao> Atribuicoes { get; set; } = new List<Atribuicao>();
 }

@@ -11,770 +11,229 @@ namespace EduCore.Tests.Services;
 
 public class AvaliacaoServiceTests
 {
-    private readonly Mock<IAvaliacaoRepository>
-    _avaliacaoRepository;
+    private const int TurmaId = 1;
+    private const int MatematicaId = 10;
+    private const int AlgebraId = 100;
+    private const int GeometriaId = 101;
 
-private readonly Mock<IDisciplinaRepository>
-    _disciplinaRepository;
+    private readonly Mock<IAvaliacaoRepository> _avaliacaoRepository = new();
+    private readonly Mock<IAtribuicaoRepository> _atribuicaoRepository = new();
+    private readonly Mock<ITurmaRepository> _turmaRepository = new();
+    private readonly Mock<IDisciplinaRepository> _disciplinaRepository = new();
+    private readonly Mock<ISubDisciplinaRepository> _subDisciplinaRepository = new();
 
-private readonly Mock<ISubDisciplinaRepository>
-    _subDisciplinaRepository;
-
-    private readonly AvaliacaoService
-        _service;
+    private readonly AvaliacaoService _service;
 
     public AvaliacaoServiceTests()
     {
-        _avaliacaoRepository =
-            new Mock<IAvaliacaoRepository>();
+        _service = new AvaliacaoService(
+            _avaliacaoRepository.Object,
+            _atribuicaoRepository.Object,
+            _turmaRepository.Object,
+            _disciplinaRepository.Object,
+            _subDisciplinaRepository.Object);
 
-        _disciplinaRepository =
-            new Mock<IDisciplinaRepository>();
-
-        _subDisciplinaRepository =             
-            new Mock<ISubDisciplinaRepository>();
-
-        _service =
-            new AvaliacaoService(
-                _avaliacaoRepository.Object,
-                _subDisciplinaRepository.Object,
-                _disciplinaRepository.Object);
+        _turmaRepository.Setup(x => x.GetEntityByIdAsync(TurmaId))
+            .ReturnsAsync(new Turma { Id = TurmaId, Nome = "1º Ano A", Ativo = true });
+        _disciplinaRepository.Setup(x => x.GetEntityByIdAsync(MatematicaId))
+            .ReturnsAsync(new Disciplina { Id = MatematicaId, Nome = "Matemática", Ativo = true });
+        _subDisciplinaRepository.Setup(x => x.GetEntityByIdAsync(AlgebraId))
+            .ReturnsAsync(new SubDisciplina { Id = AlgebraId, Nome = "Álgebra", DisciplinaId = MatematicaId, Ativo = true });
+        _subDisciplinaRepository.Setup(x => x.GetEntityByIdAsync(GeometriaId))
+            .ReturnsAsync(new SubDisciplina { Id = GeometriaId, Nome = "Geometria", DisciplinaId = MatematicaId, Ativo = true });
+        _avaliacaoRepository.Setup(x => x.GetByIdAsync(It.IsAny<int>()))
+            .ReturnsAsync((int id) => new AvaliacaoResponseDTO { Id = id });
     }
+
+    private static CreateAvaliacaoRequest Request(decimal peso = 30, int? subDisciplinaId = null) => new()
+    {
+        TurmaId = TurmaId,
+        DisciplinaId = MatematicaId,
+        SubDisciplinaId = subDisciplinaId,
+        Nome = " Prova 1 ",
+        Peso = peso,
+        DataAplicacao = new DateTime(2026, 3, 10),
+        Bimestre = BimestreEnum.Primeiro
+    };
+
+    private void AtribuidaInteira()
+        => _atribuicaoRepository.Setup(x => x.GetAtivasDaDisciplinaAsync(TurmaId, MatematicaId))
+            .ReturnsAsync([new AtribuicaoResponseDTO { Id = 1, ProfessorNome = "Ana" }]);
+
+    private void AtribuidaSoAlgebra()
+        => _atribuicaoRepository.Setup(x => x.GetAtivasDaDisciplinaAsync(TurmaId, MatematicaId))
+            .ReturnsAsync([new AtribuicaoResponseDTO { Id = 1, ProfessorNome = "Ana", SubDisciplinaId = AlgebraId, SubDisciplinaNome = "Álgebra" }]);
+
+    private void PesoJaUsado(decimal total, int? ignorar = null)
+        => _avaliacaoRepository.Setup(x => x.GetPesoTotalAsync(TurmaId, MatematicaId, 1, ignorar)).ReturnsAsync(total);
 
     [Fact]
     public async Task Deve_Criar_Avaliacao_Com_Sucesso()
     {
-        var disciplina =
-            new Disciplina
-            {
-                Id = 1,
-                Nome = "Matemática"
-            };
+        AtribuidaInteira();
+        PesoJaUsado(40);
 
-        _disciplinaRepository
-            .Setup(x =>
-                x.GetEntityByIdAsync(1))
-            .ReturnsAsync(disciplina);
+        var resultado = await _service.CriarAsync(Request(peso: 30));
 
-        _subDisciplinaRepository
-            .Setup(x =>
-                x.GetEntityByIdAsync(1))
-            .ReturnsAsync(
-                new SubDisciplina
-                {
-                    Id = 1,
-                    DisciplinaId = 1,
-                    Nome = "Capoeira",
-                    Ativo = true
-                }
-            );
-
-        _avaliacaoRepository
-            .Setup(x =>
-                x.GetPesoTotalByDisciplinaEBimestreAsync(
-                    1,
-                    BimestreEnum.Primeiro,
-                    null))
-            .ReturnsAsync(40);
-
-        _avaliacaoRepository
-            .Setup(x =>
-                x.AddAsync(It.IsAny<Avaliacao>()))
-            .Returns(Task.CompletedTask);
-
-        var request =
-            new CreateAvaliacaoRequest
-            {
-                DisciplinaId = 1,
-                SubDisciplinaId = 1,
-                Nome = "Prova Mensal",
-                Peso = 30,
-                DataAplicacao = DateTime.Now,
-                Bimestre = BimestreEnum.Primeiro
-            };
-
-        var resultado =
-            await _service.CreateAsync(request);
-
-        resultado.Should().NotBeNull();
-
-        resultado!.Nome.Should()
-            .Be("Prova Mensal");
-
-        resultado.Peso.Should()
-            .Be(30);
-
-        _avaliacaoRepository.Verify(
-            x => x.AddAsync(It.IsAny<Avaliacao>()),
-            Times.Once);
+        resultado.Sucesso.Should().BeTrue();
+        _avaliacaoRepository.Verify(x => x.AddAsync(It.Is<Avaliacao>(a =>
+            a.TurmaId == TurmaId && a.DisciplinaId == MatematicaId && a.Nome == "Prova 1" &&
+            a.Peso == 30 && a.Bimestre == 1 && a.Ativo)), Times.Once);
     }
 
     [Fact]
-    public async Task Nao_Deve_Criar_Avaliacao_Sem_Disciplina()
+    public async Task Deve_Permitir_Peso_Que_Completa_Exatamente_100()
     {
-        _disciplinaRepository
-            .Setup(x =>
-                x.GetEntityByIdAsync(It.IsAny<int>()))
-            .ReturnsAsync((Disciplina?)null);
+        AtribuidaInteira();
+        PesoJaUsado(70);
 
-        var request =
-            new CreateAvaliacaoRequest
-            {
-                DisciplinaId = 1,
-                Nome = "Prova",
-                Peso = 20,
-                DataAplicacao = DateTime.Now,
-                Bimestre = BimestreEnum.Primeiro
-            };
+        var resultado = await _service.CriarAsync(Request(peso: 30));
 
-        var resultado =
-            await _service.CreateAsync(request);
-
-        resultado.Should().BeNull();
-
-        _avaliacaoRepository.Verify(
-            x => x.AddAsync(It.IsAny<Avaliacao>()),
-            Times.Never);
+        resultado.Sucesso.Should().BeTrue();
     }
 
     [Fact]
-    public async Task Nao_Deve_Criar_Avaliacao_Com_Peso_Maior_Que_100()
+    public async Task Nao_Deve_Ultrapassar_100_No_Bimestre()
     {
-        var disciplina =
-            new Disciplina
-            {
-                Id = 1
-            };
+        AtribuidaInteira();
+        PesoJaUsado(70);
 
-        _disciplinaRepository
-            .Setup(x =>
-                x.GetEntityByIdAsync(It.IsAny<int>()))
-            .ReturnsAsync(disciplina);
+        var resultado = await _service.CriarAsync(Request(peso: 40));
 
-        var request =
-            new CreateAvaliacaoRequest
-            {
-                DisciplinaId = 1,
-                Nome = "Prova",
-                Peso = 120,
-                DataAplicacao = DateTime.Now,
-                Bimestre = BimestreEnum.Primeiro
-            };
-
-        var resultado =
-            await _service.CreateAsync(request);
-
-        resultado.Should().BeNull();
+        resultado.Falha.Should().Be(FalhaOperacao.Invalido);
+        resultado.Campo.Should().Be(nameof(UpdateAvaliacaoRequest.Peso));
+        resultado.Mensagem.Should().Contain("no máximo 30");
+        _avaliacaoRepository.Verify(x => x.AddAsync(It.IsAny<Avaliacao>()), Times.Never);
     }
 
     [Fact]
-    public async Task Nao_Deve_Criar_Avaliacao_Quando_Soma_Do_Bimestre_Ultrapassar_100()
+    public async Task Deve_Avisar_Quando_Bimestre_Ja_Esta_Completo()
     {
-        var disciplina =
-            new Disciplina
-            {
-                Id = 1
-            };
+        AtribuidaInteira();
+        PesoJaUsado(100);
 
-        _disciplinaRepository
-            .Setup(x =>
-                x.GetEntityByIdAsync(1))
-            .ReturnsAsync(disciplina);
+        var resultado = await _service.CriarAsync(Request(peso: 10));
 
-        _avaliacaoRepository
-            .Setup(x =>
-                x.GetPesoTotalByDisciplinaEBimestreAsync(
-                    1,
-                    BimestreEnum.Primeiro,
-                    null))
-            .ReturnsAsync(80);
-
-        var request =
-            new CreateAvaliacaoRequest
-            {
-                DisciplinaId = 1,
-                Nome = "Prova Final",
-                Peso = 30,
-                DataAplicacao = DateTime.Now,
-                Bimestre = BimestreEnum.Primeiro
-            };
-
-        var resultado =
-            await _service.CreateAsync(request);
-
-        resultado.Should().BeNull();
-
-        _avaliacaoRepository.Verify(
-            x => x.AddAsync(It.IsAny<Avaliacao>()),
-            Times.Never);
+        resultado.Mensagem.Should().Contain("já somam 100");
     }
 
     [Fact]
-    public async Task Deve_Atualizar_Avaliacao_Com_Sucesso()
+    public async Task Nao_Deve_Criar_Em_Turma_Inativa()
     {
-        var avaliacao =
-            new Avaliacao
-            {
-                Id = 1,
-                DisciplinaId = 1,
-                SubDisciplinaId = 1,
-                Peso = 20,
-                Bimestre = (int)BimestreEnum.Primeiro
-            };
-        _avaliacaoRepository
-            .Setup(x =>
-                x.GetEntityByIdAsync(1))
-            .ReturnsAsync(avaliacao);
+        _turmaRepository.Setup(x => x.GetEntityByIdAsync(TurmaId))
+            .ReturnsAsync(new Turma { Id = TurmaId, Ativo = false });
 
-        _avaliacaoRepository
-            .Setup(x =>
-                x.GetPesoTotalByDisciplinaEBimestreAsync(
-                    1,
-                    BimestreEnum.Primeiro,
-                    1))
-            .ReturnsAsync(40);
+        var resultado = await _service.CriarAsync(Request());
 
-        _avaliacaoRepository
-            .Setup(x =>
-                x.UpdateAsync(It.IsAny<Avaliacao>()))
-            .Returns(Task.CompletedTask);
-
-        var request =
-            new UpdateAvaliacaoRequest
-            {
-                Nome = "Prova Atualizada",
-                Peso = 30,
-                DataAplicacao = DateTime.Now,
-                Bimestre = BimestreEnum.Primeiro
-            };
-
-        var resultado =
-            await _service.UpdateAsync(
-                1,
-                request);
-
-        resultado.Should().BeTrue();
-
-        _avaliacaoRepository.Verify(
-            x => x.UpdateAsync(It.IsAny<Avaliacao>()),
-            Times.Once);
+        resultado.Falha.Should().Be(FalhaOperacao.Invalido);
+        resultado.Campo.Should().Be(nameof(CreateAvaliacaoRequest.TurmaId));
     }
 
     [Fact]
-    public async Task Nao_Deve_Atualizar_Avaliacao_Inexistente()
+    public async Task Nao_Deve_Criar_Sem_Professor_Atribuido()
     {
-        _avaliacaoRepository
-            .Setup(x =>
-                x.GetEntityByIdAsync(It.IsAny<int>()))
-            .ReturnsAsync((Avaliacao?)null);
+        _atribuicaoRepository.Setup(x => x.GetAtivasDaDisciplinaAsync(TurmaId, MatematicaId)).ReturnsAsync([]);
 
-        var request =
-            new UpdateAvaliacaoRequest
-            {
-                Nome = "Teste",
-                Peso = 20,
-                DataAplicacao = DateTime.Now,
-                Bimestre = BimestreEnum.Primeiro
-            };
+        var resultado = await _service.CriarAsync(Request());
 
-        var resultado =
-            await _service.UpdateAsync(
-                999,
-                request);
-
-        resultado.Should().BeFalse();
+        resultado.Campo.Should().Be(nameof(CreateAvaliacaoRequest.DisciplinaId));
+        resultado.Mensagem.Should().Contain("não tem professor atribuído");
     }
 
     [Fact]
-    public async Task Nao_Deve_Atualizar_Avaliacao_Quando_Soma_Do_Bimestre_Ultrapassar_100()
+    public async Task Disciplina_Dividida_Exige_Subdisciplina()
     {
-        var avaliacao =
-            new Avaliacao
-            {
-                Id = 1,
-                DisciplinaId = 1,
-                SubDisciplinaId = 1,
-                Peso = 20,
-                Bimestre = (int)BimestreEnum.Primeiro
-            };
+        AtribuidaSoAlgebra();
 
-        _avaliacaoRepository
-            .Setup(x =>
-                x.GetEntityByIdAsync(1))
-            .ReturnsAsync(avaliacao);
+        var resultado = await _service.CriarAsync(Request(subDisciplinaId: null));
 
-        _avaliacaoRepository
-            .Setup(x =>
-                x.GetPesoTotalByDisciplinaEBimestreAsync(
-                    1,
-                    BimestreEnum.Primeiro,
-                    1))
-            .ReturnsAsync(90);
-
-        var request =
-            new UpdateAvaliacaoRequest
-            {
-                Nome = "Prova Atualizada",
-                Peso = 20,
-                DataAplicacao = DateTime.Now,
-                Bimestre = BimestreEnum.Primeiro
-            };
-
-        var resultado =
-            await _service.UpdateAsync(
-                1,
-                request);
-
-        resultado.Should().BeFalse();
-
-        _avaliacaoRepository.Verify(
-            x => x.UpdateAsync(It.IsAny<Avaliacao>()),
-            Times.Never);
+        resultado.Campo.Should().Be(nameof(UpdateAvaliacaoRequest.SubDisciplinaId));
+        resultado.Mensagem.Should().Contain("Álgebra");
     }
 
     [Fact]
-    public async Task Deve_Inativar_Avaliacao_Com_Sucesso()
+    public async Task Disciplina_Dividida_Recusa_Subdisciplina_Sem_Professor()
     {
-        var avaliacao =
-            new Avaliacao
-            {
-                Id = 1,
-                Ativo = true
-            };
+        AtribuidaSoAlgebra();
 
-        _avaliacaoRepository
-            .Setup(x =>
-                x.GetEntityByIdAsync(1))
-            .ReturnsAsync(avaliacao);
+        var resultado = await _service.CriarAsync(Request(subDisciplinaId: GeometriaId));
 
-        _avaliacaoRepository
-            .Setup(x =>
-                x.UpdateAsync(It.IsAny<Avaliacao>()))
-            .Returns(Task.CompletedTask);
-
-        var resultado =
-            await _service.DeleteAsync(1);
-
-        resultado.Should().BeTrue();
-
-        avaliacao.Ativo.Should()
-            .BeFalse();
-
-        _avaliacaoRepository.Verify(
-            x => x.UpdateAsync(It.IsAny<Avaliacao>()),
-            Times.Once);
+        resultado.Campo.Should().Be(nameof(UpdateAvaliacaoRequest.SubDisciplinaId));
+        resultado.Mensagem.Should().Contain("Geometria não tem professor");
     }
 
     [Fact]
-    public async Task Nao_Deve_Inativar_Avaliacao_Inexistente()
+    public async Task Disciplina_Dividida_Aceita_Subdisciplina_Atribuida()
     {
-        _avaliacaoRepository
-            .Setup(x =>
-                x.GetEntityByIdAsync(It.IsAny<int>()))
-            .ReturnsAsync((Avaliacao?)null);
+        AtribuidaSoAlgebra();
+        PesoJaUsado(0);
 
-        var resultado =
-            await _service.DeleteAsync(999);
+        var resultado = await _service.CriarAsync(Request(subDisciplinaId: AlgebraId));
 
-        resultado.Should().BeFalse();
-
-        _avaliacaoRepository.Verify(
-            x => x.UpdateAsync(It.IsAny<Avaliacao>()),
-            Times.Never);
+        resultado.Sucesso.Should().BeTrue();
+        _avaliacaoRepository.Verify(x => x.AddAsync(It.Is<Avaliacao>(a => a.SubDisciplinaId == AlgebraId)), Times.Once);
     }
 
     [Fact]
-    public async Task Deve_Retornar_Todas_As_Avaliacoes()
+    public async Task Nao_Deve_Aceitar_Subdisciplina_De_Outra_Disciplina()
     {
-        var lista = new List<AvaliacaoResponseDTO>
-    {
-        new()
-        {
-            Id = 1,
-            Nome = "Prova"
-        }
-    };
+        AtribuidaInteira();
+        _subDisciplinaRepository.Setup(x => x.GetEntityByIdAsync(999))
+            .ReturnsAsync(new SubDisciplina { Id = 999, DisciplinaId = 55, Ativo = true });
 
-        _avaliacaoRepository
-            .Setup(x => x.GetAllAsync())
-            .ReturnsAsync(lista);
+        var resultado = await _service.CriarAsync(Request(subDisciplinaId: 999));
 
-        var resultado =
-            await _service.GetAllAsync();
-
-        resultado.Should().HaveCount(1);
+        resultado.Campo.Should().Be(nameof(UpdateAvaliacaoRequest.SubDisciplinaId));
+        resultado.Mensagem.Should().Contain("não pertence");
     }
 
     [Fact]
-    public async Task Deve_Retornar_Avaliacao_Por_Id()
+    public async Task Atualizar_Desconsidera_O_Proprio_Peso()
     {
-        var avaliacao =
-            new AvaliacaoResponseDTO
-            {
-                Id = 1,
-                DisciplinaId = 1,
-                SubDisciplinaId = 1,
-                Nome = "Prova"
-            };
+        var avaliacao = new Avaliacao { Id = 7, TurmaId = TurmaId, DisciplinaId = MatematicaId, Peso = 50, Bimestre = 1, Ativo = true };
+        _avaliacaoRepository.Setup(x => x.GetEntityByIdAsync(7)).ReturnsAsync(avaliacao);
+        // Outras avaliacoes somam 50: a propria pode ir de 50 para 50 (ou menos) sem erro.
+        PesoJaUsado(50, ignorar: 7);
 
-        _avaliacaoRepository
-            .Setup(x => x.GetByIdAsync(1))
-            .ReturnsAsync(avaliacao);
+        var resultado = await _service.AtualizarAsync(7, Request(peso: 50));
 
-        var resultado =
-            await _service.GetByIdAsync(1);
-
-        resultado.Should().NotBeNull();
-        resultado!.Id.Should().Be(1);
+        resultado.Sucesso.Should().BeTrue();
+        avaliacao.Nome.Should().Be("Prova 1");
+        _avaliacaoRepository.Verify(x => x.SalvarAsync(), Times.Once);
     }
 
     [Fact]
-    public async Task Deve_Retornar_Avaliacoes_Por_Disciplina()
+    public async Task Atualizar_Inexistente_Retorna_Nao_Encontrado()
     {
-        var lista =
-            new List<AvaliacaoResponseDTO>
-            {
-            new()
-            {
-                Id = 1,
-                DisciplinaId = 1
-            }
-            };
+        var resultado = await _service.AtualizarAsync(404, Request());
 
-        _avaliacaoRepository
-            .Setup(x =>
-                x.GetByDisciplinaAsync(1))
-            .ReturnsAsync(lista);
-
-        var resultado =
-            await _service.GetByDisciplinaAsync(1);
-
-        resultado.Should().HaveCount(1);
+        resultado.Falha.Should().Be(FalhaOperacao.NaoEncontrado);
     }
 
     [Fact]
-    public async Task Nao_Deve_Criar_Avaliacao_Com_Bimestre_Invalido()
+    public async Task Deve_Inativar_Avaliacao()
     {
-        _disciplinaRepository
-            .Setup(x =>
-                x.GetEntityByIdAsync(It.IsAny<int>()))
-            .ReturnsAsync(new Disciplina());
+        var avaliacao = new Avaliacao { Id = 7, Ativo = true };
+        _avaliacaoRepository.Setup(x => x.GetEntityByIdAsync(7)).ReturnsAsync(avaliacao);
 
-        var request =
-            new CreateAvaliacaoRequest
-            {
-                DisciplinaId = 1,
-                Nome = "Prova Mensal",
-                Peso = 30,
-                DataAplicacao = DateTime.Now,
-                Bimestre = (BimestreEnum)99
-            };
+        var resultado = await _service.InativarAsync(7);
 
-
-        var resultado =
-            await _service.CreateAsync(request);
-
-        resultado.Should().BeNull();
+        resultado.Sucesso.Should().BeTrue();
+        avaliacao.Ativo.Should().BeFalse();
+        _avaliacaoRepository.Verify(x => x.SalvarAsync(), Times.Once);
     }
 
     [Fact]
-    public async Task Nao_Deve_Criar_Avaliacao_Com_Peso_Zero()
+    public async Task Nao_Deve_Reativar_Se_O_Peso_Nao_Couber()
     {
-        _disciplinaRepository
-            .Setup(x => x.GetEntityByIdAsync(It.IsAny<int>()))
-            .ReturnsAsync(new Disciplina());
+        var avaliacao = new Avaliacao { Id = 7, TurmaId = TurmaId, DisciplinaId = MatematicaId, Peso = 40, Bimestre = 1, Ativo = false };
+        _avaliacaoRepository.Setup(x => x.GetEntityByIdAsync(7)).ReturnsAsync(avaliacao);
+        PesoJaUsado(80, ignorar: 7);
 
-        var request =
-            new CreateAvaliacaoRequest
-            {
-                DisciplinaId = 1,
-                Nome = "Prova Mensal",
-                Peso = 0,
-                DataAplicacao = DateTime.Now,
-                Bimestre = (BimestreEnum)99
-            };
+        var resultado = await _service.ReativarAsync(7);
 
-        var resultado =
-            await _service.CreateAsync(request);
-
-        resultado.Should().BeNull();
+        resultado.Campo.Should().Be(nameof(UpdateAvaliacaoRequest.Peso));
+        avaliacao.Ativo.Should().BeFalse();
+        _avaliacaoRepository.Verify(x => x.SalvarAsync(), Times.Never);
     }
-
-    [Fact]
-    public async Task Nao_Deve_Atualizar_Com_Bimestre_Invalido()
-    {
-        var avaliacao =
-            new Avaliacao
-            {
-                Id = 1,
-                DisciplinaId = 1,
-                SubDisciplinaId = 1,
-                Peso = 20,
-                Bimestre = (int)(BimestreEnum)99
-            };
-        _avaliacaoRepository
-            .Setup(x => x.GetEntityByIdAsync(1))
-            .ReturnsAsync(avaliacao);
-
-        var request =
-            new UpdateAvaliacaoRequest
-            {
-                Nome = "Teste",
-                Peso = 20,
-                DataAplicacao = DateTime.Now,
-                Bimestre = (BimestreEnum)(int)(BimestreEnum)99
-            };
-        var resultado =
-            await _service.UpdateAsync(
-                1,
-                request);
-
-        resultado.Should().BeFalse();
-    }
-
-    [Fact]
-    public async Task Nao_Deve_Atualizar_Com_Peso_Zero()
-    {
-        var avaliacao =
-            new Avaliacao
-            {
-                Id = 1,
-                DisciplinaId = 1,
-                SubDisciplinaId = 1,
-                Peso = 20,
-                Bimestre = (int)BimestreEnum.Primeiro
-            };
-
-        _avaliacaoRepository
-            .Setup(x => x.GetEntityByIdAsync(1))
-            .ReturnsAsync(avaliacao);
-
-        var request =
-            new UpdateAvaliacaoRequest
-            {
-                Nome = "Teste",
-                Peso = 0,
-                DataAplicacao = DateTime.Now,
-                Bimestre = BimestreEnum.Primeiro
-            };
-
-        var resultado =
-            await _service.UpdateAsync(
-                1,
-                request);
-
-        resultado.Should().BeFalse();
-    }
-
-
-    [Fact]
-    public async Task Nao_Deve_Atualizar_Com_Peso_Maior_Que_100()
-    {
-        var avaliacao =
-            new Avaliacao
-            {
-                Id = 1,
-                DisciplinaId = 1,
-                SubDisciplinaId = 1,
-                Peso = 20,
-                Bimestre = (int)BimestreEnum.Primeiro
-            };
-
-        _avaliacaoRepository
-            .Setup(x => x.GetEntityByIdAsync(1))
-            .ReturnsAsync(avaliacao);
-
-        var request =
-            new UpdateAvaliacaoRequest
-            {
-                Nome = "Teste",
-                Peso = 200,
-                DataAplicacao = DateTime.Now,
-                Bimestre = BimestreEnum.Primeiro
-            };
-
-        var resultado =
-            await _service.UpdateAsync(
-                1,
-                request);
-
-        resultado.Should().BeFalse();
-    }
-
-    [Fact]
-    public async Task Deve_Criar_Avaliacao_Com_SubDisciplina_Valida()
-    {
-        var disciplina =
-            new Disciplina
-            {
-                Id = 1,
-                SubDisciplinas =
-                [
-                    new SubDisciplina
-            {
-                Id = 1,
-                DisciplinaId = 1
-            }
-                ]
-            };
-
-        _disciplinaRepository
-            .Setup(x => x.GetEntityByIdAsync(1))
-            .ReturnsAsync(disciplina);
-
-        _subDisciplinaRepository
-            .Setup(x => x.GetEntityByIdAsync(1))
-            .ReturnsAsync(
-                new SubDisciplina
-                {
-                    Id = 1,
-                    DisciplinaId = 1,
-                    Nome = "Capoeira",
-                    Ativo = true
-                });
-
-        _avaliacaoRepository
-            .Setup(x => x.GetPesoTotalByDisciplinaEBimestreAsync(
-                1,
-                BimestreEnum.Primeiro,
-                null))
-            .ReturnsAsync(20);
-
-        _avaliacaoRepository
-            .Setup(x => x.AddAsync(It.IsAny<Avaliacao>()))
-            .Returns(Task.CompletedTask);
-
-        var request = new CreateAvaliacaoRequest
-        {
-            DisciplinaId = 1,
-            SubDisciplinaId = 1,
-            Nome = "Prova",
-            Peso = 20,
-            Bimestre = BimestreEnum.Primeiro,
-            DataAplicacao = DateTime.Now
-        };
-
-        var resultado =
-            await _service.CreateAsync(request);
-
-        resultado.Should().NotBeNull();
-    }
-
-    [Fact]
-    public async Task Nao_Deve_Atualizar_Com_SubDisciplina_Invalida()
-    {
-        var avaliacao =
-            new Avaliacao
-            {
-                Id = 1,
-                DisciplinaId = 1,
-                SubDisciplinaId = 1,
-                Peso = 20,
-                Bimestre = (int)BimestreEnum.Primeiro
-            };
-
-        _avaliacaoRepository
-            .Setup(x => x.GetEntityByIdAsync(1))
-            .ReturnsAsync(avaliacao);
-
-        var request = new UpdateAvaliacaoRequest
-        {
-            Nome = "Nova",
-            Peso = 20,
-            Bimestre = BimestreEnum.Primeiro,
-            SubDisciplinaId = 999
-        };
-
-        var resultado =
-            await _service.UpdateAsync(1, request);
-
-        resultado.Should().BeFalse();
-    }
-
-    [Fact]
-    public async Task Nao_Deve_Criar_Avaliacao_Quando_SubDisciplina_Nao_Existir()
-    {
-        var disciplina =
-            new Disciplina
-            {
-                Id = 1
-            };
-
-        _disciplinaRepository
-            .Setup(x =>
-                x.GetEntityByIdAsync(1))
-            .ReturnsAsync(disciplina);
-
-        _subDisciplinaRepository
-            .Setup(x =>
-                x.GetEntityByIdAsync(1))
-            .ReturnsAsync((SubDisciplina?)null);
-
-        var request =
-            new CreateAvaliacaoRequest
-            {
-                DisciplinaId = 1,
-                SubDisciplinaId = 1,
-                Nome = "Prova",
-                Peso = 20,
-                DataAplicacao = DateTime.Now,
-                Bimestre = BimestreEnum.Primeiro
-            };
-
-        var resultado =
-            await _service.CreateAsync(request);
-
-        resultado.Should().BeNull();
-
-        _avaliacaoRepository.Verify(
-            x => x.AddAsync(It.IsAny<Avaliacao>()),
-            Times.Never);
-    }
-
-    [Fact]
-    public async Task Nao_Deve_Atualizar_Quando_SubDisciplina_Nao_Existir()
-    {
-        var avaliacao =
-            new Avaliacao
-            {
-                Id = 1,
-                DisciplinaId = 1,
-                SubDisciplinaId = 1,
-                Peso = 20,
-                Bimestre = (int)BimestreEnum.Primeiro,
-                Ativo = true
-            };
-
-        _avaliacaoRepository
-            .Setup(x =>
-                x.GetEntityByIdAsync(1))
-            .ReturnsAsync(avaliacao);
-
-        _subDisciplinaRepository
-            .Setup(x =>
-                x.GetEntityByIdAsync(1))
-            .ReturnsAsync((SubDisciplina?)null);
-
-        var request =
-            new UpdateAvaliacaoRequest
-            {
-                SubDisciplinaId = 1,
-                Nome = "Prova Atualizada",
-                Peso = 20,
-                DataAplicacao = DateTime.Now,
-                Bimestre = BimestreEnum.Primeiro
-            };
-
-        var resultado =
-            await _service.UpdateAsync(
-                1,
-                request);
-
-        resultado.Should().BeFalse();
-
-        _avaliacaoRepository.Verify(
-            x => x.UpdateAsync(It.IsAny<Avaliacao>()),
-            Times.Never);
-    }
-
 }

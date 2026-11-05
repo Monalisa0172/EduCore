@@ -18,9 +18,15 @@ public partial class Turma
 
     public int AnoLetivo { get; set; }
 
-    [InverseProperty("Turma")]
+    [InverseProperty(nameof(Matricula.Turma))]
     public virtual ICollection<Matricula> Matriculas { get; set; } = new List<Matricula>();
 
-    [InverseProperty("Turma")]
-    public virtual ICollection<ProfessorTurma> ProfessorTurmas { get; set; } = new List<ProfessorTurma>();
+    [InverseProperty(nameof(Atribuicao.Turma))]
+    public virtual ICollection<Atribuicao> Atribuicoes { get; set; } = new List<Atribuicao>();
+
+    [InverseProperty(nameof(Avaliacao.Turma))]
+    public virtual ICollection<Avaliacao> Avaliacoes { get; set; } = new List<Avaliacao>();
+
+    [InverseProperty(nameof(Presenca.Turma))]
+    public virtual ICollection<Presenca> Presencas { get; set; } = new List<Presenca>();
 }
