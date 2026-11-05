@@ -17,6 +17,12 @@ public interface ITurmaApiClient
 
     Task<ApiResult<IReadOnlyList<TurmaAluno>>> ListarAlunosAsync(int id, CancellationToken cancellationToken = default);
 
+    /// <summary>Matricula vários alunos (ids de usuário); devolve a lista atualizada da turma.</summary>
+    Task<ApiResult<IReadOnlyList<TurmaAluno>>> MatricularAsync(int id, IReadOnlyCollection<int> usuarioIds, CancellationToken cancellationToken = default);
+
+    /// <summary>Remove o aluno da turma; devolve a lista atualizada.</summary>
+    Task<ApiResult<IReadOnlyList<TurmaAluno>>> RemoverAlunoAsync(int id, int usuarioId, CancellationToken cancellationToken = default);
+
     Task<ApiResult<TurmaItem>> CriarAsync(SalvarTurmaRequest request, CancellationToken cancellationToken = default);
 
     Task<ApiResult<TurmaItem>> AtualizarAsync(int id, SalvarTurmaRequest request, CancellationToken cancellationToken = default);

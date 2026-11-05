@@ -116,18 +116,28 @@
                             }
                             @if (turma.Ativo)
                             {
-                                <FluentButton Appearance="ButtonAppearance.Primary"
+                                <FluentButton Appearance="ButtonAppearance.Default"
                                               IconStart="@(new Icons.Regular.Size20.PersonAdd())"
                                               OnClick="CadastrarAluno">
                                     Cadastrar aluno
+                                </FluentButton>
+                                <FluentButton Appearance="ButtonAppearance.Primary"
+                                              IconStart="@(new Icons.Regular.Size20.PeopleAdd())"
+                                              Disabled="_alunos is null"
+                                              OnClick="AbrirMatriculaAsync">
+                                    Matricular alunos
                                 </FluentButton>
                             }
                         </div>
                     </div>
 
-                    <p class="texto-suave">
-                        A matrícula é feita no cadastro do aluno: abra o aluno e marque esta turma em "Turmas".
-                    </p>
+                    @if (turma.Ativo)
+                    {
+                        <p class="texto-suave">
+                            Use "Matricular alunos" para incluir alunos já cadastrados. Para um aluno novo, use "Cadastrar aluno":
+                            ele já vem com esta turma marcada.
+                        </p>
+                    }
 
                     @if (_erroAlunos is not null)
                     {
@@ -149,7 +159,16 @@
                     }
                     else if (AlunosVisiveis.Count == 0)
                     {
-                        <EmptyState Titulo="@TituloVazio" Descricao="@DescricaoVazio" Icone="@(new Icons.Regular.Size24.PeopleList())" />
+                        <EmptyState Titulo="@TituloVazio" Descricao="@DescricaoVazio" Icone="@(new Icons.Regular.Size24.PeopleList())">
+                            @if (turma.Ativo && !(QuantidadeInativos > 0 && !_mostrarInativos))
+                            {
+                                <FluentButton Appearance="ButtonAppearance.Primary"
+                                              IconStart="@(new Icons.Regular.Size20.PeopleAdd())"
+                                              OnClick="AbrirMatriculaAsync">
+                                    Matricular alunos
+                                </FluentButton>
+                            }
+                        </EmptyState>
                     }
                     else
                     {
@@ -165,10 +184,22 @@
 
                                     <StatusBadge Ativo="aluno.Ativo" TextoAtivo="Ativo" TextoInativo="Inativo" />
 
-                                    <a class="aluno-abrir" href="@LinkCadastro(aluno)" title="@($"Abrir o cadastro de {aluno.Nome}")">
-                                        <FluentIcon Value="@(new Icons.Regular.Size16.Open())" Color="Color.Custom" CustomColor="currentColor" aria-hidden="true" />
-                                        Abrir cadastro
-                                    </a>
+                                    <div class="aluno-acoes">
+                                        <a class="aluno-abrir" href="@LinkCadastro(aluno)" title="@($"Abrir o cadastro de {aluno.Nome}")">
+                                            <FluentIcon Value="@(new Icons.Regular.Size16.Open())" Color="Color.Custom" CustomColor="currentColor" aria-hidden="true" />
+                                            Abrir cadastro
+                                        </a>
+                                        @if (turma.Ativo)
+                                        {
+                                            <FluentButton Appearance="ButtonAppearance.Subtle"
+                                                          IconStart="@(new Icons.Regular.Size16.PersonDelete())"
+                                                          Title="@($"Remover {aluno.Nome} da turma")"
+                                                          aria-label="@($"Remover {aluno.Nome} da turma")"
+                                                          OnClick="@(() => SolicitarRemocaoAsync(aluno))">
+                                                Remover
+                                            </FluentButton>
+                                        }
+                                    </div>
                                 </li>
                             }
                         </ul>
@@ -178,6 +209,25 @@
         </div>
 
         <TurmaFormDialog @ref="_formulario" OnSalva="AoSalvarTurma" />
+
+        <MatricularAlunosDialog @ref="_matricula"
+                                TurmaId="Id"
+                                NomeTurma="@(_turma?.Nome ?? string.Empty)"
+                                JaMatriculados="@((_alunos ?? []).Select(a => a.UsuarioId).ToList())"
+                                OnMatriculados="AoMatricular" />
+
+        <ConfirmDialog @ref="_confirmarRemocao"
+                       Titulo="Remover da turma"
+                       TextoConfirmar="Remover"
+                       Perigo="true"
+                       Processando="_processando"
+                       Erro="_erroConfirmacao"
+                       OnConfirmar="ConfirmarRemocaoAsync">
+            <p>Deseja remover <strong>@_alvoRemocao?.Nome</strong> de <strong>@_turma?.Nome</strong>?</p>
+            <p class="texto-suave">
+                O aluno continua cadastrado e pode ser matriculado de novo. Notas e presenças já lançadas são mantidas.
+            </p>
+        </ConfirmDialog>
 
         <ConfirmDialog @ref="_confirmarInativacao"
                        Titulo="Inativar turma"

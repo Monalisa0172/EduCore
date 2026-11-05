@@ -25,7 +25,10 @@ public partial class TurmaDetalhe : IDisposable
     private bool _mostrarInativos;
 
     private TurmaFormDialog _formulario = default!;
+    private MatricularAlunosDialog _matricula = default!;
     private ConfirmDialog _confirmarInativacao = default!;
+    private ConfirmDialog _confirmarRemocao = default!;
+    private TurmaAluno? _alvoRemocao;
     private ApiError? _erroConfirmacao;
     private bool _processando;
 
@@ -74,7 +77,7 @@ public partial class TurmaDetalhe : IDisposable
     private string DescricaoVazio => QuantidadeInativos > 0 && !_mostrarInativos
         ? "Há alunos inativos nesta turma. Ligue \"Mostrar inativos\" para vê-los."
         : _turma?.Ativo == true
-            ? "Para matricular, abra o cadastro do aluno e marque esta turma em \"Turmas\", ou cadastre um aluno novo."
+            ? "Inclua os alunos já cadastrados de uma vez, ou cadastre um aluno novo."
             : "Esta turma não teve alunos matriculados.";
 
     // A rota pode mudar de /turmas/1 para /turmas/2 sem recriar o componente.
@@ -138,7 +141,80 @@ public partial class TurmaDetalhe : IDisposable
     private string LinkCadastro(TurmaAluno aluno)
         => $"usuarios/{aluno.UsuarioId}?voltar={Uri.EscapeDataString($"/turmas/{Id}")}&origem={Uri.EscapeDataString(_turma?.Nome ?? "Turma")}";
 
-    private void CadastrarAluno() => Navigation.NavigateTo("usuarios/novo");
+    /// <summary>
+    /// Cadastro de aluno novo já com esta turma marcada; ao salvar ou cancelar, volta para cá.
+    /// </summary>
+    private void CadastrarAluno()
+        => Navigation.NavigateTo(
+            $"usuarios/novo?turma={Id}&voltar={Uri.EscapeDataString($"/turmas/{Id}")}&origem={Uri.EscapeDataString(_turma?.Nome ?? "Turma")}");
+
+    // ---------- Matriculas ----------
+
+    private Task AbrirMatriculaAsync() => _matricula.AbrirAsync();
+
+    private void AoMatricular(MatriculaConcluida concluida)
+    {
+        AtualizarAlunos(concluida.Alunos);
+
+        var texto = concluida.Quantidade == 1 ? "1 aluno foi matriculado" : $"{concluida.Quantidade} alunos foram matriculados";
+        MostrarAviso(new AvisoPagina("Matrícula concluída", $"{texto} em {_turma?.Nome}."));
+    }
+
+    private async Task SolicitarRemocaoAsync(TurmaAluno aluno)
+    {
+        _alvoRemocao = aluno;
+        _erroConfirmacao = null;
+        await _confirmarRemocao.AbrirAsync();
+    }
+
+    private async Task ConfirmarRemocaoAsync()
+    {
+        if (_alvoRemocao is not { } aluno || _processando)
+        {
+            return;
+        }
+
+        _processando = true;
+        _erroConfirmacao = null;
+
+        var resultado = await TurmaApi.RemoverAlunoAsync(Id, aluno.UsuarioId, _cts.Token);
+
+        _processando = false;
+
+        // 404: alguem ja tirou o aluno da turma; a lista local tambem deve refletir isso.
+        if (!resultado.Succeeded && resultado.Error.Kind != ApiErrorKind.NotFound)
+        {
+            _erroConfirmacao = resultado.Error;
+            return;
+        }
+
+        await _confirmarRemocao.FecharAsync();
+        _alvoRemocao = null;
+
+        if (resultado.Succeeded)
+        {
+            AtualizarAlunos(resultado.Value!);
+        }
+        else
+        {
+            await CarregarAlunosAsync();
+        }
+
+        MostrarAviso(new AvisoPagina("Aluno removido da turma", $"{aluno.Nome} não faz mais parte de {_turma?.Nome}."));
+    }
+
+    /// <summary>
+    /// Troca a lista de alunos pela devolvida pela API e atualiza o total exibido no cabeçalho.
+    /// </summary>
+    private void AtualizarAlunos(IReadOnlyList<TurmaAluno> alunos)
+    {
+        _alunos = [.. alunos];
+
+        if (_turma is not null)
+        {
+            _turma = _turma with { QuantidadeAlunos = QuantidadeAtivos };
+        }
+    }
 
     private void VoltarParaLista() => Navigation.NavigateTo("turmas");
 

@@ -59,6 +59,40 @@ public class TurmaController : ControllerBase
     }
 
     /// <summary>
+    /// Matricula alunos na turma (vários de uma vez). Quem já está matriculado é ignorado.
+    /// </summary>
+    /// <response code="200">Lista atualizada de alunos da turma.</response>
+    /// <response code="400">Turma inativa, ou aluno inexistente/inativo.</response>
+    /// <response code="404">Turma não encontrada.</response>
+    [Authorize(Roles = Roles.Admin)]
+    [HttpPost("{id:int}/alunos")]
+    [ProducesResponseType(typeof(List<TurmaAlunoDTO>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Matricular(int id, [FromBody] MatricularAlunosRequest request)
+    {
+        return this.ParaResposta(await _turmaService.MatricularAsync(id, request), Ok);
+    }
+
+    /// <summary>
+    /// Remove o aluno da turma (não vale para turmas inativas, que são histórico).
+    /// </summary>
+    /// <param name="id">Id da turma.</param>
+    /// <param name="usuarioId">Id de usuário do aluno.</param>
+    /// <response code="200">Lista atualizada de alunos da turma.</response>
+    /// <response code="400">Turma inativa.</response>
+    /// <response code="404">Turma não encontrada ou aluno não matriculado.</response>
+    [Authorize(Roles = Roles.Admin)]
+    [HttpDelete("{id:int}/alunos/{usuarioId:int}")]
+    [ProducesResponseType(typeof(List<TurmaAlunoDTO>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> RemoverMatricula(int id, int usuarioId)
+    {
+        return this.ParaResposta(await _turmaService.RemoverMatriculaAsync(id, usuarioId), Ok);
+    }
+
+    /// <summary>
     /// Cria uma turma. O nome é único dentro do ano letivo.
     /// </summary>
     /// <response code="201">Turma criada.</response>

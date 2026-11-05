@@ -82,6 +82,14 @@
     white-space: nowrap;
 }
 
+.aluno-acoes {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 4px;
+}
+
 .aluno-abrir {
     display: inline-flex;
     align-items: center;
@@ -108,8 +116,8 @@
         grid-template-columns: auto minmax(0, 1fr) auto;
     }
 
-    .aluno-abrir {
+    .aluno-acoes {
         grid-column: 2 / -1;
-        justify-self: start;
+        justify-content: flex-start;
     }
 }

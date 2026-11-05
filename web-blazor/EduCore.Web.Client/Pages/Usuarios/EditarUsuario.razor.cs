@@ -33,39 +33,9 @@ public partial class EditarUsuario : IDisposable
     public string? Origem { get; set; }
 
     /// <summary>Caminho relativo seguro para o retorno; vazio = painel.</summary>
-    private string UrlRetorno => CaminhoInterno(Voltar) ?? string.Empty;
+    private string UrlRetorno => RetornoNavegacao.CaminhoInterno(Voltar) ?? string.Empty;
 
-    private IReadOnlyList<ItemTrilha>? Trilha
-    {
-        get
-        {
-            var retorno = CaminhoInterno(Voltar);
-            if (retorno is null || !retorno.StartsWith("turmas/", StringComparison.Ordinal))
-            {
-                return null;
-            }
-
-            var origem = string.IsNullOrWhiteSpace(Origem) ? "Turma" : Origem.Trim();
-            return [ItemTrilha.Inicio, new("Turmas", "turmas"), new(origem, retorno), new("Editar usuário")];
-        }
-    }
-
-    /// <summary>
-    /// Aceita só caminhos da própria aplicação (evita open redirect) e devolve sem a barra inicial.
-    /// </summary>
-    private static string? CaminhoInterno(string? url)
-    {
-        if (string.IsNullOrWhiteSpace(url)
-            || !url.StartsWith('/')
-            || url.StartsWith("//", StringComparison.Ordinal)
-            || url.StartsWith("/\\", StringComparison.Ordinal)
-            || !Uri.IsWellFormedUriString(url, UriKind.Relative))
-        {
-            return null;
-        }
-
-        return url.TrimStart('/');
-    }
+    private IReadOnlyList<ItemTrilha>? Trilha => RetornoNavegacao.TrilhaDaTurma(Voltar, Origem, "Editar usuário");
 
     [Inject]
     private IUsuarioApiClient UsuarioApi { get; set; } = default!;

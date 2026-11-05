@@ -43,6 +43,85 @@ public class TurmaService
         return await _turmaRepository.GetAlunosAsync(id);
     }
 
+    /// <summary>
+    /// Matricula vários alunos de uma vez. Quem já está na turma é ignorado (operação idempotente).
+    /// </summary>
+    public async Task<ResultadoOperacao<List<TurmaAlunoDTO>>> MatricularAsync(int turmaId, MatricularAlunosRequest request)
+    {
+        var turma = await _turmaRepository.GetEntityByIdAsync(turmaId);
+        if (turma is null)
+        {
+            return ResultadoOperacao<List<TurmaAlunoDTO>>.NaoEncontrado(NaoEncontrada);
+        }
+
+        if (!turma.Ativo)
+        {
+            return ResultadoOperacao<List<TurmaAlunoDTO>>.Invalido(
+                nameof(MatricularAlunosRequest.UsuarioIds),
+                "A turma está inativa e não aceita novas matrículas. Reative a turma primeiro.");
+        }
+
+        var usuarioIds = request.UsuarioIds.Distinct().ToList();
+        var usuarios = await _turmaRepository.GetAlunosAtivosParaMatriculaAsync(usuarioIds);
+
+        if (usuarios.Count != usuarioIds.Count)
+        {
+            return ResultadoOperacao<List<TurmaAlunoDTO>>.Invalido(
+                nameof(MatricularAlunosRequest.UsuarioIds),
+                "Um ou mais alunos não existem ou estão inativos. Atualize a lista e selecione novamente.");
+        }
+
+        foreach (var usuario in usuarios)
+        {
+            // Alunos antigos podem nao ter o registro de perfil: e criado aqui, como no cadastro de usuario.
+            var aluno = usuario.Alunos.FirstOrDefault();
+            if (aluno is null)
+            {
+                aluno = new Aluno();
+                usuario.Alunos.Add(aluno);
+            }
+
+            if (!aluno.Matriculas.Any(m => m.TurmaId == turmaId))
+            {
+                aluno.Matriculas.Add(new Matricula { TurmaId = turmaId });
+            }
+        }
+
+        await _turmaRepository.SalvarAsync();
+
+        return ResultadoOperacao<List<TurmaAlunoDTO>>.Ok(await _turmaRepository.GetAlunosAsync(turmaId));
+    }
+
+    /// <summary>
+    /// Remove o aluno da turma. Turmas inativas não mudam: as matrículas delas são histórico.
+    /// </summary>
+    public async Task<ResultadoOperacao<List<TurmaAlunoDTO>>> RemoverMatriculaAsync(int turmaId, int usuarioId)
+    {
+        var turma = await _turmaRepository.GetEntityByIdAsync(turmaId);
+        if (turma is null)
+        {
+            return ResultadoOperacao<List<TurmaAlunoDTO>>.NaoEncontrado(NaoEncontrada);
+        }
+
+        if (!turma.Ativo)
+        {
+            return ResultadoOperacao<List<TurmaAlunoDTO>>.Invalido(
+                "TurmaId",
+                "A turma está inativa: as matrículas dela ficam preservadas no histórico.");
+        }
+
+        var matricula = await _turmaRepository.GetMatriculaAsync(turmaId, usuarioId);
+        if (matricula is null)
+        {
+            return ResultadoOperacao<List<TurmaAlunoDTO>>.NaoEncontrado("O aluno não está matriculado nesta turma.");
+        }
+
+        _turmaRepository.RemoverMatricula(matricula);
+        await _turmaRepository.SalvarAsync();
+
+        return ResultadoOperacao<List<TurmaAlunoDTO>>.Ok(await _turmaRepository.GetAlunosAsync(turmaId));
+    }
+
     public async Task<ResultadoOperacao<TurmaResponseDTO>>
         CreateAsync(
             CreateTurmaRequest request)

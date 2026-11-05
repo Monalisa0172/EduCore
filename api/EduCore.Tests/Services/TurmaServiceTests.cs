@@ -180,6 +180,134 @@ public class TurmaServiceTests
         _turmaRepository.Verify(x => x.GetAlunosAsync(It.IsAny<int>()), Times.Never);
     }
 
+    // ---------- Matriculas ----------
+
+    private static Usuario UsuarioAluno(int usuarioId, params int[] turmasMatriculadas)
+    {
+        var aluno = new Aluno { Id = usuarioId + 100, UsuarioId = usuarioId };
+        foreach (var turmaId in turmasMatriculadas)
+        {
+            aluno.Matriculas.Add(new Matricula { TurmaId = turmaId });
+        }
+
+        var usuario = new Usuario { Id = usuarioId, Nome = $"Aluno {usuarioId}", Ativo = true };
+        usuario.Alunos.Add(aluno);
+        return usuario;
+    }
+
+    private void TurmaAtiva(int id = 1, bool ativa = true)
+        => _turmaRepository.Setup(x => x.GetEntityByIdAsync(id)).ReturnsAsync(new Turma { Id = id, Ativo = ativa });
+
+    [Fact]
+    public async Task Deve_Matricular_Varios_Alunos_E_Ignorar_Quem_Ja_Esta_Na_Turma()
+    {
+        TurmaAtiva();
+        var novo = UsuarioAluno(10);
+        var jaMatriculado = UsuarioAluno(11, 1);
+        _turmaRepository
+            .Setup(x => x.GetAlunosAtivosParaMatriculaAsync(It.IsAny<IReadOnlyCollection<int>>()))
+            .ReturnsAsync([novo, jaMatriculado]);
+        _turmaRepository.Setup(x => x.GetAlunosAsync(1)).ReturnsAsync([]);
+
+        var resultado = await _service.MatricularAsync(1, new MatricularAlunosRequest { UsuarioIds = [10, 11, 10] });
+
+        resultado.Sucesso.Should().BeTrue();
+        novo.Alunos.Single().Matriculas.Should().ContainSingle(m => m.TurmaId == 1);
+        jaMatriculado.Alunos.Single().Matriculas.Should().ContainSingle(m => m.TurmaId == 1);
+        _turmaRepository.Verify(x => x.SalvarAsync(), Times.Once);
+    }
+
+    [Fact]
+    public async Task Deve_Criar_Perfil_De_Aluno_Quando_Nao_Existir()
+    {
+        TurmaAtiva();
+        var semPerfil = new Usuario { Id = 12, Nome = "Aluno antigo", Ativo = true };
+        _turmaRepository
+            .Setup(x => x.GetAlunosAtivosParaMatriculaAsync(It.IsAny<IReadOnlyCollection<int>>()))
+            .ReturnsAsync([semPerfil]);
+        _turmaRepository.Setup(x => x.GetAlunosAsync(1)).ReturnsAsync([]);
+
+        var resultado = await _service.MatricularAsync(1, new MatricularAlunosRequest { UsuarioIds = [12] });
+
+        resultado.Sucesso.Should().BeTrue();
+        semPerfil.Alunos.Should().ContainSingle()
+            .Which.Matriculas.Should().ContainSingle(m => m.TurmaId == 1);
+    }
+
+    [Fact]
+    public async Task Nao_Deve_Matricular_Em_Turma_Inativa()
+    {
+        TurmaAtiva(ativa: false);
+
+        var resultado = await _service.MatricularAsync(1, new MatricularAlunosRequest { UsuarioIds = [10] });
+
+        resultado.Falha.Should().Be(FalhaOperacao.Invalido);
+        _turmaRepository.Verify(x => x.SalvarAsync(), Times.Never);
+    }
+
+    [Fact]
+    public async Task Nao_Deve_Matricular_Aluno_Inexistente_Ou_Inativo()
+    {
+        TurmaAtiva();
+        // Pediu 2, mas so 1 e aluno ativo.
+        _turmaRepository
+            .Setup(x => x.GetAlunosAtivosParaMatriculaAsync(It.IsAny<IReadOnlyCollection<int>>()))
+            .ReturnsAsync([UsuarioAluno(10)]);
+
+        var resultado = await _service.MatricularAsync(1, new MatricularAlunosRequest { UsuarioIds = [10, 99] });
+
+        resultado.Falha.Should().Be(FalhaOperacao.Invalido);
+        _turmaRepository.Verify(x => x.SalvarAsync(), Times.Never);
+    }
+
+    [Fact]
+    public async Task Nao_Deve_Matricular_Em_Turma_Inexistente()
+    {
+        _turmaRepository.Setup(x => x.GetEntityByIdAsync(It.IsAny<int>())).ReturnsAsync((Turma?)null);
+
+        var resultado = await _service.MatricularAsync(999, new MatricularAlunosRequest { UsuarioIds = [10] });
+
+        resultado.Falha.Should().Be(FalhaOperacao.NaoEncontrado);
+    }
+
+    [Fact]
+    public async Task Deve_Remover_Aluno_Da_Turma()
+    {
+        TurmaAtiva();
+        var matricula = new Matricula { Id = 5, TurmaId = 1 };
+        _turmaRepository.Setup(x => x.GetMatriculaAsync(1, 10)).ReturnsAsync(matricula);
+        _turmaRepository.Setup(x => x.GetAlunosAsync(1)).ReturnsAsync([]);
+
+        var resultado = await _service.RemoverMatriculaAsync(1, 10);
+
+        resultado.Sucesso.Should().BeTrue();
+        _turmaRepository.Verify(x => x.RemoverMatricula(matricula), Times.Once);
+        _turmaRepository.Verify(x => x.SalvarAsync(), Times.Once);
+    }
+
+    [Fact]
+    public async Task Nao_Deve_Remover_Aluno_Nao_Matriculado()
+    {
+        TurmaAtiva();
+        _turmaRepository.Setup(x => x.GetMatriculaAsync(1, 10)).ReturnsAsync((Matricula?)null);
+
+        var resultado = await _service.RemoverMatriculaAsync(1, 10);
+
+        resultado.Falha.Should().Be(FalhaOperacao.NaoEncontrado);
+        _turmaRepository.Verify(x => x.SalvarAsync(), Times.Never);
+    }
+
+    [Fact]
+    public async Task Nao_Deve_Remover_Aluno_De_Turma_Inativa()
+    {
+        TurmaAtiva(ativa: false);
+
+        var resultado = await _service.RemoverMatriculaAsync(1, 10);
+
+        resultado.Falha.Should().Be(FalhaOperacao.Invalido);
+        _turmaRepository.Verify(x => x.RemoverMatricula(It.IsAny<Matricula>()), Times.Never);
+    }
+
     [Fact]
     public async Task Deve_Buscar_Turma_Por_Id()
     {

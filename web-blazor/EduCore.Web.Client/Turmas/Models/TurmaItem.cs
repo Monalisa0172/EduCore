@@ -22,6 +22,9 @@ public sealed record TurmaItem(int Id, string Nome, int AnoLetivo, bool Ativo, i
 /// </summary>
 public sealed record TurmaAluno(int AlunoId, int UsuarioId, string Nome, string Email, bool Ativo);
 
+/// <summary>Resultado da matrícula em lote: lista atualizada da turma e quantos foram selecionados.</summary>
+public sealed record MatriculaConcluida(IReadOnlyList<TurmaAluno> Alunos, int Quantidade);
+
 /// <summary>Corpo de POST/PUT api/turmas.</summary>
 public sealed record SalvarTurmaRequest(string Nome, int AnoLetivo);
 

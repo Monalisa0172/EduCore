@@ -39,6 +39,12 @@ public sealed class TurmaApiClient(
     public Task<ApiResult<IReadOnlyList<TurmaAluno>>> ListarAlunosAsync(int id, CancellationToken cancellationToken = default)
         => GetAsync<IReadOnlyList<TurmaAluno>>($"{BasePath}/{id}/alunos", cancellationToken);
 
+    public Task<ApiResult<IReadOnlyList<TurmaAluno>>> MatricularAsync(int id, IReadOnlyCollection<int> usuarioIds, CancellationToken cancellationToken = default)
+        => SendJsonAsync<object, IReadOnlyList<TurmaAluno>>(HttpMethod.Post, $"{BasePath}/{id}/alunos", new { usuarioIds }, cancellationToken);
+
+    public Task<ApiResult<IReadOnlyList<TurmaAluno>>> RemoverAlunoAsync(int id, int usuarioId, CancellationToken cancellationToken = default)
+        => SendAsync<IReadOnlyList<TurmaAluno>>(new HttpRequestMessage(HttpMethod.Delete, $"{BasePath}/{id}/alunos/{usuarioId}"), cancellationToken);
+
     public Task<ApiResult<TurmaItem>> CriarAsync(SalvarTurmaRequest request, CancellationToken cancellationToken = default)
         => SendJsonAsync<SalvarTurmaRequest, TurmaItem>(HttpMethod.Post, BasePath, request, cancellationToken);
 

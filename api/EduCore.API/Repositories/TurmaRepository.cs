@@ -2,6 +2,7 @@
 using EduCore.API.Data;
 using EduCore.API.DTOs.Response;
 using EduCore.API.Entities;
+using EduCore.API.Enums;
 using EduCore.API.Interfaces.Repositories;
 using Microsoft.EntityFrameworkCore;
 
@@ -79,6 +80,34 @@ public class TurmaRepository
             .OrderBy(a => a.Nome)
             .ToListAsync();
     }
+
+    public async Task<List<Usuario>>
+        GetAlunosAtivosParaMatriculaAsync(IReadOnlyCollection<int> usuarioIds)
+    {
+        return await _context.Usuarios
+            .Include(u => u.Alunos)
+                .ThenInclude(a => a.Matriculas)
+            .Where(u => usuarioIds.Contains(u.Id) && u.Ativo && u.Tipo == TipoUsuarioEnum.Aluno)
+            .AsSplitQuery()
+            .ToListAsync();
+    }
+
+    public async Task<Matricula?>
+        GetMatriculaAsync(int turmaId, int usuarioId)
+    {
+        return await _context.Matriculas
+            .FirstOrDefaultAsync(m =>
+                m.TurmaId == turmaId &&
+                m.Aluno != null &&
+                m.Aluno.UsuarioId == usuarioId);
+    }
+
+    public void RemoverMatricula(Matricula matricula)
+    {
+        _context.Matriculas.Remove(matricula);
+    }
+
+    public Task SalvarAsync() => _context.SaveChangesAsync();
 
     public async Task AddAsync(Turma turma)
     {
