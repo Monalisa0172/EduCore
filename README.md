@@ -74,7 +74,7 @@ EduCore/
 4. No Visual Studio: **Configure Startup Projects** → **Multiple startup projects** → `EduCore.API` e `EduCore.Web`.
 5. Execute (F5). A API publica o Swagger e o front abre na tela de login.
 
-> Os dados de demonstração estão sendo organizados em `database/scripts`.
+> Para ver o sistema com dados, aplique também o `002_dados_demonstracao.sql`: ele cria uma turma completa com professores, alunos, notas e chamadas. Os e-mails e a senha de acesso estão no [README dos scripts](database/scripts/README.md#acesso-de-demonstração).
 
 ---
 
@@ -88,7 +88,8 @@ EduCore/
 - [x] Admin: disciplinas e subdisciplinas (cadastro, edição, inativação e reativação)
 - [x] Admin: turmas por ano letivo, com os alunos matriculados
 - [x] Modelo acadêmico: atribuição de professores (professor × turma × disciplina/subdisciplina) e avaliações por turma com pesos por bimestre somando até 100 (API)
-- [ ] Admin: tela de atribuição de professores
+- [x] Admin: atribuição de professores na tela da turma
+- [x] Dados de demonstração (turma completa com notas e chamadas)
 - [x] Lançamento de notas por avaliação e chamada em lote, boletim com média ponderada e frequência, endpoints `/me` e acesso restrito ao que cada professor leciona (API)
 - [ ] Professor: minhas turmas, avaliações, lançamento de notas e chamada
 - [ ] Aluno: boletim e frequência
