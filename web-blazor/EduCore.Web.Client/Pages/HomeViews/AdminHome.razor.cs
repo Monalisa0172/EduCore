@@ -14,6 +14,13 @@ public partial class AdminHome : IDisposable
 
     private static readonly CompareInfo Comparador = CultureInfo.InvariantCulture.CompareInfo;
 
+    private static readonly IReadOnlyList<OpcaoSeletor<TipoUsuarioFiltro>> OpcoesFiltro =
+    [
+        new(TipoUsuarioFiltro.Todos, "Todos"),
+        new(TipoUsuarioFiltro.Alunos, "Alunos"),
+        new(TipoUsuarioFiltro.Professores, "Professores")
+    ];
+
     private readonly CancellationTokenSource _cts = new();
     private readonly PaginationState _paginacao = new() { ItemsPerPage = ItensPorPagina };
     private readonly GridSort<UsuarioListItem> _ordenarPorNome = GridSort<UsuarioListItem>.ByAscending(u => u.Nome);

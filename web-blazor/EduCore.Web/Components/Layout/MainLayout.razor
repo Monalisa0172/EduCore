@@ -5,7 +5,12 @@
 <FluentLayout>
     <FluentLayoutItem Area="LayoutArea.Header">
         <FluentLayoutHamburger />
-        <FluentText Weight="TextWeight.Bold" Size="TextSize.Size600">EduCore</FluentText>
+        <a class="header-marca" href="" aria-label="EduCore - página inicial">
+            <span class="header-marca-icone" aria-hidden="true">
+                <FluentIcon Value="@(new Icons.Filled.Size20.HatGraduation())" Color="Color.Custom" CustomColor="var(--educore-primary)" />
+            </span>
+            <span class="header-marca-texto">EduCore</span>
+        </a>
         <FluentSpacer />
         <UserMenu />
     </FluentLayoutItem>

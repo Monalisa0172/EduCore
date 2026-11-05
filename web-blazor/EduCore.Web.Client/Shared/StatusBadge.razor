@@ -1,0 +1,17 @@
+@* Selo de status ativo/inativo. Os textos variam com o genero do registro ("Ativa"/"Ativo"). *@
+<FluentBadge Appearance="BadgeAppearance.Tint"
+             Color="@(Ativo ? BadgeColor.Success : BadgeColor.Subtle)"
+             Shape="BadgeShape.Rounded">
+    @(Ativo ? TextoAtivo : TextoInativo)
+</FluentBadge>
+
+@code {
+    [Parameter, EditorRequired]
+    public bool Ativo { get; set; }
+
+    [Parameter]
+    public string TextoAtivo { get; set; } = "Ativa";
+
+    [Parameter]
+    public string TextoInativo { get; set; } = "Inativa";
+}

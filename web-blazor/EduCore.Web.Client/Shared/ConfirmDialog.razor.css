@@ -1,0 +1,21 @@
+.confirm-conteudo {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+    .confirm-conteudo ::deep p {
+        margin: 0;
+    }
+
+.confirm-acoes {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+    .confirm-acoes ::deep .button-danger {
+        --colorBrandBackground: var(--colorPaletteRedBackground3, #C50F1F);
+        --colorBrandBackgroundHover: var(--colorPaletteRedForeground1, #B10E1C);
+        --colorBrandBackgroundPressed: var(--colorPaletteRedForeground2, #960B18);
+    }

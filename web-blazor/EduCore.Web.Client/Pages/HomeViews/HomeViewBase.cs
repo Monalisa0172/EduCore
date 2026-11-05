@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using EduCore.Web.Client.Auth;
 using Microsoft.AspNetCore.Components;
 
 namespace EduCore.Web.Client.Pages.HomeViews;
@@ -11,5 +12,6 @@ public abstract class HomeViewBase : ComponentBase
     [Parameter, EditorRequired]
     public ClaimsPrincipal User { get; set; } = default!;
 
-    protected string UserEmail => User.FindFirst(ClaimTypes.Email)?.Value ?? string.Empty;
+    /// <summary>Primeiro nome para a saudação (cai no e-mail em tokens sem nome).</summary>
+    protected string PrimeiroNome => User.PrimeiroNome();
 }

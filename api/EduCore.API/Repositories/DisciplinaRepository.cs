@@ -1,4 +1,5 @@
-﻿using EduCore.API.Data;
+﻿using System.Linq.Expressions;
+using EduCore.API.Data;
 using EduCore.API.DTOs.Response;
 using EduCore.API.Entities;
 using EduCore.API.Interfaces.Repositories;
@@ -8,6 +9,18 @@ namespace EduCore.API.Repositories;
 
 public class DisciplinaRepository : IDisciplinaRepository
 {
+    // Projecao unica: a contagem de subdisciplinas vira um COUNT no SQL (sem carregar a colecao).
+    private static readonly Expression<Func<Disciplina, DisciplinaResponseDTO>> ParaDto = x => new DisciplinaResponseDTO
+    {
+        Id = x.Id,
+        Nome = x.Nome ?? string.Empty,
+        Codigo = x.Codigo,
+        Descricao = x.Descricao,
+        CargaHoraria = x.CargaHoraria,
+        Ativo = x.Ativo,
+        QuantidadeSubDisciplinas = x.SubDisciplinas.Count(s => s.Ativo)
+    };
+
     private readonly AppDbContext _context;
 
     public DisciplinaRepository(AppDbContext context)
@@ -18,15 +31,8 @@ public class DisciplinaRepository : IDisciplinaRepository
     public async Task<List<DisciplinaResponseDTO>> GetAllAsync()
     {
         return await _context.Disciplinas
-            .Select(x => new DisciplinaResponseDTO
-            {
-                Id = x.Id,
-                Nome = x.Nome ?? string.Empty,
-                Codigo = x.Codigo,
-                Descricao = x.Descricao,
-                CargaHoraria = x.CargaHoraria,
-                Ativo = x.Ativo
-            })
+            .OrderBy(x => x.Nome)
+            .Select(ParaDto)
             .ToListAsync();
     }
 
@@ -34,15 +40,7 @@ public class DisciplinaRepository : IDisciplinaRepository
     {
         return await _context.Disciplinas
             .Where(x => x.Id == id)
-            .Select(x => new DisciplinaResponseDTO
-            {
-                Id = x.Id,
-                Nome = x.Nome ?? string.Empty,
-                Codigo = x.Codigo,
-                Descricao = x.Descricao,
-                CargaHoraria = x.CargaHoraria,
-                Ativo = x.Ativo
-            })
+            .Select(ParaDto)
             .FirstOrDefaultAsync();
     }
 

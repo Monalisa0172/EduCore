@@ -1,22 +1,13 @@
-@* Moldura das paginas de usuario: caminho de volta, titulo e conteudo. *@
+@* Moldura das paginas de usuario: cabecalho padrao (trilha, area e titulo) e conteudo.
+   Os links da trilha sao <a> nativos; a confirmacao de "descartar alteracoes" e feita pelo UsuarioForm.razor.js. *@
 <div class="usuario-pagina">
-    @* <a> nativo: link de verdade (abre em nova aba, leitor de tela anuncia como link).
-       A confirmacao de "descartar alteracoes" e feita pelo UsuarioForm.razor.js. *@
-    <nav aria-label="Navegação da página">
-        <a class="voltar" href="">
-            <FluentIcon Value="@(new Icons.Regular.Size20.ArrowLeft())" Color="Color.Custom" CustomColor="currentColor" aria-hidden="true" />
-            Voltar ao painel
-        </a>
-    </nav>
-
-    <header class="page-header">
-        <FluentText As="TextTag.H1" Size="TextSize.Size800" Weight="TextWeight.Semibold" Block="true">@Titulo</FluentText>
-        @if (!string.IsNullOrWhiteSpace(Descricao))
-        {
-            <FluentText Block="true" Class="page-subtitle">@Descricao</FluentText>
-        }
-        @Resumo
-    </header>
+    <PageHeader Titulo="@Titulo"
+                Secao="Pessoas"
+                Icone="Icone"
+                Descricao="@Descricao"
+                Trilha="@([ItemTrilha.Inicio, new(Titulo)])">
+        <Detalhes>@Resumo</Detalhes>
+    </PageHeader>
 
     @ChildContent
 </div>
@@ -27,6 +18,9 @@
 
     [Parameter]
     public string? Descricao { get; set; }
+
+    [Parameter]
+    public Icon Icone { get; set; } = new Icons.Regular.Size24.Person();
 
     /// <summary>Conteúdo extra do cabeçalho (ex.: quem está sendo editado).</summary>
     [Parameter]

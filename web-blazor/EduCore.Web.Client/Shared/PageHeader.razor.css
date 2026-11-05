@@ -1,0 +1,146 @@
+.page-header {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* ---------- Trilha de navegacao (breadcrumb) ---------- */
+.trilha {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: var(--fontSizeBase300, 14px);
+}
+
+    .trilha li {
+        display: inline-flex;
+        align-items: center;
+        min-width: 0;
+    }
+
+        /* Separador entre niveis */
+        .trilha li + li::before {
+            content: "›";
+            margin: 0 8px;
+            color: var(--colorNeutralForeground3);
+        }
+
+    .trilha a {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        color: var(--educore-primary-text);
+        text-decoration: none;
+    }
+
+        .trilha a:hover {
+            text-decoration: underline;
+        }
+
+        .trilha a:focus-visible {
+            outline: 2px solid var(--colorStrokeFocus2);
+            outline-offset: 2px;
+            border-radius: 4px;
+        }
+
+    .trilha [aria-current="page"] {
+        overflow: hidden;
+        max-width: 280px;
+        color: var(--colorNeutralForeground3);
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+/* Celular: so o nivel anterior, como "voltar" */
+@media (max-width: 600px) {
+    .trilha li {
+        display: none;
+    }
+
+        .trilha li:nth-last-child(2) {
+            display: inline-flex;
+        }
+
+            .trilha li:nth-last-child(2)::before {
+                content: "←";
+                margin: 0 6px 0 0;
+                color: var(--educore-primary-text);
+            }
+}
+
+.page-header-linha {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 16px;
+}
+
+.page-header-textos {
+    display: flex;
+    flex: 1 1 320px;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+/* Quadro do icone da pagina (azul da marca) */
+.page-header-icone {
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    align-self: flex-start;
+    width: 56px;
+    height: 56px;
+    border-radius: var(--borderRadiusXLarge, 12px);
+    color: var(--educore-primary-text);
+    background: var(--educore-primary-tint);
+}
+
+/* Area do sistema: traco ambar + texto em caixa alta, discreto */
+.page-header-secao {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: var(--fontSizeBase200, 12px);
+    font-weight: var(--fontWeightSemibold, 600);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--colorNeutralForeground3);
+}
+
+    .page-header-secao::before {
+        content: "";
+        width: 20px;
+        height: 3px;
+        border-radius: 2px;
+        background: var(--educore-secondary);
+    }
+
+.page-header-titulo {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+}
+
+.page-header-descricao {
+    margin: 0;
+    color: var(--colorNeutralForeground3);
+}
+
+.page-header-acoes {
+    display: flex;
+    margin-inline-start: auto;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+/* Celular: sem o quadro do icone (fica no fim para vencer a regra base) */
+@media (max-width: 600px) {
+    .page-header-icone {
+        display: none;
+    }
+}

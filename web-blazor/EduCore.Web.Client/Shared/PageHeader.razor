@@ -1,0 +1,93 @@
+@* Cabecalho padrao das paginas: trilha de navegacao, titulo, descricao e acoes. *@
+<header class="page-header">
+    @if (Trilha is { Count: > 0 })
+    {
+        <nav aria-label="Trilha de navegação">
+            <ol class="trilha">
+                @foreach (var item in Trilha)
+                {
+                    <li>
+                        @if (item.Href is not null)
+                        {
+                            <a href="@item.Href">
+                                @if (ReferenceEquals(item, ItemTrilha.Inicio))
+                                {
+                                    <FluentIcon Value="@(new Icons.Regular.Size16.Home())" Color="Color.Custom" CustomColor="currentColor" aria-hidden="true" />
+                                }
+                                @item.Texto
+                            </a>
+                        }
+                        else
+                        {
+                            <span aria-current="page">@item.Texto</span>
+                        }
+                    </li>
+                }
+            </ol>
+        </nav>
+    }
+
+    <div class="page-header-linha">
+        @if (Icone is not null)
+        {
+            <span class="page-header-icone" aria-hidden="true">
+                <FluentIcon Value="Icone" Color="Color.Custom" CustomColor="currentColor" />
+            </span>
+        }
+
+        <div class="page-header-textos">
+            @if (!string.IsNullOrWhiteSpace(Secao))
+            {
+                <span class="page-header-secao">@Secao</span>
+            }
+            <div class="page-header-titulo">
+                <FluentText As="TextTag.H1" Size="TextSize.Size800" Weight="TextWeight.Semibold">@Titulo</FluentText>
+                @Selo
+            </div>
+            @if (!string.IsNullOrWhiteSpace(Descricao))
+            {
+                <p class="page-header-descricao">@Descricao</p>
+            }
+            @Detalhes
+        </div>
+
+        @if (Acoes is not null)
+        {
+            <div class="page-header-acoes">@Acoes</div>
+        }
+    </div>
+</header>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Titulo { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? Descricao { get; set; }
+
+    /// <summary>Área do sistema exibida acima do título (ex.: "Acadêmico"), com o traço âmbar da marca.</summary>
+    [Parameter]
+    public string? Secao { get; set; }
+
+    /// <summary>Ícone da página (Size28 ou Size24), exibido num quadro azul à esquerda do título.</summary>
+    [Parameter]
+    public Icon? Icone { get; set; }
+
+    /// <summary>Conteúdo ao lado do título (ex.: selo de status).</summary>
+    [Parameter]
+    public RenderFragment? Selo { get; set; }
+
+    /// <summary>Linha extra abaixo da descrição (ex.: código e carga horária).</summary>
+    [Parameter]
+    public RenderFragment? Detalhes { get; set; }
+
+    /// <summary>Botões alinhados à direita.</summary>
+    [Parameter]
+    public RenderFragment? Acoes { get; set; }
+
+    /// <summary>
+    /// Caminho até a página (ex.: Início › Disciplinas › Ciências). O último item, sem Href, é a página atual.
+    /// </summary>
+    [Parameter]
+    public IReadOnlyList<ItemTrilha>? Trilha { get; set; }
+}

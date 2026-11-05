@@ -30,7 +30,7 @@ public static class MenuPorPerfil
         new("Acadêmico",
         [
             new("Disciplinas", "disciplinas",
-                new Icons.Regular.Size20.BookOpen(), new Icons.Filled.Size20.BookOpen(), Disponivel: false),
+                new Icons.Regular.Size20.BookOpen(), new Icons.Filled.Size20.BookOpen()),
             new("Turmas", "turmas",
                 new Icons.Regular.Size20.PeopleTeam(), new Icons.Filled.Size20.PeopleTeam(), Disponivel: false),
         ]),

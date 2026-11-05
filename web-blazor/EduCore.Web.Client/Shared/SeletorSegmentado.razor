@@ -1,0 +1,47 @@
+@typeparam TValor
+
+@* Grupo de botoes de alternancia para filtros (ex.: Ativas / Inativas / Todas).
+   Substitui o FluentRadioGroup nos filtros: no v5 ele so confirma a escolha quando perde o foco,
+   e o filtro aplicava a opcao anterior. Aqui a escolha vale no proprio clique. *@
+<div class="seletor">
+    <span class="seletor-rotulo" id="@_idRotulo">@Rotulo</span>
+    <div class="seletor-opcoes" role="group" aria-labelledby="@_idRotulo">
+        @foreach (var opcao in Opcoes)
+        {
+            var selecionada = EqualityComparer<TValor>.Default.Equals(opcao.Valor, Valor);
+            <FluentToggleButton @key="opcao.Valor"
+                                Pressed="selecionada"
+                                Appearance="@(selecionada ? ButtonAppearance.Primary : ButtonAppearance.Default)"
+                                OnClick="@(() => SelecionarAsync(opcao.Valor))">
+                @opcao.Rotulo
+            </FluentToggleButton>
+        }
+    </div>
+</div>
+
+@code {
+    private readonly string _idRotulo = $"seletor-{Guid.NewGuid():N}";
+
+    [Parameter, EditorRequired]
+    public string Rotulo { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public IReadOnlyList<OpcaoSeletor<TValor>> Opcoes { get; set; } = [];
+
+    [Parameter]
+    public TValor Valor { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback<TValor> ValorChanged { get; set; }
+
+    private async Task SelecionarAsync(TValor valor)
+    {
+        if (EqualityComparer<TValor>.Default.Equals(valor, Valor))
+        {
+            return;
+        }
+
+        Valor = valor;
+        await ValorChanged.InvokeAsync(valor);
+    }
+}

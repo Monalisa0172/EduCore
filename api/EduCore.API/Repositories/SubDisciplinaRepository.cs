@@ -57,6 +57,7 @@ public class SubDisciplinaRepository
         return await _context.SubDisciplinas
             .Include(x => x.Disciplina)
             .Where(x => x.DisciplinaId == disciplinaId)
+            .OrderBy(x => x.Nome)
             .Select(x => new SubDisciplinaResponseDTO
             {
                 Id = x.Id,

@@ -31,6 +31,8 @@ public class JwtService : IJwtService
         {
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new Claim(ClaimTypes.Email, user.Email ?? ""),
+            // Nome para exibicao nos fronts (saudacao, cabecalho); nao e usado em autorizacao.
+            new Claim(ClaimTypes.Name, string.IsNullOrWhiteSpace(user.Nome) ? user.Email ?? "" : user.Nome.Trim()),
             new Claim(ClaimTypes.Role, user.Tipo.ToString())
         };
 

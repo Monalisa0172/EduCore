@@ -1,5 +1,6 @@
 ﻿using EduCore.API.Constants;
 using EduCore.API.DTOs.Request;
+using EduCore.API.DTOs.Response;
 using EduCore.API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -8,6 +9,7 @@ namespace EduCore.API.Controllers;
 
 [ApiController]
 [Route("api/subdisciplinas")]
+[Authorize(Roles = Roles.Admin)]
 public class SubDisciplinaController : ControllerBase
 {
     private readonly SubDisciplinaService
@@ -20,136 +22,106 @@ public class SubDisciplinaController : ControllerBase
     }
 
     /// <summary>
-    /// Lista todas as subdisciplinas
+    /// Lista todas as subdisciplinas.
     /// </summary>
-    [Authorize(Roles = Roles.Admin)]
     [HttpGet]
+    [ProducesResponseType(typeof(List<SubDisciplinaResponseDTO>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll()
     {
-        var subDisciplinas =
-            await _subDisciplinaService
-                .GetAllAsync();
-
-        return Ok(subDisciplinas);
+        return Ok(await _subDisciplinaService.GetAllAsync());
     }
 
     /// <summary>
-    /// Busca uma subdisciplina por ID
+    /// Busca uma subdisciplina por ID.
     /// </summary>
-    [Authorize(Roles = Roles.Admin)]
-    [HttpGet("{id}")]
+    [HttpGet("{id:int}")]
+    [ProducesResponseType(typeof(SubDisciplinaResponseDTO), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetById(int id)
     {
-        var subDisciplina =
-            await _subDisciplinaService
-                .GetByIdAsync(id);
+        var subDisciplina = await _subDisciplinaService.GetByIdAsync(id);
 
-        if (subDisciplina == null)
-        {
-            return NotFound(new
-            {
-                message =
-                    "Subdisciplina não encontrada"
-            });
-        }
-
-        return Ok(subDisciplina);
+        return subDisciplina is null
+            ? Problem(detail: "Subdisciplina não encontrada.", statusCode: StatusCodes.Status404NotFound, title: "Registro não encontrado")
+            : Ok(subDisciplina);
     }
 
     /// <summary>
-    /// Busca subdisciplinas por disciplina
+    /// Lista as subdisciplinas (ativas e inativas) de uma disciplina, em ordem alfabética.
     /// </summary>
-    [Authorize(Roles = Roles.Admin)]
-    [HttpGet("disciplina/{disciplinaId}")]
-    public async Task<IActionResult>
-        GetByDisciplina(int disciplinaId)
+    [HttpGet("disciplina/{disciplinaId:int}")]
+    [ProducesResponseType(typeof(List<SubDisciplinaResponseDTO>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetByDisciplina(int disciplinaId)
     {
-        var subDisciplinas =
-            await _subDisciplinaService
-                .GetByDisciplinaAsync(disciplinaId);
-
-        return Ok(subDisciplinas);
+        return Ok(await _subDisciplinaService.GetByDisciplinaAsync(disciplinaId));
     }
 
     /// <summary>
-    /// Cria uma nova subdisciplina
+    /// Cria uma subdisciplina numa disciplina ativa.
     /// </summary>
-    [Authorize(Roles = Roles.Admin)]
+    /// <response code="201">Subdisciplina criada.</response>
+    /// <response code="400">Dados inválidos ou disciplina inativa.</response>
+    /// <response code="409">Já existe uma subdisciplina com este nome na disciplina.</response>
     [HttpPost]
+    [ProducesResponseType(typeof(SubDisciplinaResponseDTO), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Create(
-        [FromBody]
-        CreateSubDisciplinaRequest request)
+        [FromBody] CreateSubDisciplinaRequest request)
     {
-        var subDisciplina =
-            await _subDisciplinaService
-                .CreateAsync(request);
+        var resultado = await _subDisciplinaService.CreateAsync(request);
 
-        if (subDisciplina == null)
-        {
-            return BadRequest(new
-            {
-                message =
-                    "Disciplina inválida ou subdisciplina já cadastrada"
-            });
-        }
-
-        return Ok(subDisciplina);
+        return this.ParaResposta(resultado, subDisciplina =>
+            CreatedAtAction(nameof(GetById), new { id = subDisciplina.Id }, subDisciplina));
     }
 
     /// <summary>
-    /// Atualiza uma subdisciplina
+    /// Atualiza uma subdisciplina.
     /// </summary>
-    [Authorize(Roles = Roles.Admin)]
-    [HttpPut("{id}")]
+    /// <response code="200">Subdisciplina atualizada.</response>
+    /// <response code="400">Dados inválidos.</response>
+    /// <response code="404">Subdisciplina não encontrada.</response>
+    /// <response code="409">Nome já usado nesta disciplina.</response>
+    [HttpPut("{id:int}")]
+    [ProducesResponseType(typeof(SubDisciplinaResponseDTO), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Update(
         int id,
-        [FromBody]
-        CreateSubDisciplinaRequest request)
+        [FromBody] CreateSubDisciplinaRequest request)
     {
-        var atualizado =
-            await _subDisciplinaService
-                .UpdateAsync(id, request);
-
-        if (!atualizado)
-        {
-            return NotFound(new
-            {
-                message =
-                    "Subdisciplina não encontrada"
-            });
-        }
-
-        return Ok(new
-        {
-            message =
-                "Subdisciplina atualizada com sucesso"
-        });
+        return this.ParaResposta(await _subDisciplinaService.UpdateAsync(id, request), Ok);
     }
 
     /// <summary>
-    /// Inativa uma subdisciplina
+    /// Inativa uma subdisciplina (o histórico é mantido).
     /// </summary>
-    [Authorize(Roles = Roles.Admin)]
-    [HttpDelete("{id}")]
-    public async Task<IActionResult> Delete(int id)
+    [HttpPatch("{id:int}/inativar")]
+    [ProducesResponseType(typeof(SubDisciplinaResponseDTO), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Inativar(int id)
     {
-        var removido =
-            await _subDisciplinaService
-                .DeleteAsync(id);
-
-        if (!removido)
-        {
-            return NotFound(new
-            {
-                message =
-                    "Subdisciplina não encontrada"
-            });
-        }
-
-        return Ok(new
-        {
-            message =
-                "Subdisciplina inativada com sucesso"
-        });
+        return this.ParaResposta(await _subDisciplinaService.InativarAsync(id), Ok);
     }
+
+    /// <summary>
+    /// Reativa uma subdisciplina. A disciplina precisa estar ativa.
+    /// </summary>
+    [HttpPatch("{id:int}/reativar")]
+    [ProducesResponseType(typeof(SubDisciplinaResponseDTO), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Reativar(int id)
+    {
+        return this.ParaResposta(await _subDisciplinaService.ReativarAsync(id), Ok);
+    }
+
+    /// <summary>
+    /// Inativa uma subdisciplina. Mantido por compatibilidade: prefira PATCH {id}/inativar.
+    /// </summary>
+    [HttpDelete("{id:int}")]
+    [ProducesResponseType(typeof(SubDisciplinaResponseDTO), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public Task<IActionResult> Delete(int id) => Inativar(id);
 }

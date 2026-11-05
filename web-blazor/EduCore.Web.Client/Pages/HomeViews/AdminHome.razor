@@ -2,22 +2,18 @@
 
 <div class="admin-home">
     @* ---------- Cabecalho da pagina ---------- *@
-    <header class="page-header">
-        <div class="page-heading">
-            <FluentText As="TextTag.H1" Id="admin-home-title" Size="TextSize.Size800" Weight="TextWeight.Semibold" Block="true">
-                Painel administrativo
-            </FluentText>
-            <FluentText Block="true" Class="page-subtitle">
-                Olá, @UserEmail. Acompanhe os alunos e professores ativos da escola.
-            </FluentText>
-        </div>
-
-        <FluentButton Appearance="ButtonAppearance.Primary"
-                      IconStart="@(new Icons.Regular.Size20.PersonAdd())"
-                      OnClick="IrParaNovoUsuario">
-            Novo usuário
-        </FluentButton>
-    </header>
+    <PageHeader Titulo="Painel administrativo"
+                Secao="Visão geral"
+                Icone="@(new Icons.Regular.Size24.Board())"
+                Descricao="@($"Olá, {PrimeiroNome}. Acompanhe os alunos e professores ativos da escola.")">
+        <Acoes>
+            <FluentButton Appearance="ButtonAppearance.Primary"
+                          IconStart="@(new Icons.Regular.Size20.PersonAdd())"
+                          OnClick="IrParaNovoUsuario">
+                Novo usuário
+            </FluentButton>
+        </Acoes>
+    </PageHeader>
 
     @if (_avisoSucesso is not null)
     {
@@ -63,15 +59,11 @@
         </div>
 
         <div class="toolbar">
-            <FluentRadioGroup TValue="TipoUsuarioFiltro"
-                              Label="Exibir"
-                              Orientation="Orientation.Horizontal"
-                              @bind-Value="_filtro"
-                              @bind-Value:after="AoAlterarFiltroAsync">
-                <FluentRadio Value="TipoUsuarioFiltro.Todos" Label="Todos" />
-                <FluentRadio Value="TipoUsuarioFiltro.Alunos" Label="Alunos" />
-                <FluentRadio Value="TipoUsuarioFiltro.Professores" Label="Professores" />
-            </FluentRadioGroup>
+            <SeletorSegmentado TValor="TipoUsuarioFiltro"
+                               Rotulo="Exibir"
+                               Opcoes="OpcoesFiltro"
+                               @bind-Valor="_filtro"
+                               @bind-Valor:after="AoAlterarFiltroAsync" />
 
             <FluentTextInput Id="busca-usuarios"
                              Label="Buscar"
