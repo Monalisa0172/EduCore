@@ -7,6 +7,8 @@
     <Authorized Context="autenticacao">
         <div class="pagina">
             <PageHeader Titulo="Disciplinas"
+                        Secao="Acadêmico"
+                        Icone="@(new Icons.Regular.Size24.BookOpen())"
                         Descricao="Cadastre as disciplinas da escola e organize as subdisciplinas de cada uma.">
                 <Acoes>
                     <FluentButton Appearance="ButtonAppearance.Primary"
@@ -25,6 +27,25 @@
                                   AllowDismiss="true">
                     @_aviso.Mensagem
                 </FluentMessageBar>
+            }
+
+            @if (_erroLista is null)
+            {
+                <section class="indicadores" aria-label="Resumo das disciplinas">
+                    <KpiCard Label="Disciplinas ativas"
+                             Icon="@(new Icons.Regular.Size24.BookOpen())"
+                             Value="@(_carregando ? null : QuantidadeAtivas)"
+                             Descricao="@TextoInativas" />
+                    <KpiCard Label="Subdisciplinas ativas"
+                             Icon="@(new Icons.Regular.Size24.TextBulletListSquare())"
+                             Value="@(_carregando ? null : QuantidadeSubDisciplinas)"
+                             Descricao="Somadas nas disciplinas ativas"
+                             Secondary="true" />
+                    <KpiCard Label="Cadastros incompletos"
+                             Icon="@(new Icons.Regular.Size24.DocumentError())"
+                             Value="@(_carregando ? null : QuantidadeIncompletas)"
+                             Descricao="Sem código ou carga horária" />
+                </section>
             }
 
             <section class="secao-card" aria-labelledby="disciplinas-titulo">
@@ -88,7 +109,16 @@
                                                 InitialSortDirection="DataGridSortDirection.Ascending">
                                     <div class="disciplina-celula">
                                         <a class="disciplina-nome" href="@($"disciplinas/{context.Id}")">@context.Nome</a>
-                                        <span class="disciplina-codigo @(context.TemCodigo ? null : "disciplina-codigo--vazio")">@context.CodigoTexto</span>
+                                        <span class="disciplina-linha2">
+                                            <span class="disciplina-codigo @(context.TemCodigo ? null : "disciplina-codigo--vazio")">@context.CodigoTexto</span>
+                                            @if (context.Incompleta)
+                                            {
+                                                <span class="chip-atencao" title="Edite a disciplina para informar código e carga horária.">
+                                                    <FluentIcon Value="@(new Icons.Filled.Size12.Warning())" Color="Color.Custom" CustomColor="currentColor" aria-hidden="true" />
+                                                    Incompleta
+                                                </span>
+                                            }
+                                        </span>
                                     </div>
                                 </TemplateColumn>
 

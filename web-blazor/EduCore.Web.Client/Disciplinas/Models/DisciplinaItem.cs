@@ -17,6 +17,9 @@ public sealed record DisciplinaItem(
 
     public string CodigoTexto => TemCodigo ? Codigo : "Sem código";
 
+    /// <summary>Falta código ou carga horária (exigidos no cadastro atual).</summary>
+    public bool Incompleta => !TemCodigo || CargaHoraria is not > 0;
+
     public string CargaHorariaTexto => CargaHoraria is > 0 ? $"{CargaHoraria} h" : "Não informada";
 
     public string SubDisciplinasTexto => QuantidadeSubDisciplinas switch

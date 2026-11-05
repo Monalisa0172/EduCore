@@ -56,9 +56,27 @@
     border-radius: var(--borderRadiusLarge, 8px);
 }
 
+/* Marcador com as iniciais: o ambar da marca, mais apagado quando inativa */
+.sub-marcador {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    font-size: var(--fontSizeBase200, 12px);
+    font-weight: 700;
+    color: var(--educore-secondary-text);
+    background: var(--educore-secondary-tint);
+}
+
+.sub-item--inativa .sub-marcador {
+    filter: grayscale(1);
+    opacity: 0.6;
+}
+
 .sub-item {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
     align-items: center;
     gap: 16px;
     padding: 12px 16px;
@@ -99,7 +117,7 @@
 
 @media (max-width: 600px) {
     .sub-item {
-        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-columns: auto minmax(0, 1fr) auto;
     }
 
     .sub-acoes {

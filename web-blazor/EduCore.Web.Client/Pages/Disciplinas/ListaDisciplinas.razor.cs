@@ -58,6 +58,20 @@ public partial class ListaDisciplinas : IDisposable
 
     private int TotalVisivel => _itensVisiveis.Count();
 
+    // Indicadores (sobre todas as disciplinas, independente do filtro)
+    private int QuantidadeAtivas => _disciplinas.Count(d => d.Ativo);
+
+    private int QuantidadeSubDisciplinas => _disciplinas.Where(d => d.Ativo).Sum(d => d.QuantidadeSubDisciplinas);
+
+    private int QuantidadeIncompletas => _disciplinas.Count(d => d.Ativo && d.Incompleta);
+
+    private string TextoInativas => (_disciplinas.Count - QuantidadeAtivas) switch
+    {
+        0 => "Nenhuma inativa",
+        1 => "1 inativa",
+        var n => $"{n} inativas"
+    };
+
     private string TextoContagem => _carregando
         ? "Carregando..."
         : TotalVisivel == 1 ? "1 disciplina" : $"{TotalVisivel} disciplinas";

@@ -14,8 +14,8 @@
     height: 56px;
     margin-bottom: 6px;
     border-radius: 50%;
-    color: var(--colorBrandForeground1, var(--educore-primary));
-    background: color-mix(in srgb, var(--educore-primary) 10%, transparent);
+    color: var(--educore-primary-text);
+    background: var(--educore-primary-tint);
 }
 
 .empty-state-descricao {

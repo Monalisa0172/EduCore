@@ -7,23 +7,6 @@
     padding: 8px 0 24px;
 }
 
-/* ---------- Cabecalho ---------- */
-.page-header {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: 16px;
-}
-
-.page-heading {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    min-width: 0;
-}
-
-.admin-home ::deep .page-subtitle,
 .admin-home ::deep .text-muted,
 .text-muted {
     color: var(--colorNeutralForeground3);

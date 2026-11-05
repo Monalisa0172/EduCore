@@ -11,7 +11,18 @@
     }
 
     <div class="page-header-linha">
+        @if (Icone is not null)
+        {
+            <span class="page-header-icone" aria-hidden="true">
+                <FluentIcon Value="Icone" Color="Color.Custom" CustomColor="currentColor" />
+            </span>
+        }
+
         <div class="page-header-textos">
+            @if (!string.IsNullOrWhiteSpace(Secao))
+            {
+                <span class="page-header-secao">@Secao</span>
+            }
             <div class="page-header-titulo">
                 <FluentText As="TextTag.H1" Size="TextSize.Size800" Weight="TextWeight.Semibold">@Titulo</FluentText>
                 @Selo
@@ -36,6 +47,14 @@
 
     [Parameter]
     public string? Descricao { get; set; }
+
+    /// <summary>Área do sistema exibida acima do título (ex.: "Acadêmico"), com o traço âmbar da marca.</summary>
+    [Parameter]
+    public string? Secao { get; set; }
+
+    /// <summary>Ícone da página (Size28 ou Size24), exibido num quadro azul à esquerda do título.</summary>
+    [Parameter]
+    public Icon? Icone { get; set; }
 
     /// <summary>Conteúdo ao lado do título (ex.: selo de status).</summary>
     [Parameter]

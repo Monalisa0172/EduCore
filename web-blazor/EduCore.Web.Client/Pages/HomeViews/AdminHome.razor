@@ -2,22 +2,18 @@
 
 <div class="admin-home">
     @* ---------- Cabecalho da pagina ---------- *@
-    <header class="page-header">
-        <div class="page-heading">
-            <FluentText As="TextTag.H1" Id="admin-home-title" Size="TextSize.Size800" Weight="TextWeight.Semibold" Block="true">
-                Painel administrativo
-            </FluentText>
-            <FluentText Block="true" Class="page-subtitle">
-                Olá, @PrimeiroNome. Acompanhe os alunos e professores ativos da escola.
-            </FluentText>
-        </div>
-
-        <FluentButton Appearance="ButtonAppearance.Primary"
-                      IconStart="@(new Icons.Regular.Size20.PersonAdd())"
-                      OnClick="IrParaNovoUsuario">
-            Novo usuário
-        </FluentButton>
-    </header>
+    <PageHeader Titulo="Painel administrativo"
+                Secao="Visão geral"
+                Icone="@(new Icons.Regular.Size24.Board())"
+                Descricao="@($"Olá, {PrimeiroNome}. Acompanhe os alunos e professores ativos da escola.")">
+        <Acoes>
+            <FluentButton Appearance="ButtonAppearance.Primary"
+                          IconStart="@(new Icons.Regular.Size20.PersonAdd())"
+                          OnClick="IrParaNovoUsuario">
+                Novo usuário
+            </FluentButton>
+        </Acoes>
+    </PageHeader>
 
     @if (_avisoSucesso is not null)
     {

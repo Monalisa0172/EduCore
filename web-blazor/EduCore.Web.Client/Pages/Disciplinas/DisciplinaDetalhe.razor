@@ -39,11 +39,20 @@
             else if (_disciplina is { } disciplina)
             {
                 <PageHeader Titulo="@disciplina.Nome"
+                            Secao="Acadêmico · Disciplina"
+                            Icone="@(new Icons.Regular.Size24.BookOpen())"
                             Descricao="@disciplina.Descricao"
                             VoltarHref="disciplinas"
                             VoltarTexto="Disciplinas">
                     <Selo>
                         <StatusBadge Ativo="disciplina.Ativo" />
+                        @if (disciplina.Incompleta)
+                        {
+                            <span class="chip-atencao" title="Clique em Editar para informar código e carga horária.">
+                                <FluentIcon Value="@(new Icons.Filled.Size12.Warning())" Color="Color.Custom" CustomColor="currentColor" aria-hidden="true" />
+                                Cadastro incompleto
+                            </span>
+                        }
                     </Selo>
                     <Detalhes>
                         <dl class="disciplina-dados">
@@ -157,6 +166,7 @@
                             @foreach (var sub in SubDisciplinasVisiveis)
                             {
                                 <li class="sub-item @(sub.Ativo ? null : "sub-item--inativa")" @key="sub.Id">
+                                    <span class="sub-marcador" aria-hidden="true">@Iniciais(sub.Nome)</span>
                                     <div class="sub-textos">
                                         <span class="sub-nome">@sub.Nome</span>
                                         <span class="sub-descricao">@(string.IsNullOrWhiteSpace(sub.Descricao) ? "Sem descrição" : sub.Descricao)</span>

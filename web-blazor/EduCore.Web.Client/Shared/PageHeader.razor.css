@@ -9,7 +9,7 @@
     align-items: center;
     gap: 6px;
     font-size: var(--fontSizeBase300, 14px);
-    color: var(--colorBrandForeground1);
+    color: var(--educore-primary-text);
     text-decoration: none;
 }
 
@@ -27,16 +27,55 @@
     display: flex;
     flex-wrap: wrap;
     align-items: flex-end;
-    justify-content: space-between;
     gap: 16px;
+}
+
+@media (max-width: 600px) {
+    .page-header-icone {
+        display: none;
+    }
 }
 
 .page-header-textos {
     display: flex;
+    flex: 1 1 320px;
     flex-direction: column;
     gap: 4px;
     min-width: 0;
 }
+
+/* Quadro do icone da pagina (azul da marca) */
+.page-header-icone {
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    align-self: flex-start;
+    width: 56px;
+    height: 56px;
+    border-radius: var(--borderRadiusXLarge, 12px);
+    color: var(--educore-primary-text);
+    background: var(--educore-primary-tint);
+}
+
+/* Area do sistema: traco ambar + texto em caixa alta, discreto */
+.page-header-secao {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: var(--fontSizeBase200, 12px);
+    font-weight: var(--fontWeightSemibold, 600);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--colorNeutralForeground3);
+}
+
+    .page-header-secao::before {
+        content: "";
+        width: 20px;
+        height: 3px;
+        border-radius: 2px;
+        background: var(--educore-secondary);
+    }
 
 .page-header-titulo {
     display: flex;
@@ -52,6 +91,7 @@
 
 .page-header-acoes {
     display: flex;
+    margin-inline-start: auto;
     flex-wrap: wrap;
     gap: 8px;
 }

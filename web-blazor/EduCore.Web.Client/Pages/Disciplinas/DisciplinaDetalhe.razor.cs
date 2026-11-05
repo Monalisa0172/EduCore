@@ -129,6 +129,21 @@ public partial class DisciplinaDetalhe : IDisposable
 
     private void VoltarParaLista() => Navigation.NavigateTo("disciplinas");
 
+    /// <summary>Até duas iniciais para o marcador da subdisciplina ("Matemática Financeira" -> "MF").</summary>
+    private static string Iniciais(string nome)
+    {
+        var palavras = nome.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Where(p => p.Length > 2)
+            .ToList();
+
+        return palavras.Count switch
+        {
+            0 => nome.Length > 0 ? nome[..1].ToUpperInvariant() : "?",
+            1 => palavras[0][..1].ToUpperInvariant(),
+            _ => string.Concat(palavras[0][0], palavras[1][0]).ToUpperInvariant()
+        };
+    }
+
     // ---------- Disciplina ----------
 
     private Task EditarDisciplinaAsync() => _formDisciplina.AbrirEdicaoAsync(_disciplina!);
