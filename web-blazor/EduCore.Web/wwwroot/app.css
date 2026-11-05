@@ -108,6 +108,19 @@
   color: var(--colorNeutralForeground3);
 }
 
+/* Texto so para leitores de tela (ex.: legend de fieldset) */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* Faixa de indicadores (KpiCard) no topo das paginas */
 .indicadores {
   display: grid;

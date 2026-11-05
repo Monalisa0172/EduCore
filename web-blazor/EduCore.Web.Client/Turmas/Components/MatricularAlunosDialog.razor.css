@@ -1,0 +1,120 @@
+.matricula {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    /* Mesma largura dos demais formularios em dialogo (FormDialog) */
+    width: min(520px, 80vw);
+    min-width: 0;
+}
+
+.matricula-descricao {
+    margin: 0;
+    font-size: var(--fontSizeBase300, 14px);
+    color: var(--colorNeutralForeground3);
+}
+
+    .matricula-descricao strong {
+        color: var(--colorNeutralForeground1);
+    }
+
+.matricula-carregando {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.matricula-barra {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: var(--fontSizeBase200, 12px);
+    color: var(--colorNeutralForeground3);
+}
+
+.matricula-barra-acoes {
+    display: flex;
+    gap: 4px;
+}
+
+/* Lista rolavel: a janela nao cresce alem da tela com muitos alunos */
+.matricula-lista {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    max-height: min(360px, 45vh);
+    margin: 0;
+    padding: 4px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    border: 1px solid var(--colorNeutralStroke2);
+    border-radius: var(--borderRadiusLarge, 8px);
+}
+
+.matricula-opcao {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 10px;
+    border-radius: var(--borderRadiusMedium, 4px);
+    cursor: pointer;
+}
+
+    .matricula-opcao:hover {
+        background: var(--colorSubtleBackgroundHover);
+    }
+
+    .matricula-opcao input {
+        flex-shrink: 0;
+        width: 18px;
+        height: 18px;
+        margin: 0;
+        accent-color: var(--educore-primary);
+        cursor: pointer;
+    }
+
+        .matricula-opcao input:focus-visible {
+            outline: 2px solid var(--colorStrokeFocus2);
+            outline-offset: 2px;
+        }
+
+.matricula-opcao--marcada {
+    background: var(--educore-primary-tint);
+}
+
+    .matricula-opcao--marcada:hover {
+        background: var(--educore-primary-tint);
+    }
+
+.matricula-textos {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.matricula-nome {
+    font-weight: var(--fontWeightSemibold, 600);
+}
+
+.matricula-detalhe {
+    overflow: hidden;
+    font-size: var(--fontSizeBase200, 12px);
+    color: var(--colorNeutralForeground3);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.matricula-vazio {
+    margin: 0;
+    padding: 16px;
+    text-align: center;
+    color: var(--colorNeutralForeground3);
+}
+
+.matricula-acoes {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}

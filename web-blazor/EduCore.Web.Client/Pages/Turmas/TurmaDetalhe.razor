@@ -1,0 +1,248 @@
+@page "/turmas/{Id:int}"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+
+<PageTitle>@(_turma?.Nome ?? "Turma") | EduCore</PageTitle>
+
+<AuthorizeView Roles="@Roles.Admin">
+    <Authorized>
+        <div class="pagina">
+            @if (_carregandoTurma)
+            {
+                <div class="carregando" aria-busy="true" aria-label="Carregando turma">
+                    <FluentSkeleton Width="160px" Height="20px" Shimmer="true" />
+                    <FluentSkeleton Width="320px" Height="40px" Shimmer="true" />
+                    <FluentSkeleton Width="240px" Height="20px" Shimmer="true" />
+                    <FluentSkeleton Height="220px" Shimmer="true" />
+                </div>
+            }
+            else if (_erroTurma is { Kind: ApiErrorKind.NotFound })
+            {
+                <PageHeader Titulo="Turma não encontrada" Trilha="TrilhaBase" />
+                <section class="secao-card">
+                    <EmptyState Titulo="Esta turma não existe"
+                                Descricao="O endereço pode estar incorreto. Volte para a lista e escolha uma turma."
+                                Icone="@(new Icons.Regular.Size24.PeopleTeam())">
+                        <FluentButton Appearance="ButtonAppearance.Primary" OnClick="VoltarParaLista">Ver turmas</FluentButton>
+                    </EmptyState>
+                </section>
+            }
+            else if (_erroTurma is not null)
+            {
+                <PageHeader Titulo="Turma" Trilha="TrilhaBase" />
+                <FluentMessageBar Intent="MessageBarIntent.Error" Title="@_erroTurma.Title" AllowDismiss="false">
+                    <ChildContent>@_erroTurma.Message</ChildContent>
+                    <ActionsTemplate>
+                        <FluentButton Appearance="ButtonAppearance.Default" OnClick="CarregarAsync">Tentar novamente</FluentButton>
+                    </ActionsTemplate>
+                </FluentMessageBar>
+            }
+            else if (_turma is { } turma)
+            {
+                <PageHeader Titulo="@turma.Nome"
+                            Secao="Acadêmico · Turma"
+                            Icone="@(new Icons.Regular.Size24.PeopleTeam())"
+                            Trilha="@([ItemTrilha.Inicio, new("Turmas", "turmas"), new(turma.Nome)])">
+                    <Selo>
+                        <StatusBadge Ativo="turma.Ativo" />
+                    </Selo>
+                    <Detalhes>
+                        <dl class="turma-dados">
+                            <div>
+                                <dt>Ano letivo</dt>
+                                <dd>@turma.AnoLetivo</dd>
+                            </div>
+                            <div>
+                                <dt>Alunos ativos</dt>
+                                <dd>@turma.QuantidadeAlunos</dd>
+                            </div>
+                        </dl>
+                    </Detalhes>
+                    <Acoes>
+                        <FluentButton Appearance="ButtonAppearance.Default"
+                                      IconStart="@(new Icons.Regular.Size20.Edit())"
+                                      OnClick="EditarTurmaAsync">
+                            Editar
+                        </FluentButton>
+                        @if (turma.Ativo)
+                        {
+                            <FluentButton Appearance="ButtonAppearance.Default"
+                                          IconStart="@(new Icons.Regular.Size20.Archive())"
+                                          OnClick="SolicitarInativacaoAsync">
+                                Inativar
+                            </FluentButton>
+                        }
+                        else
+                        {
+                            <FluentButton Appearance="ButtonAppearance.Primary"
+                                          IconStart="@(new Icons.Regular.Size20.ArrowUndo())"
+                                          Loading="_reativando"
+                                          OnClick="ReativarAsync">
+                                Reativar
+                            </FluentButton>
+                        }
+                    </Acoes>
+                </PageHeader>
+
+                @if (_aviso is not null)
+                {
+                    <FluentMessageBar @key="_avisoId"
+                                      Intent="@(_aviso.Erro ? MessageBarIntent.Error : MessageBarIntent.Success)"
+                                      Title="@_aviso.Titulo"
+                                      AllowDismiss="true">
+                        @_aviso.Mensagem
+                    </FluentMessageBar>
+                }
+
+                @if (!turma.Ativo)
+                {
+                    <FluentMessageBar Intent="MessageBarIntent.Warning" Title="Turma inativa" AllowDismiss="false">
+                        A turma não aparece como opção de matrícula. Os alunos abaixo continuam no histórico.
+                    </FluentMessageBar>
+                }
+
+                <section class="secao-card" aria-labelledby="alunos-titulo">
+                    <div class="secao-cabecalho">
+                        <div class="secao-titulo">
+                            <FluentText As="TextTag.H2" Id="alunos-titulo" Size="TextSize.Size600" Weight="TextWeight.Semibold">
+                                Alunos matriculados
+                            </FluentText>
+                            <span class="secao-contagem" role="status">@TextoContagemAlunos</span>
+                        </div>
+
+                        <div class="secao-acoes">
+                            @if (QuantidadeInativos > 0)
+                            {
+                                <FluentSwitch Label="Mostrar inativos" @bind-Value="_mostrarInativos" />
+                            }
+                            @if (turma.Ativo)
+                            {
+                                <FluentButton Appearance="ButtonAppearance.Default"
+                                              IconStart="@(new Icons.Regular.Size20.PersonAdd())"
+                                              OnClick="CadastrarAluno">
+                                    Cadastrar aluno
+                                </FluentButton>
+                                <FluentButton Appearance="ButtonAppearance.Primary"
+                                              IconStart="@(new Icons.Regular.Size20.PeopleAdd())"
+                                              Disabled="_alunos is null"
+                                              OnClick="AbrirMatriculaAsync">
+                                    Matricular alunos
+                                </FluentButton>
+                            }
+                        </div>
+                    </div>
+
+                    @if (turma.Ativo)
+                    {
+                        <p class="texto-suave">
+                            Use "Matricular alunos" para incluir alunos já cadastrados. Para um aluno novo, use "Cadastrar aluno":
+                            ele já vem com esta turma marcada.
+                        </p>
+                    }
+
+                    @if (_erroAlunos is not null)
+                    {
+                        <FluentMessageBar Intent="MessageBarIntent.Error" Title="@_erroAlunos.Title" AllowDismiss="false">
+                            <ChildContent>@_erroAlunos.Message</ChildContent>
+                            <ActionsTemplate>
+                                <FluentButton Appearance="ButtonAppearance.Default" OnClick="CarregarAlunosAsync">Tentar novamente</FluentButton>
+                            </ActionsTemplate>
+                        </FluentMessageBar>
+                    }
+                    else if (_alunos is null)
+                    {
+                        <div class="carregando" aria-busy="true" aria-label="Carregando alunos">
+                            @for (var i = 0; i < 3; i++)
+                            {
+                                <FluentSkeleton Height="56px" Shimmer="true" />
+                            }
+                        </div>
+                    }
+                    else if (AlunosVisiveis.Count == 0)
+                    {
+                        <EmptyState Titulo="@TituloVazio" Descricao="@DescricaoVazio" Icone="@(new Icons.Regular.Size24.PeopleList())">
+                            @if (turma.Ativo && !(QuantidadeInativos > 0 && !_mostrarInativos))
+                            {
+                                <FluentButton Appearance="ButtonAppearance.Primary"
+                                              IconStart="@(new Icons.Regular.Size20.PeopleAdd())"
+                                              OnClick="AbrirMatriculaAsync">
+                                    Matricular alunos
+                                </FluentButton>
+                            }
+                        </EmptyState>
+                    }
+                    else
+                    {
+                        <ul class="aluno-lista" aria-labelledby="alunos-titulo">
+                            @foreach (var aluno in AlunosVisiveis)
+                            {
+                                <li class="aluno-item @(aluno.Ativo ? null : "aluno-item--inativo")" @key="aluno.AlunoId">
+                                    <FluentAvatar Name="@aluno.Nome" Size="AvatarSize.Size32" Color="AvatarColor.Colorful" aria-hidden="true" />
+                                    <div class="aluno-textos">
+                                        <span class="aluno-nome">@aluno.Nome</span>
+                                        <span class="aluno-email">@aluno.Email</span>
+                                    </div>
+
+                                    <StatusBadge Ativo="aluno.Ativo" TextoAtivo="Ativo" TextoInativo="Inativo" />
+
+                                    <div class="aluno-acoes">
+                                        <a class="aluno-abrir" href="@LinkCadastro(aluno)" title="@($"Abrir o cadastro de {aluno.Nome}")">
+                                            <FluentIcon Value="@(new Icons.Regular.Size16.Open())" Color="Color.Custom" CustomColor="currentColor" aria-hidden="true" />
+                                            Abrir cadastro
+                                        </a>
+                                        @if (turma.Ativo)
+                                        {
+                                            <FluentButton Appearance="ButtonAppearance.Subtle"
+                                                          IconStart="@(new Icons.Regular.Size16.PersonDelete())"
+                                                          Title="@($"Remover {aluno.Nome} da turma")"
+                                                          aria-label="@($"Remover {aluno.Nome} da turma")"
+                                                          OnClick="@(() => SolicitarRemocaoAsync(aluno))">
+                                                Remover
+                                            </FluentButton>
+                                        }
+                                    </div>
+                                </li>
+                            }
+                        </ul>
+                    }
+                </section>
+            }
+        </div>
+
+        <TurmaFormDialog @ref="_formulario" OnSalva="AoSalvarTurma" />
+
+        <MatricularAlunosDialog @ref="_matricula"
+                                TurmaId="Id"
+                                NomeTurma="@(_turma?.Nome ?? string.Empty)"
+                                JaMatriculados="@((_alunos ?? []).Select(a => a.UsuarioId).ToList())"
+                                OnMatriculados="AoMatricular" />
+
+        <ConfirmDialog @ref="_confirmarRemocao"
+                       Titulo="Remover da turma"
+                       TextoConfirmar="Remover"
+                       Perigo="true"
+                       Processando="_processando"
+                       Erro="_erroConfirmacao"
+                       OnConfirmar="ConfirmarRemocaoAsync">
+            <p>Deseja remover <strong>@_alvoRemocao?.Nome</strong> de <strong>@_turma?.Nome</strong>?</p>
+            <p class="texto-suave">
+                O aluno continua cadastrado e pode ser matriculado de novo. Notas e presenças já lançadas são mantidas.
+            </p>
+        </ConfirmDialog>
+
+        <ConfirmDialog @ref="_confirmarInativacao"
+                       Titulo="Inativar turma"
+                       TextoConfirmar="Inativar"
+                       Perigo="true"
+                       Processando="_processando"
+                       Erro="_erroConfirmacao"
+                       OnConfirmar="ConfirmarInativacaoAsync">
+            <p>Deseja inativar <strong>@_turma?.Nome</strong> (@_turma?.AnoLetivo)?</p>
+            <p class="texto-suave">
+                As matrículas ficam no histórico dos alunos, mas a turma deixa de aparecer como opção de matrícula.
+            </p>
+        </ConfirmDialog>
+    </Authorized>
+    <NotAuthorized>
+        <AcessoNegadoOuLogin />
+    </NotAuthorized>
+</AuthorizeView>

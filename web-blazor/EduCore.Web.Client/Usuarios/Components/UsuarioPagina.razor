@@ -5,7 +5,7 @@
                 Secao="Pessoas"
                 Icone="Icone"
                 Descricao="@Descricao"
-                Trilha="@([ItemTrilha.Inicio, new(Titulo)])">
+                Trilha="@(Trilha ?? [ItemTrilha.Inicio, new(Titulo)])">
         <Detalhes>@Resumo</Detalhes>
     </PageHeader>
 
@@ -21,6 +21,10 @@
 
     [Parameter]
     public Icon Icone { get; set; } = new Icons.Regular.Size24.Person();
+
+    /// <summary>Trilha quando a página é aberta de outro lugar (ex.: a partir de uma turma). Padrão: Início › Título.</summary>
+    [Parameter]
+    public IReadOnlyList<ItemTrilha>? Trilha { get; set; }
 
     /// <summary>Conteúdo extra do cabeçalho (ex.: quem está sendo editado).</summary>
     [Parameter]

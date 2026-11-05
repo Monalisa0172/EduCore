@@ -34,8 +34,11 @@ public static class ResultadoOperacaoExtensions
                     modelStateDictionary: controller.ModelState);
 
             default:
+                // detail com a mensagem: telas sem o campo correspondente (ex.: dialogo de matricula) exibem o texto certo.
                 controller.ModelState.AddModelError(resultado.Campo!, resultado.Mensagem!);
-                return controller.ValidationProblem(controller.ModelState);
+                return controller.ValidationProblem(
+                    detail: resultado.Mensagem,
+                    modelStateDictionary: controller.ModelState);
         }
     }
 }
