@@ -1,0 +1,77 @@
+@* Moldura de formulario em dialogo: titulo, campos (ChildContent), erro geral e botoes Cancelar/Salvar.
+   A validacao e o envio ficam no componente que usa a moldura (OnSalvar). *@
+<FluentDialog @ref="_dialogo" Modal="true">
+    <FluentDialogBody>
+        <TitleTemplate>@Titulo</TitleTemplate>
+
+        <ChildContent>
+            <EditForm EditContext="EditContext" OnSubmit="OnSalvar" FormName="@NomeFormulario" class="form-dialog" novalidate>
+                <DataAnnotationsValidator />
+
+                @if (!string.IsNullOrWhiteSpace(Descricao))
+                {
+                    <p class="form-dialog-descricao">@Descricao</p>
+                }
+
+                @ChildContent
+
+                @if (Erro is not null)
+                {
+                    <FluentMessageBar Intent="MessageBarIntent.Error" Title="@Erro.Title" AllowDismiss="false">
+                        @Erro.Message
+                    </FluentMessageBar>
+                }
+            </EditForm>
+        </ChildContent>
+
+        <ActionTemplate>
+            <div class="form-dialog-acoes">
+                <FluentButton Appearance="ButtonAppearance.Default" Disabled="Salvando" OnClick="FecharAsync">
+                    Cancelar
+                </FluentButton>
+                <FluentButton Appearance="ButtonAppearance.Primary"
+                              IconStart="@(new Icons.Regular.Size20.Save())"
+                              Loading="Salvando"
+                              OnClick="OnSalvar">
+                    @TextoSalvar
+                </FluentButton>
+            </div>
+        </ActionTemplate>
+    </FluentDialogBody>
+</FluentDialog>
+
+@code {
+    private FluentDialog _dialogo = default!;
+
+    [Parameter, EditorRequired]
+    public string Titulo { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? Descricao { get; set; }
+
+    [Parameter, EditorRequired]
+    public EditContext EditContext { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public string NomeFormulario { get; set; } = string.Empty;
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    [Parameter]
+    public string TextoSalvar { get; set; } = "Salvar";
+
+    [Parameter]
+    public bool Salvando { get; set; }
+
+    [Parameter]
+    public ApiError? Erro { get; set; }
+
+    /// <summary>Chamado pelo botão Salvar e pelo Enter dentro do formulário.</summary>
+    [Parameter]
+    public EventCallback OnSalvar { get; set; }
+
+    public async Task AbrirAsync() => await _dialogo.ShowAsync();
+
+    public async Task FecharAsync() => await _dialogo.HideAsync();
+}

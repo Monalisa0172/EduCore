@@ -1,0 +1,146 @@
+@implements IDisposable
+@inject IDisciplinaApiClient DisciplinaApi
+
+@* Cadastro e edicao de disciplina em dialogo. Campos com Immediate: o valor chega ao modelo a cada tecla,
+   entao clicar direto em "Salvar" nunca envia o valor antigo. *@
+<FormDialog @ref="_moldura"
+            Titulo="@(_modelo.Edicao ? "Editar disciplina" : "Nova disciplina")"
+            Descricao="Campos com * são obrigatórios."
+            EditContext="_editContext"
+            NomeFormulario="disciplina"
+            TextoSalvar="@(_modelo.Edicao ? "Salvar alterações" : "Cadastrar disciplina")"
+            Salvando="_salvando"
+            Erro="_erro"
+            OnSalvar="SalvarAsync">
+    <div class="campos-grid">
+        <FluentTextInput Id="disciplina-nome"
+                         Label="Nome"
+                         Placeholder="Ex.: Matemática"
+                         @bind-Value="_modelo.Nome"
+                         Required="true"
+                         MaxLength="100"
+                         AutoComplete="off"
+                         Immediate="true"
+                         ImmediateDelay="0"
+                         Class="campo-largo" />
+
+        <FluentTextInput Id="disciplina-codigo"
+                         Label="Código"
+                         Placeholder="Ex.: MAT01"
+                         @bind-Value="_modelo.Codigo"
+                         Required="true"
+                         MaxLength="20"
+                         AutoComplete="off"
+                         Spellcheck="false"
+                         Immediate="true"
+                         ImmediateDelay="0" />
+
+        <FluentNumberInput TValue="int?"
+                           Id="disciplina-carga"
+                           Label="Carga horária (horas)"
+                           Placeholder="Ex.: 80"
+                           @bind-Value="_modelo.CargaHoraria"
+                           Required="true"
+                           Immediate="true"
+                           ImmediateDelay="0" />
+    </div>
+
+    <FluentTextArea Id="disciplina-descricao"
+                    Label="Descrição"
+                    Placeholder="Opcional: ementa resumida ou observações."
+                    @bind-Value="_modelo.Descricao"
+                    MaxLength="255"
+                    Width="100%"
+                    Immediate="true"
+                    ImmediateDelay="0" />
+</FormDialog>
+
+@code {
+    private readonly CancellationTokenSource _cts = new();
+
+    private FormDialog _moldura = default!;
+    private DisciplinaFormModel _modelo = DisciplinaFormModel.Nova();
+    private EditContext _editContext = default!;
+    private ValidationMessageStore _mensagensServidor = default!;
+    private ApiError? _erro;
+    private bool _salvando;
+
+    /// <summary>Disparado depois que a API confirmou a gravação.</summary>
+    [Parameter]
+    public EventCallback<DisciplinaSalva> OnSalva { get; set; }
+
+    protected override void OnInitialized() => Preparar(_modelo);
+
+    public Task AbrirNovaAsync() => AbrirAsync(DisciplinaFormModel.Nova());
+
+    public Task AbrirEdicaoAsync(DisciplinaItem disciplina) => AbrirAsync(DisciplinaFormModel.De(disciplina));
+
+    private async Task AbrirAsync(DisciplinaFormModel modelo)
+    {
+        Preparar(modelo);
+        StateHasChanged();
+
+        // Deixa o dialogo renderizar com o modelo novo antes de abrir.
+        await Task.Yield();
+        await _moldura.AbrirAsync();
+    }
+
+    private void Preparar(DisciplinaFormModel modelo)
+    {
+        if (_editContext is not null)
+        {
+            _editContext.OnFieldChanged -= AoAlterarCampo;
+        }
+
+        _modelo = modelo;
+        _erro = null;
+        _editContext = new EditContext(modelo);
+        _mensagensServidor = new ValidationMessageStore(_editContext);
+        _editContext.OnFieldChanged += AoAlterarCampo;
+    }
+
+    // O erro devolvido pela API vale ate o usuario mexer no campo.
+    private void AoAlterarCampo(object? sender, FieldChangedEventArgs e) => _mensagensServidor.Clear(e.FieldIdentifier);
+
+    private async Task SalvarAsync()
+    {
+        if (_salvando)
+        {
+            return;
+        }
+
+        _erro = null;
+        _mensagensServidor.Clear();
+
+        if (!_editContext.Validate())
+        {
+            return;
+        }
+
+        _salvando = true;
+
+        var request = _modelo.ParaRequest();
+        var resultado = _modelo.Edicao
+            ? await DisciplinaApi.AtualizarAsync(_modelo.Id!.Value, request, _cts.Token)
+            : await DisciplinaApi.CriarAsync(request, _cts.Token);
+
+        _salvando = false;
+
+        if (resultado.Succeeded)
+        {
+            await _moldura.FecharAsync();
+            await OnSalva.InvokeAsync(new DisciplinaSalva(resultado.Value!, Nova: !_modelo.Edicao));
+            return;
+        }
+
+        _erro = ErrosDeFormulario.Aplicar(resultado.Error, _mensagensServidor, _modelo, DisciplinaFormModel.Campos);
+        _editContext.NotifyValidationStateChanged();
+    }
+
+    public void Dispose()
+    {
+        _editContext.OnFieldChanged -= AoAlterarCampo;
+        _cts.Cancel();
+        _cts.Dispose();
+    }
+}

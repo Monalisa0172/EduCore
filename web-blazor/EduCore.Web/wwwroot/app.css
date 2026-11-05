@@ -42,6 +42,87 @@
   padding: 5px;
 }
 
+/* ---------- Estrutura comum das paginas de cadastro ---------- */
+.pagina {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 8px 0 24px;
+}
+
+.secao-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+  border-radius: var(--borderRadiusXLarge, 12px);
+  background: var(--colorNeutralBackground1);
+  box-shadow: var(--shadow4);
+}
+
+.secao-cabecalho {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.secao-titulo {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.secao-contagem {
+  font-size: var(--fontSizeBase200, 12px);
+  color: var(--colorNeutralForeground3);
+}
+
+.texto-suave {
+  margin: 0;
+  color: var(--colorNeutralForeground3);
+}
+
+.lista-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+/* Rolagem horizontal no celular em vez de esmagar as colunas */
+.lista-grid {
+  overflow-x: auto;
+}
+
+  .lista-grid td[role="gridcell"] {
+    align-content: center;
+  }
+
+.acoes-celula {
+  display: flex;
+  justify-content: flex-end;
+}
+
+  /* A lista do menu abre na camada superior (popover): o fluent-menu nao ocupa espaco na celula */
+  .acoes-celula fluent-menu {
+    display: contents;
+  }
+
+@media (max-width: 600px) {
+  .secao-card {
+    padding: 16px 12px;
+  }
+
+  .lista-toolbar fluent-text-input {
+    width: 100% !important;
+  }
+}
+
 
 #blazor-error-ui {
   background: lightyellow;

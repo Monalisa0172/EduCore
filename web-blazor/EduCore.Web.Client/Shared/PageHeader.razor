@@ -1,0 +1,57 @@
+@* Cabecalho padrao das paginas: link de volta (opcional), titulo, descricao e acoes. *@
+<header class="page-header">
+    @if (!string.IsNullOrWhiteSpace(VoltarHref))
+    {
+        <nav aria-label="Navegação da página" class="page-header-nav">
+            <a class="page-header-voltar" href="@VoltarHref">
+                <FluentIcon Value="@(new Icons.Regular.Size20.ArrowLeft())" Color="Color.Custom" CustomColor="currentColor" aria-hidden="true" />
+                @VoltarTexto
+            </a>
+        </nav>
+    }
+
+    <div class="page-header-linha">
+        <div class="page-header-textos">
+            <div class="page-header-titulo">
+                <FluentText As="TextTag.H1" Size="TextSize.Size800" Weight="TextWeight.Semibold">@Titulo</FluentText>
+                @Selo
+            </div>
+            @if (!string.IsNullOrWhiteSpace(Descricao))
+            {
+                <p class="page-header-descricao">@Descricao</p>
+            }
+            @Detalhes
+        </div>
+
+        @if (Acoes is not null)
+        {
+            <div class="page-header-acoes">@Acoes</div>
+        }
+    </div>
+</header>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Titulo { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? Descricao { get; set; }
+
+    /// <summary>Conteúdo ao lado do título (ex.: selo de status).</summary>
+    [Parameter]
+    public RenderFragment? Selo { get; set; }
+
+    /// <summary>Linha extra abaixo da descrição (ex.: código e carga horária).</summary>
+    [Parameter]
+    public RenderFragment? Detalhes { get; set; }
+
+    /// <summary>Botões alinhados à direita.</summary>
+    [Parameter]
+    public RenderFragment? Acoes { get; set; }
+
+    [Parameter]
+    public string? VoltarHref { get; set; }
+
+    [Parameter]
+    public string VoltarTexto { get; set; } = "Voltar";
+}

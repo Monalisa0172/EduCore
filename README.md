@@ -85,7 +85,8 @@ EduCore/
 - [x] Front Blazor: login, página inicial por perfil e painel administrativo
 - [x] Cadastro e edição de usuários (alunos com matrícula em turmas)
 - [x] Menu lateral por perfil
-- [ ] Admin: disciplinas, turmas e atribuição de professores
+- [x] Admin: disciplinas e subdisciplinas (cadastro, edição, inativação e reativação)
+- [ ] Admin: turmas e atribuição de professores
 - [ ] Notas por avaliação (pesos por bimestre somando 100) e chamada
 - [ ] Professor: minhas turmas, avaliações, lançamento de notas e chamada
 - [ ] Aluno: boletim e frequência

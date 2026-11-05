@@ -1,0 +1,65 @@
+@* Dialogo de confirmacao (ex.: inativar). A pagina abre com AbrirAsync e fecha com FecharAsync. *@
+<FluentDialog @ref="_dialogo" Modal="true">
+    <FluentDialogBody>
+        <TitleTemplate>@Titulo</TitleTemplate>
+
+        <ChildContent>
+            <div class="confirm-conteudo">
+                @if (Erro is not null)
+                {
+                    <FluentMessageBar Intent="MessageBarIntent.Error" Title="@Erro.Title" AllowDismiss="false">
+                        @Erro.Message
+                    </FluentMessageBar>
+                }
+                @ChildContent
+            </div>
+        </ChildContent>
+
+        <ActionTemplate>
+            <div class="confirm-acoes">
+                <FluentButton Appearance="ButtonAppearance.Default" Disabled="Processando" OnClick="FecharAsync">
+                    @TextoCancelar
+                </FluentButton>
+                <FluentButton Appearance="ButtonAppearance.Primary"
+                              Class="@(Perigo ? "button-danger" : null)"
+                              Loading="Processando"
+                              OnClick="OnConfirmar">
+                    @TextoConfirmar
+                </FluentButton>
+            </div>
+        </ActionTemplate>
+    </FluentDialogBody>
+</FluentDialog>
+
+@code {
+    private FluentDialog _dialogo = default!;
+
+    [Parameter, EditorRequired]
+    public string Titulo { get; set; } = string.Empty;
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    [Parameter]
+    public string TextoConfirmar { get; set; } = "Confirmar";
+
+    [Parameter]
+    public string TextoCancelar { get; set; } = "Cancelar";
+
+    /// <summary>Destaca o botão de confirmação em vermelho (ação destrutiva).</summary>
+    [Parameter]
+    public bool Perigo { get; set; }
+
+    [Parameter]
+    public bool Processando { get; set; }
+
+    [Parameter]
+    public ApiError? Erro { get; set; }
+
+    [Parameter]
+    public EventCallback OnConfirmar { get; set; }
+
+    public async Task AbrirAsync() => await _dialogo.ShowAsync();
+
+    public async Task FecharAsync() => await _dialogo.HideAsync();
+}

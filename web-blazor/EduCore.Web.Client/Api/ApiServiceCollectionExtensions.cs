@@ -1,4 +1,5 @@
 using EduCore.Web.Client.Auth.Services;
+using EduCore.Web.Client.Disciplinas.Services;
 using EduCore.Web.Client.Turmas.Services;
 using EduCore.Web.Client.Usuarios.Services;
 using Microsoft.AspNetCore.Components.Authorization;
@@ -35,6 +36,8 @@ public static class ApiServiceCollectionExtensions
         // Clientes da API (anexam o JWT em cada chamada)
         services.AddHttpClient<IUsuarioApiClient, UsuarioApiClient>(ConfigureClient);
         services.AddHttpClient<ITurmaApiClient, TurmaApiClient>(ConfigureClient);
+        services.AddHttpClient<IDisciplinaApiClient, DisciplinaApiClient>(ConfigureClient);
+        services.AddHttpClient<ISubDisciplinaApiClient, SubDisciplinaApiClient>(ConfigureClient);
 
         return services;
 

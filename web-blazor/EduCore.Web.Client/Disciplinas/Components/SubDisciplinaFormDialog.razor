@@ -1,0 +1,123 @@
+@implements IDisposable
+@inject ISubDisciplinaApiClient SubDisciplinaApi
+
+@* Cadastro e edicao de subdisciplina em dialogo (sempre dentro da disciplina aberta). *@
+<FormDialog @ref="_moldura"
+            Titulo="@(_modelo.Edicao ? "Editar subdisciplina" : "Nova subdisciplina")"
+            Descricao="@($"Disciplina: {NomeDisciplina}. Campos com * são obrigatórios.")"
+            EditContext="_editContext"
+            NomeFormulario="subdisciplina"
+            TextoSalvar="@(_modelo.Edicao ? "Salvar alterações" : "Adicionar subdisciplina")"
+            Salvando="_salvando"
+            Erro="_erro"
+            OnSalvar="SalvarAsync">
+    <FluentTextInput Id="subdisciplina-nome"
+                     Label="Nome"
+                     Placeholder="Ex.: Álgebra"
+                     @bind-Value="_modelo.Nome"
+                     Required="true"
+                     MaxLength="100"
+                     AutoComplete="off"
+                     Immediate="true"
+                     ImmediateDelay="0" />
+
+    <FluentTextArea Id="subdisciplina-descricao"
+                    Label="Descrição"
+                    Placeholder="Opcional: conteúdos abordados."
+                    @bind-Value="_modelo.Descricao"
+                    MaxLength="255"
+                    Width="100%"
+                    Immediate="true"
+                    ImmediateDelay="0" />
+</FormDialog>
+
+@code {
+    private readonly CancellationTokenSource _cts = new();
+
+    private FormDialog _moldura = default!;
+    private SubDisciplinaFormModel _modelo = SubDisciplinaFormModel.Nova(0);
+    private EditContext _editContext = default!;
+    private ValidationMessageStore _mensagensServidor = default!;
+    private ApiError? _erro;
+    private bool _salvando;
+
+    [Parameter, EditorRequired]
+    public string NomeDisciplina { get; set; } = string.Empty;
+
+    /// <summary>Disparado depois que a API confirmou a gravação.</summary>
+    [Parameter]
+    public EventCallback<SubDisciplinaSalva> OnSalva { get; set; }
+
+    protected override void OnInitialized() => Preparar(_modelo);
+
+    public Task AbrirNovaAsync(int disciplinaId) => AbrirAsync(SubDisciplinaFormModel.Nova(disciplinaId));
+
+    public Task AbrirEdicaoAsync(SubDisciplinaItem subDisciplina) => AbrirAsync(SubDisciplinaFormModel.De(subDisciplina));
+
+    private async Task AbrirAsync(SubDisciplinaFormModel modelo)
+    {
+        Preparar(modelo);
+        StateHasChanged();
+
+        await Task.Yield();
+        await _moldura.AbrirAsync();
+    }
+
+    private void Preparar(SubDisciplinaFormModel modelo)
+    {
+        if (_editContext is not null)
+        {
+            _editContext.OnFieldChanged -= AoAlterarCampo;
+        }
+
+        _modelo = modelo;
+        _erro = null;
+        _editContext = new EditContext(modelo);
+        _mensagensServidor = new ValidationMessageStore(_editContext);
+        _editContext.OnFieldChanged += AoAlterarCampo;
+    }
+
+    private void AoAlterarCampo(object? sender, FieldChangedEventArgs e) => _mensagensServidor.Clear(e.FieldIdentifier);
+
+    private async Task SalvarAsync()
+    {
+        if (_salvando)
+        {
+            return;
+        }
+
+        _erro = null;
+        _mensagensServidor.Clear();
+
+        if (!_editContext.Validate())
+        {
+            return;
+        }
+
+        _salvando = true;
+
+        var request = _modelo.ParaRequest();
+        var resultado = _modelo.Edicao
+            ? await SubDisciplinaApi.AtualizarAsync(_modelo.Id!.Value, request, _cts.Token)
+            : await SubDisciplinaApi.CriarAsync(request, _cts.Token);
+
+        _salvando = false;
+
+        if (resultado.Succeeded)
+        {
+            await _moldura.FecharAsync();
+            await OnSalva.InvokeAsync(new SubDisciplinaSalva(resultado.Value!, Nova: !_modelo.Edicao));
+            return;
+        }
+
+        _erro = ErrosDeFormulario.Aplicar(resultado.Error, _mensagensServidor, _modelo, SubDisciplinaFormModel.Campos);
+        _editContext.NotifyValidationStateChanged();
+    }
+
+    public void Dispose()
+    {
+        _editContext.OnFieldChanged -= AoAlterarCampo;
+        _cts.Cancel();
+        _cts.Dispose();
+    }
+}
