@@ -2,6 +2,7 @@
 using EduCore.API.DTOs.Response;
 using EduCore.API.Entities;
 using EduCore.API.Interfaces.Repositories;
+using EduCore.API.Services.Acesso;
 
 namespace EduCore.API.Services;
 
@@ -18,34 +19,63 @@ public class AvaliacaoService
 
     private const string NaoEncontrada = "Avaliação não encontrada.";
 
+    private const string NaoLeciona = "Você não leciona esta disciplina (ou subdisciplina) nesta turma.";
+
     private readonly IAvaliacaoRepository _avaliacaoRepository;
     private readonly IAtribuicaoRepository _atribuicaoRepository;
     private readonly ITurmaRepository _turmaRepository;
     private readonly IDisciplinaRepository _disciplinaRepository;
     private readonly ISubDisciplinaRepository _subDisciplinaRepository;
+    private readonly IAcessoAcademico _acesso;
 
     public AvaliacaoService(
         IAvaliacaoRepository avaliacaoRepository,
         IAtribuicaoRepository atribuicaoRepository,
         ITurmaRepository turmaRepository,
         IDisciplinaRepository disciplinaRepository,
-        ISubDisciplinaRepository subDisciplinaRepository)
+        ISubDisciplinaRepository subDisciplinaRepository,
+        IAcessoAcademico acesso)
     {
         _avaliacaoRepository = avaliacaoRepository;
         _atribuicaoRepository = atribuicaoRepository;
         _turmaRepository = turmaRepository;
         _disciplinaRepository = disciplinaRepository;
         _subDisciplinaRepository = subDisciplinaRepository;
+        _acesso = acesso;
     }
 
-    public Task<List<AvaliacaoResponseDTO>> ListarAsync(int? turmaId, int? disciplinaId, int? bimestre, bool? ativo)
-        => _avaliacaoRepository.ListarAsync(turmaId, disciplinaId, bimestre, ativo);
+    /// <summary>
+    /// Admin vê todas; professor, só as do que leciona.
+    /// </summary>
+    public async Task<List<AvaliacaoResponseDTO>> ListarAsync(int? turmaId, int? disciplinaId, int? bimestre, bool? ativo)
+    {
+        if (_acesso.EhAdmin)
+            return await _avaliacaoRepository.ListarAsync(turmaId, disciplinaId, bimestre, ativo);
 
-    public Task<AvaliacaoResponseDTO?> GetByIdAsync(int id)
-        => _avaliacaoRepository.GetByIdAsync(id);
+        var professorId = await _acesso.ProfessorIdAsync();
+
+        return professorId is null
+            ? []
+            : await _avaliacaoRepository.ListarAsync(turmaId, disciplinaId, bimestre, ativo, professorId);
+    }
+
+    /// <summary>
+    /// Nulo quando não existe ou não é do professor (não revela a existência).
+    /// </summary>
+    public async Task<AvaliacaoResponseDTO?> GetByIdAsync(int id)
+    {
+        var dto = await _avaliacaoRepository.GetByIdAsync(id);
+
+        return dto is not null && await _acesso.PodeGerenciarAvaliacaoAsync(dto.TurmaId, dto.DisciplinaId, dto.SubDisciplinaId)
+            ? dto
+            : null;
+    }
 
     public async Task<ResultadoOperacao<AvaliacaoResponseDTO>> CriarAsync(CreateAvaliacaoRequest request)
     {
+        if (!await _acesso.PodeGerenciarAvaliacaoAsync(request.TurmaId, request.DisciplinaId, request.SubDisciplinaId))
+            return Invalido(nameof(CreateAvaliacaoRequest.DisciplinaId), NaoLeciona);
+
         var turma = await _turmaRepository.GetEntityByIdAsync(request.TurmaId);
         if (turma is null)
             return Invalido(nameof(CreateAvaliacaoRequest.TurmaId), "Turma não encontrada.");
@@ -85,12 +115,17 @@ public class AvaliacaoService
 
     public async Task<ResultadoOperacao<AvaliacaoResponseDTO>> AtualizarAsync(int id, UpdateAvaliacaoRequest request)
     {
-        var avaliacao = await _avaliacaoRepository.GetEntityByIdAsync(id);
+        var avaliacao = await ObterComAcessoAsync(id);
         if (avaliacao is null)
             return ResultadoOperacao<AvaliacaoResponseDTO>.NaoEncontrado(NaoEncontrada);
 
         if (!avaliacao.Ativo)
             return Invalido(nameof(UpdateAvaliacaoRequest.Nome), "A avaliação está inativa. Reative-a para editar.");
+
+        // Professor de uma subdisciplina nao pode mover a avaliacao para outra que nao leciona.
+        if (request.SubDisciplinaId != avaliacao.SubDisciplinaId
+            && !await _acesso.PodeGerenciarAvaliacaoAsync(avaliacao.TurmaId, avaliacao.DisciplinaId, request.SubDisciplinaId))
+            return Invalido(nameof(UpdateAvaliacaoRequest.SubDisciplinaId), NaoLeciona);
 
         var disciplina = await _disciplinaRepository.GetEntityByIdAsync(avaliacao.DisciplinaId);
         if (disciplina is null)
@@ -123,7 +158,7 @@ public class AvaliacaoService
     /// </summary>
     public async Task<ResultadoOperacao<AvaliacaoResponseDTO>> InativarAsync(int id)
     {
-        var avaliacao = await _avaliacaoRepository.GetEntityByIdAsync(id);
+        var avaliacao = await ObterComAcessoAsync(id);
         if (avaliacao is null)
             return ResultadoOperacao<AvaliacaoResponseDTO>.NaoEncontrado(NaoEncontrada);
 
@@ -141,7 +176,7 @@ public class AvaliacaoService
     /// </summary>
     public async Task<ResultadoOperacao<AvaliacaoResponseDTO>> ReativarAsync(int id)
     {
-        var avaliacao = await _avaliacaoRepository.GetEntityByIdAsync(id);
+        var avaliacao = await ObterComAcessoAsync(id);
         if (avaliacao is null)
             return ResultadoOperacao<AvaliacaoResponseDTO>.NaoEncontrado(NaoEncontrada);
 
@@ -215,6 +250,19 @@ public class AvaliacaoService
             : $"Os pesos de {disciplina.Nome} no {bimestre}º bimestre já somam {pesoAtual:0.##}. O peso desta avaliação pode ser no máximo {disponivel:0.##}.";
 
         return Invalido(nameof(UpdateAvaliacaoRequest.Peso), texto);
+    }
+
+    /// <summary>
+    /// Avaliação rastreada, ou nulo se não existe ou não é do professor logado.
+    /// </summary>
+    private async Task<Avaliacao?> ObterComAcessoAsync(int id)
+    {
+        var avaliacao = await _avaliacaoRepository.GetEntityByIdAsync(id);
+
+        return avaliacao is not null
+            && await _acesso.PodeGerenciarAvaliacaoAsync(avaliacao.TurmaId, avaliacao.DisciplinaId, avaliacao.SubDisciplinaId)
+                ? avaliacao
+                : null;
     }
 
     private async Task<ResultadoOperacao<AvaliacaoResponseDTO>> RecarregarAsync(int id)

@@ -15,6 +15,9 @@ public interface IAtribuicaoRepository
     /// <summary>Atribuições ativas da disciplina na turma (para checar conflitos), com o nome do professor.</summary>
     Task<List<AtribuicaoResponseDTO>> GetAtivasDaDisciplinaAsync(int turmaId, int disciplinaId);
 
+    /// <summary>Atribuições ativas do professor, opcionalmente só de uma turma/disciplina (controle de acesso).</summary>
+    Task<List<AtribuicaoResponseDTO>> GetAtivasDoProfessorAsync(int professorId, int? turmaId = null, int? disciplinaId = null);
+
     Task AddAsync(Atribuicao atribuicao);
 
     Task SalvarAsync();

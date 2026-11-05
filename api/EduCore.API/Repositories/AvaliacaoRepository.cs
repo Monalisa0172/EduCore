@@ -34,9 +34,19 @@ public class AvaliacaoRepository : IAvaliacaoRepository
         _context = context;
     }
 
-    public async Task<List<AvaliacaoResponseDTO>> ListarAsync(int? turmaId, int? disciplinaId, int? bimestre, bool? ativo)
+    public async Task<List<AvaliacaoResponseDTO>> ListarAsync(int? turmaId, int? disciplinaId, int? bimestre, bool? ativo, int? professorId = null)
     {
         var query = _context.Avaliacoes.AsNoTracking();
+
+        if (professorId.HasValue)
+        {
+            query = query.Where(av => _context.Atribuicoes.Any(a =>
+                a.Ativo
+                && a.ProfessorId == professorId
+                && a.TurmaId == av.TurmaId
+                && a.DisciplinaId == av.DisciplinaId
+                && (a.SubDisciplinaId == null || a.SubDisciplinaId == av.SubDisciplinaId)));
+        }
 
         if (turmaId.HasValue) query = query.Where(a => a.TurmaId == turmaId);
         if (disciplinaId.HasValue) query = query.Where(a => a.DisciplinaId == disciplinaId);

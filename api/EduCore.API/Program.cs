@@ -102,7 +102,7 @@ builder.Services.AddAuthentication(
 
 builder.Services.AddAuthorization();
 
-builder.Services.AddApplication();
+builder.Services.AddApplication(builder.Configuration);
 
 var app = builder.Build();
 
