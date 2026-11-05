@@ -17,6 +17,7 @@ public class AtribuicaoRepository : IAtribuicaoRepository
         TurmaId = a.TurmaId,
         TurmaNome = a.Turma.Nome ?? string.Empty,
         AnoLetivo = a.Turma.AnoLetivo,
+        TurmaAtiva = a.Turma.Ativo,
         DisciplinaId = a.DisciplinaId,
         DisciplinaNome = a.Disciplina.Nome ?? string.Empty,
         SubDisciplinaId = a.SubDisciplinaId,
@@ -60,6 +61,21 @@ public class AtribuicaoRepository : IAtribuicaoRepository
             .Where(a => a.Ativo && a.TurmaId == turmaId && a.DisciplinaId == disciplinaId)
             .Select(ParaDto)
             .ToListAsync();
+
+    public async Task<List<AtribuicaoResponseDTO>> GetAtivasDoProfessorAsync(int professorId, int? turmaId = null, int? disciplinaId = null)
+    {
+        var query = _context.Atribuicoes.AsNoTracking().Where(a => a.Ativo && a.ProfessorId == professorId);
+
+        if (turmaId.HasValue) query = query.Where(a => a.TurmaId == turmaId);
+        if (disciplinaId.HasValue) query = query.Where(a => a.DisciplinaId == disciplinaId);
+
+        return await query
+            .OrderByDescending(a => a.Turma.AnoLetivo)
+            .ThenBy(a => a.Turma.Nome)
+            .ThenBy(a => a.Disciplina.Nome)
+            .Select(ParaDto)
+            .ToListAsync();
+    }
 
     public async Task AddAsync(Atribuicao atribuicao)
     {

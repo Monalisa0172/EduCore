@@ -64,6 +64,12 @@ public class ProfessorRepository : IProfessorRepository
         await _context.SaveChangesAsync();
     }
 
+    public Task<int?> GetIdAtivoPorUsuarioAsync(int usuarioId)
+        => _context.Professors
+            .Where(p => p.Funcionario.UsuarioId == usuarioId && p.Funcionario.Ativo && p.Funcionario.Usuario.Ativo)
+            .Select(p => (int?)p.Id)
+            .FirstOrDefaultAsync();
+
     public async Task<Professor?>
     GetEntityByIdAsync(int id)
     {

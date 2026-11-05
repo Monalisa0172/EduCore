@@ -14,6 +14,9 @@ public class AtribuicaoResponseDTO
 
     public int AnoLetivo { get; set; }
 
+    /// <summary>Turma inativa = histórico: dá para consultar, não para lançar.</summary>
+    public bool TurmaAtiva { get; set; }
+
     public int DisciplinaId { get; set; }
 
     public string DisciplinaNome { get; set; } = string.Empty;
