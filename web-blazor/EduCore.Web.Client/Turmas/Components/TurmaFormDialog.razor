@@ -1,0 +1,125 @@
+@implements IDisposable
+@inject ITurmaApiClient TurmaApi
+@inject TimeProvider Relogio
+
+@* Cadastro e edicao de turma em dialogo. Campos com Immediate: o valor chega ao modelo a cada tecla. *@
+<FormDialog @ref="_moldura"
+            Titulo="@(_modelo.Edicao ? "Editar turma" : "Nova turma")"
+            Descricao="O nome da turma é único dentro do ano letivo. Campos com * são obrigatórios."
+            EditContext="_editContext"
+            NomeFormulario="turma"
+            TextoSalvar="@(_modelo.Edicao ? "Salvar alterações" : "Cadastrar turma")"
+            Salvando="_salvando"
+            Erro="_erro"
+            OnSalvar="SalvarAsync">
+    <div class="campos-grid">
+        <FluentTextInput Id="turma-nome"
+                         Label="Nome"
+                         Placeholder="Ex.: 1º Ano A - Manhã"
+                         @bind-Value="_modelo.Nome"
+                         Required="true"
+                         MaxLength="100"
+                         AutoComplete="off"
+                         Immediate="true"
+                         ImmediateDelay="0" />
+
+        <FluentNumberInput TValue="int?"
+                           Id="turma-ano"
+                           Label="Ano letivo"
+                           Placeholder="Ex.: 2026"
+                           @bind-Value="_modelo.AnoLetivo"
+                           Required="true"
+                           Immediate="true"
+                           ImmediateDelay="0" />
+    </div>
+</FormDialog>
+
+@code {
+    private readonly CancellationTokenSource _cts = new();
+
+    private FormDialog _moldura = default!;
+    private TurmaFormModel _modelo = default!;
+    private EditContext _editContext = default!;
+    private ValidationMessageStore _mensagensServidor = default!;
+    private ApiError? _erro;
+    private bool _salvando;
+
+    /// <summary>Disparado depois que a API confirmou a gravação.</summary>
+    [Parameter]
+    public EventCallback<TurmaSalva> OnSalva { get; set; }
+
+    protected override void OnInitialized() => Preparar(TurmaFormModel.Nova(Relogio));
+
+    public Task AbrirNovaAsync() => AbrirAsync(TurmaFormModel.Nova(Relogio));
+
+    public Task AbrirEdicaoAsync(TurmaItem turma) => AbrirAsync(TurmaFormModel.De(turma));
+
+    private async Task AbrirAsync(TurmaFormModel modelo)
+    {
+        Preparar(modelo);
+        StateHasChanged();
+
+        // Deixa o dialogo renderizar com o modelo novo antes de abrir.
+        await Task.Yield();
+        await _moldura.AbrirAsync();
+    }
+
+    private void Preparar(TurmaFormModel modelo)
+    {
+        if (_editContext is not null)
+        {
+            _editContext.OnFieldChanged -= AoAlterarCampo;
+        }
+
+        _modelo = modelo;
+        _erro = null;
+        _editContext = new EditContext(modelo);
+        _mensagensServidor = new ValidationMessageStore(_editContext);
+        _editContext.OnFieldChanged += AoAlterarCampo;
+    }
+
+    // O erro devolvido pela API vale ate o usuario mexer no campo.
+    private void AoAlterarCampo(object? sender, FieldChangedEventArgs e) => _mensagensServidor.Clear(e.FieldIdentifier);
+
+    private async Task SalvarAsync()
+    {
+        if (_salvando)
+        {
+            return;
+        }
+
+        _erro = null;
+        _mensagensServidor.Clear();
+
+        if (!_editContext.Validate())
+        {
+            return;
+        }
+
+        _salvando = true;
+
+        var request = _modelo.ParaRequest();
+        var resultado = _modelo.Edicao
+            ? await TurmaApi.AtualizarAsync(_modelo.Id!.Value, request, _cts.Token)
+            : await TurmaApi.CriarAsync(request, _cts.Token);
+
+        _salvando = false;
+
+        if (resultado.Succeeded)
+        {
+            await _moldura.FecharAsync();
+            await OnSalva.InvokeAsync(new TurmaSalva(resultado.Value!, Nova: !_modelo.Edicao));
+            return;
+        }
+
+        _erro = ErrosDeFormulario.Aplicar(resultado.Error, _mensagensServidor, _modelo, TurmaFormModel.Campos);
+        _editContext.NotifyValidationStateChanged();
+    }
+
+    public void Dispose()
+    {
+        _editContext.OnFieldChanged -= AoAlterarCampo;
+        _cts.Cancel();
+        _cts.Dispose();
+    }
+}

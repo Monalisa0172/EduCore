@@ -1,0 +1,29 @@
+.turma-celula {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.turma-nome {
+    overflow: hidden;
+    font-weight: var(--fontWeightSemibold, 600);
+    color: var(--educore-primary-text);
+    text-decoration: none;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+    .turma-nome:hover {
+        text-decoration: underline;
+    }
+
+    .turma-nome:focus-visible {
+        outline: 2px solid var(--colorStrokeFocus2);
+        outline-offset: 2px;
+        border-radius: 2px;
+    }
+
+.turma-ano {
+    font-size: var(--fontSizeBase200, 12px);
+    color: var(--colorNeutralForeground3);
+}

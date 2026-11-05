@@ -22,6 +22,21 @@ public partial class EditarUsuario : IDisposable
     [Parameter]
     public int UsuarioId { get; set; }
 
+    /// <summary>
+    /// Página de origem (ex.: /turmas/5): salvar ou cancelar volta para ela em vez do painel.
+    /// </summary>
+    [SupplyParameterFromQuery(Name = "voltar")]
+    public string? Voltar { get; set; }
+
+    /// <summary>Nome da página de origem, exibido na trilha (ex.: nome da turma).</summary>
+    [SupplyParameterFromQuery(Name = "origem")]
+    public string? Origem { get; set; }
+
+    /// <summary>Caminho relativo seguro para o retorno; vazio = painel.</summary>
+    private string UrlRetorno => RetornoNavegacao.CaminhoInterno(Voltar) ?? string.Empty;
+
+    private IReadOnlyList<ItemTrilha>? Trilha => RetornoNavegacao.TrilhaDaTurma(Voltar, Origem, "Editar usuário");
+
     [Inject]
     private IUsuarioApiClient UsuarioApi { get; set; } = default!;
 

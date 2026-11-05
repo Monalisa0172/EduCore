@@ -25,7 +25,31 @@ public partial class NovoUsuario : IDisposable
     [Inject]
     private AvisoNavegacao Avisos { get; set; } = default!;
 
-    protected override Task OnInitializedAsync() => CarregarTurmasAsync();
+    /// <summary>Turma já marcada no cadastro (vindo de "Cadastrar aluno" na turma).</summary>
+    [SupplyParameterFromQuery(Name = "turma")]
+    public int? Turma { get; set; }
+
+    /// <summary>Página de origem: salvar ou cancelar volta para ela em vez do painel.</summary>
+    [SupplyParameterFromQuery(Name = "voltar")]
+    public string? Voltar { get; set; }
+
+    [SupplyParameterFromQuery(Name = "origem")]
+    public string? Origem { get; set; }
+
+    private string UrlRetorno => RetornoNavegacao.CaminhoInterno(Voltar) ?? string.Empty;
+
+    private IReadOnlyList<ItemTrilha>? Trilha => RetornoNavegacao.TrilhaDaTurma(Voltar, Origem, "Novo usuário");
+
+    protected override Task OnInitializedAsync()
+    {
+        // A turma so fica marcada se estiver entre as ativas (o formulario so exibe essas).
+        if (Turma is > 0)
+        {
+            _modelo.TurmaIds = [Turma.Value];
+        }
+
+        return CarregarTurmasAsync();
+    }
 
     private async Task CarregarTurmasAsync()
     {

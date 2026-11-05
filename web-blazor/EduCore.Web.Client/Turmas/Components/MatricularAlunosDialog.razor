@@ -1,0 +1,264 @@
+@implements IDisposable
+@using System.Globalization
+@inject ITurmaApiClient TurmaApi
+@inject IUsuarioApiClient UsuarioApi
+
+@* Matricula em lote: lista os alunos ativos que ainda nao estao na turma, com busca e selecao multipla. *@
+<FluentDialog @ref="_dialogo" Modal="true">
+    <FluentDialogBody>
+        <TitleTemplate>Matricular alunos</TitleTemplate>
+
+        <ChildContent>
+            <div class="matricula">
+                <p class="matricula-descricao">
+                    Turma <strong>@NomeTurma</strong>. Selecione os alunos já cadastrados que farão parte dela.
+                </p>
+
+                @if (_erroLista is not null)
+                {
+                    <FluentMessageBar Intent="MessageBarIntent.Error" Title="@_erroLista.Title" AllowDismiss="false">
+                        <ChildContent>@_erroLista.Message</ChildContent>
+                        <ActionsTemplate>
+                            <FluentButton Appearance="ButtonAppearance.Default" OnClick="CarregarAsync">Tentar novamente</FluentButton>
+                        </ActionsTemplate>
+                    </FluentMessageBar>
+                }
+                else if (_disponiveis is null)
+                {
+                    <div class="matricula-carregando" aria-busy="true" aria-label="Carregando alunos">
+                        @for (var i = 0; i < 4; i++)
+                        {
+                            <FluentSkeleton Height="44px" Shimmer="true" />
+                        }
+                    </div>
+                }
+                else if (_disponiveis.Count == 0)
+                {
+                    <EmptyState Titulo="Nenhum aluno disponível"
+                                Descricao="Todos os alunos ativos já estão nesta turma. Para incluir alguém novo, cadastre o aluno primeiro."
+                                Icone="@(new Icons.Regular.Size24.PeopleCheckmark())" />
+                }
+                else
+                {
+                    <FluentTextInput Id="busca-matricula"
+                                     Label="Buscar aluno"
+                                     Placeholder="Nome ou e-mail"
+                                     TextInputType="TextInputType.Search"
+                                     AutoComplete="off"
+                                     @bind-Value="_busca"
+                                     Immediate="true"
+                                     ImmediateDelay="200"
+                                     Width="100%">
+                        <StartTemplate>
+                            <FluentIcon Value="@(new Icons.Regular.Size20.Search())" />
+                        </StartTemplate>
+                    </FluentTextInput>
+
+                    <div class="matricula-barra">
+                        <span role="status">@TextoSelecionados</span>
+                        <div class="matricula-barra-acoes">
+                            <FluentButton Appearance="ButtonAppearance.Subtle" Size="ButtonSize.Small" OnClick="SelecionarVisiveis"
+                                          Disabled="Visiveis.Count == 0">
+                                Selecionar @(TemBusca ? "resultados" : "todos")
+                            </FluentButton>
+                            <FluentButton Appearance="ButtonAppearance.Subtle" Size="ButtonSize.Small" OnClick="LimparSelecao"
+                                          Disabled="_selecionados.Count == 0">
+                                Limpar
+                            </FluentButton>
+                        </div>
+                    </div>
+
+                    <fieldset class="matricula-lista">
+                        <legend class="visually-hidden">Alunos disponíveis</legend>
+                        @if (Visiveis.Count == 0)
+                        {
+                            <p class="matricula-vazio">Nenhum aluno encontrado para "@_busca.Trim()".</p>
+                        }
+                        @foreach (var aluno in Visiveis)
+                        {
+                            var marcado = _selecionados.Contains(aluno.UsuarioId);
+                            <label class="matricula-opcao @(marcado ? "matricula-opcao--marcada" : null)" @key="aluno.UsuarioId">
+                                <input type="checkbox"
+                                       checked="@marcado"
+                                       @onchange="@(e => Alternar(aluno.UsuarioId, e.Value is true))" />
+                                <span class="matricula-textos">
+                                    <span class="matricula-nome">@aluno.Nome</span>
+                                    <span class="matricula-detalhe">
+                                        @aluno.Email · @(string.IsNullOrWhiteSpace(aluno.Especificacao) ? "sem turma ativa" : $"em {aluno.Especificacao}")
+                                    </span>
+                                </span>
+                            </label>
+                        }
+                    </fieldset>
+                }
+
+                @if (_erroMatricula is not null)
+                {
+                    <FluentMessageBar Intent="MessageBarIntent.Error" Title="@_erroMatricula.Title" AllowDismiss="false">
+                        @_erroMatricula.Message
+                    </FluentMessageBar>
+                }
+            </div>
+        </ChildContent>
+
+        <ActionTemplate>
+            <div class="matricula-acoes">
+                <FluentButton Appearance="ButtonAppearance.Default" Disabled="_salvando" OnClick="FecharAsync">
+                    Cancelar
+                </FluentButton>
+                <FluentButton Appearance="ButtonAppearance.Primary"
+                              IconStart="@(new Icons.Regular.Size20.PersonAdd())"
+                              Disabled="_selecionados.Count == 0"
+                              Loading="_salvando"
+                              OnClick="MatricularAsync">
+                    @TextoBotao
+                </FluentButton>
+            </div>
+        </ActionTemplate>
+    </FluentDialogBody>
+</FluentDialog>
+
+@code {
+    private static readonly CompareInfo Comparador = CultureInfo.InvariantCulture.CompareInfo;
+
+    private readonly CancellationTokenSource _cts = new();
+    private readonly HashSet<int> _selecionados = [];
+
+    private FluentDialog _dialogo = default!;
+    private List<UsuarioListItem>? _disponiveis;
+    private ApiError? _erroLista;
+    private ApiError? _erroMatricula;
+    private string _busca = string.Empty;
+    private bool _salvando;
+
+    [Parameter, EditorRequired]
+    public int TurmaId { get; set; }
+
+    [Parameter, EditorRequired]
+    public string NomeTurma { get; set; } = string.Empty;
+
+    /// <summary>Ids de usuário de quem já está na turma (não aparecem como opção).</summary>
+    [Parameter, EditorRequired]
+    public IReadOnlyCollection<int> JaMatriculados { get; set; } = [];
+
+    /// <summary>Lista atualizada de alunos da turma, devolvida pela API após matricular.</summary>
+    [Parameter]
+    public EventCallback<MatriculaConcluida> OnMatriculados { get; set; }
+
+    private bool TemBusca => !string.IsNullOrWhiteSpace(_busca);
+
+    private IReadOnlyList<UsuarioListItem> Visiveis
+    {
+        get
+        {
+            var termo = _busca.Trim();
+            return (_disponiveis ?? [])
+                .Where(a => termo.Length == 0 || Contem(a.Nome, termo) || Contem(a.Email, termo))
+                .ToList();
+        }
+    }
+
+    private string TextoSelecionados => _selecionados.Count switch
+    {
+        0 => $"{_disponiveis?.Count ?? 0} disponíveis · nenhum selecionado",
+        1 => "1 aluno selecionado",
+        var n => $"{n} alunos selecionados"
+    };
+
+    private string TextoBotao => _selecionados.Count switch
+    {
+        0 => "Matricular",
+        1 => "Matricular 1 aluno",
+        var n => $"Matricular {n} alunos"
+    };
+
+    public async Task AbrirAsync()
+    {
+        _selecionados.Clear();
+        _busca = string.Empty;
+        _erroMatricula = null;
+        StateHasChanged();
+
+        await _dialogo.ShowAsync();
+        await CarregarAsync();
+    }
+
+    private async Task CarregarAsync()
+    {
+        _erroLista = null;
+        _disponiveis = null;
+        StateHasChanged();
+
+        var resultado = await UsuarioApi.GetAtivosAsync(TipoUsuarioFiltro.Alunos, _cts.Token);
+
+        if (resultado.Succeeded)
+        {
+            var jaNaTurma = JaMatriculados.ToHashSet();
+            _disponiveis = resultado.Value!.Where(a => !jaNaTurma.Contains(a.UsuarioId)).ToList();
+        }
+        else
+        {
+            _erroLista = resultado.Error;
+        }
+
+        StateHasChanged();
+    }
+
+    private static bool Contem(string texto, string termo)
+        => Comparador.IndexOf(texto, termo, CompareOptions.IgnoreCase | CompareOptions.IgnoreNonSpace) >= 0;
+
+    private void Alternar(int usuarioId, bool marcado)
+    {
+        if (marcado)
+        {
+            _selecionados.Add(usuarioId);
+        }
+        else
+        {
+            _selecionados.Remove(usuarioId);
+        }
+    }
+
+    private void SelecionarVisiveis()
+    {
+        foreach (var aluno in Visiveis)
+        {
+            _selecionados.Add(aluno.UsuarioId);
+        }
+    }
+
+    private void LimparSelecao() => _selecionados.Clear();
+
+    private async Task MatricularAsync()
+    {
+        if (_salvando || _selecionados.Count == 0)
+        {
+            return;
+        }
+
+        _salvando = true;
+        _erroMatricula = null;
+
+        var quantidade = _selecionados.Count;
+        var resultado = await TurmaApi.MatricularAsync(TurmaId, _selecionados.ToList(), _cts.Token);
+
+        _salvando = false;
+
+        if (!resultado.Succeeded)
+        {
+            _erroMatricula = resultado.Error;
+            return;
+        }
+
+        await FecharAsync();
+        await OnMatriculados.InvokeAsync(new MatriculaConcluida(resultado.Value!, quantidade));
+    }
+
+    private async Task FecharAsync() => await _dialogo.HideAsync();
+
+    public void Dispose()
+    {
+        _cts.Cancel();
+        _cts.Dispose();
+    }
+}
