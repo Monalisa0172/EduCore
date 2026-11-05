@@ -63,15 +63,11 @@
         </div>
 
         <div class="toolbar">
-            <FluentRadioGroup TValue="TipoUsuarioFiltro"
-                              Label="Exibir"
-                              Orientation="Orientation.Horizontal"
-                              @bind-Value="_filtro"
-                              @bind-Value:after="AoAlterarFiltroAsync">
-                <FluentRadio Value="TipoUsuarioFiltro.Todos" Label="Todos" />
-                <FluentRadio Value="TipoUsuarioFiltro.Alunos" Label="Alunos" />
-                <FluentRadio Value="TipoUsuarioFiltro.Professores" Label="Professores" />
-            </FluentRadioGroup>
+            <SeletorSegmentado TValor="TipoUsuarioFiltro"
+                               Rotulo="Exibir"
+                               Opcoes="OpcoesFiltro"
+                               @bind-Valor="_filtro"
+                               @bind-Valor:after="AoAlterarFiltroAsync" />
 
             <FluentTextInput Id="busca-usuarios"
                              Label="Buscar"

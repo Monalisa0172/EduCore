@@ -36,15 +36,11 @@
                 </div>
 
                 <div class="lista-toolbar">
-                    <FluentRadioGroup TValue="FiltroStatus"
-                                      Label="Exibir"
-                                      Orientation="Orientation.Horizontal"
-                                      @bind-Value="_filtro"
-                                      @bind-Value:after="AplicarFiltrosAsync">
-                        <FluentRadio Value="FiltroStatus.Ativos" Label="Ativas" />
-                        <FluentRadio Value="FiltroStatus.Inativos" Label="Inativas" />
-                        <FluentRadio Value="FiltroStatus.Todos" Label="Todas" />
-                    </FluentRadioGroup>
+                    <SeletorSegmentado TValor="FiltroStatus"
+                                       Rotulo="Exibir"
+                                       Opcoes="OpcoesFiltro"
+                                       @bind-Valor="_filtro"
+                                       @bind-Valor:after="AplicarFiltrosAsync" />
 
                     <FluentTextInput Id="busca-disciplinas"
                                      Label="Buscar"
@@ -74,7 +70,8 @@
                 else
                 {
                     <div class="lista-grid">
-                        <FluentDataGrid TGridItem="DisciplinaItem"
+                        <FluentDataGrid @ref="_grid"
+                                        TGridItem="DisciplinaItem"
                                         Items="_itensVisiveis"
                                         Pagination="_paginacao"
                                         Loading="_carregando"

@@ -15,6 +15,13 @@ public partial class ListaDisciplinas : IDisposable
 
     private static readonly CompareInfo Comparador = CultureInfo.InvariantCulture.CompareInfo;
 
+    private static readonly IReadOnlyList<OpcaoSeletor<FiltroStatus>> OpcoesFiltro =
+    [
+        new(FiltroStatus.Ativos, "Ativas"),
+        new(FiltroStatus.Inativos, "Inativas"),
+        new(FiltroStatus.Todos, "Todas")
+    ];
+
     private readonly CancellationTokenSource _cts = new();
     private readonly PaginationState _paginacao = new() { ItemsPerPage = ItensPorPagina };
     private readonly GridSort<DisciplinaItem> _ordenarPorNome = GridSort<DisciplinaItem>.ByAscending(d => d.Nome);
@@ -30,6 +37,7 @@ public partial class ListaDisciplinas : IDisposable
     private FiltroStatus _filtro = FiltroStatus.Ativos;
     private string _busca = string.Empty;
 
+    private FluentDataGrid<DisciplinaItem>? _grid;
     private DisciplinaFormDialog _formulario = default!;
 
     // Inativacao (com confirmacao)
@@ -125,6 +133,23 @@ public partial class ListaDisciplinas : IDisposable
             .AsQueryable();
 
         await _paginacao.SetCurrentPageIndexAsync(0);
+        await AtualizarGridAsync();
+    }
+
+    /// <summary>
+    /// O FluentDataGrid (v5) continua exibindo os dados anteriores quando só o Items muda num filtro em memória:
+    /// renderiza a página para o grid receber a lista nova e pede que ele releia os dados.
+    /// </summary>
+    private async Task AtualizarGridAsync()
+    {
+        if (_grid is null)
+        {
+            return;
+        }
+
+        StateHasChanged();
+        await Task.Yield();
+        await _grid.RefreshDataAsync();
     }
 
     private static bool Contem(string texto, string termo)
