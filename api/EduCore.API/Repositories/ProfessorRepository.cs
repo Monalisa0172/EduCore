@@ -31,7 +31,8 @@ public class ProfessorRepository : IProfessorRepository
                 Salario = x.Funcionario.Salario,
                 Especialidade = x.Especialidade ?? string.Empty,
                 Status = x.Funcionario.Status.ToString(),
-                Ativo = x.Funcionario.Ativo
+                // Ativo so com funcionario E usuario ativos (mesma regra da atribuicao).
+                Ativo = x.Funcionario.Ativo && x.Funcionario.Usuario.Ativo
             })
             .ToListAsync();
     }
