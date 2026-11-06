@@ -1,0 +1,44 @@
+@page "/alunos/{AlunoId:int}/boletim"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@inject IBoletimApiClient BoletimApi
+
+<PageTitle>@(_boletim?.AlunoNome ?? "Boletim") | EduCore</PageTitle>
+
+@* Boletim de um aluno visto pelo admin (aberto a partir da turma): graficos e tabela na mesma pagina. *@
+<AuthorizeView Roles="@Roles.Admin">
+    <Authorized>
+        <div class="pagina">
+            <PageHeader Titulo="@(_boletim?.AlunoNome ?? "Boletim do aluno")"
+                        Secao="Pessoas · Boletim"
+                        Icone="@(new Icons.Regular.Size24.DocumentBulletList())"
+                        Descricao="@(_boletim is null ? null : $"{_boletim.TurmaNome} · ano letivo {_boletim.AnoLetivo}")"
+                        Trilha="Trilha" />
+
+            <BoletimView Carregar="Carregar" MostrarTabela="true" OnCarregado="@(b => _boletim = b)" />
+        </div>
+    </Authorized>
+    <NotAuthorized>
+        <AcessoNegadoOuLogin />
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private Boletim? _boletim;
+
+    [Parameter]
+    public int AlunoId { get; set; }
+
+    /// <summary>Página de origem (ex.: /turmas/6), validada contra redirecionamento externo.</summary>
+    [SupplyParameterFromQuery(Name = "voltar")]
+    public string? Voltar { get; set; }
+
+    [SupplyParameterFromQuery(Name = "origem")]
+    public string? Origem { get; set; }
+
+    private IReadOnlyList<ItemTrilha> Trilha
+        => RetornoNavegacao.TrilhaDaTurma(Voltar, Origem, _boletim?.AlunoNome ?? "Boletim")
+            ?? [ItemTrilha.Inicio, new("Boletim do aluno")];
+
+    private Task<ApiResult<Boletim>> Carregar(int? ano, CancellationToken cancellationToken)
+        => BoletimApi.BoletimDoAlunoAsync(AlunoId, ano, cancellationToken);
+}

@@ -1,0 +1,154 @@
+@implements IDisposable
+
+@* Carrega o boletim (do aluno logado ou, para o admin, de um aluno) e mostra os filtros numa linha acima
+   de tudo o que eles afetam: ano letivo e periodo (bimestre ou ano). Abre no bimestre atual; com o ano
+   encerrado, abre no ano. Ao trocar de ano, mantem o conteudo anterior esmaecido (sem piscar a tela). *@
+@if (_erro is { Kind: ApiErrorKind.NotFound })
+{
+    <section class="secao-card">
+        <EmptyState Titulo="Boletim ainda não disponível"
+                    Descricao="@_erro.Message"
+                    Icone="@(new Icons.Regular.Size24.DocumentBulletList())" />
+    </section>
+}
+else if (_erro is not null)
+{
+    <FluentMessageBar Intent="MessageBarIntent.Error" Title="@_erro.Title" AllowDismiss="false">
+        <ChildContent>@_erro.Message</ChildContent>
+        <ActionsTemplate>
+            <FluentButton Appearance="ButtonAppearance.Default" OnClick="@(() => CarregarAsync(_ano))">Tentar novamente</FluentButton>
+        </ActionsTemplate>
+    </FluentMessageBar>
+}
+else if (_boletim is null)
+{
+    <div class="boletim-carregando" aria-busy="true" aria-label="Carregando boletim">
+        <FluentSkeleton Height="48px" Shimmer="true" />
+        <div class="boletim-carregando-graficos">
+            <FluentSkeleton Height="280px" Shimmer="true" />
+            <FluentSkeleton Height="280px" Shimmer="true" />
+        </div>
+    </div>
+}
+else
+{
+    var boletim = _boletim;
+    <div class="boletim-filtros">
+        @if (boletim.AnosLetivos.Count > 1)
+        {
+            <SeletorSegmentado TValor="int" Rotulo="Ano letivo" Opcoes="OpcoesAno" Valor="boletim.AnoLetivo" ValorChanged="TrocarAnoAsync" />
+        }
+        @if (MostrarPainel)
+        {
+            <SeletorSegmentado TValor="int" Rotulo="Período" Opcoes="OpcoesPeriodo" Valor="_periodo" ValorChanged="@(p => _periodo = p)" />
+        }
+    </div>
+
+    <div class="boletim-conteudo @(_recarregando ? "boletim-conteudo--recarregando" : null)" aria-busy="@(_recarregando ? "true" : "false")">
+        @if (MostrarPainel)
+        {
+            <PainelDesempenho Boletim="boletim" Periodo="Periodo" />
+        }
+
+        @if (MostrarTabela)
+        {
+            <BoletimTabela Boletim="boletim" />
+        }
+        else if (!string.IsNullOrWhiteSpace(LinkBoletim))
+        {
+            <p>
+                <a class="atalho" href="@LinkBoletim">
+                    <FluentIcon Value="@(new Icons.Regular.Size16.DocumentBulletList())" Color="Color.Custom" CustomColor="currentColor" aria-hidden="true" />
+                    Ver boletim completo (notas de cada avaliação)
+                </a>
+            </p>
+        }
+    </div>
+}
+
+@code {
+    /// <summary>Período "ano letivo" no seletor (os bimestres são 1 a 4).</summary>
+    private const int PeriodoAno = 0;
+
+    private readonly CancellationTokenSource _cts = new();
+
+    private Boletim? _boletim;
+    private ApiError? _erro;
+    private int? _ano;
+    private int _periodo;
+    private bool _recarregando;
+
+    /// <summary>Busca o boletim de um ano letivo (nulo = o mais recente).</summary>
+    [Parameter, EditorRequired]
+    public Func<int?, CancellationToken, Task<ApiResult<Boletim>>> Carregar { get; set; } = default!;
+
+    [Parameter]
+    public bool MostrarPainel { get; set; } = true;
+
+    [Parameter]
+    public bool MostrarTabela { get; set; }
+
+    /// <summary>Link para a página do boletim completo (quando a tabela não está nesta página).</summary>
+    [Parameter]
+    public string? LinkBoletim { get; set; }
+
+    /// <summary>Avisa a página (ex.: para mostrar o nome do aluno no cabeçalho).</summary>
+    [Parameter]
+    public EventCallback<Boletim> OnCarregado { get; set; }
+
+    private PeriodoBoletim Periodo => _periodo == PeriodoAno ? PeriodoBoletim.Ano : new PeriodoBoletim(_periodo);
+
+    private IReadOnlyList<OpcaoSeletor<int>> OpcoesAno
+        => (_boletim?.AnosLetivos ?? []).OrderByDescending(a => a).Select(a => new OpcaoSeletor<int>(a, a.ToString())).ToList();
+
+    private IReadOnlyList<OpcaoSeletor<int>> OpcoesPeriodo
+    {
+        get
+        {
+            var vigente = _boletim is { AnoEncerrado: false } b ? b.BimestreVigente : 0;
+            return
+            [
+                .. Enumerable.Range(1, 4).Select(n => new OpcaoSeletor<int>(n, n == vigente ? $"{n}º bim. · atual" : $"{n}º bim.")),
+                new OpcaoSeletor<int>(PeriodoAno, "Ano")
+            ];
+        }
+    }
+
+    protected override Task OnInitializedAsync() => CarregarAsync(null);
+
+    private async Task TrocarAnoAsync(int ano) => await CarregarAsync(ano);
+
+    private async Task CarregarAsync(int? ano)
+    {
+        _erro = null;
+        _recarregando = _boletim is not null;
+
+        var resultado = await Carregar(ano, _cts.Token);
+
+        _recarregando = false;
+
+        if (!resultado.Succeeded)
+        {
+            _erro = resultado.Error;
+            return;
+        }
+
+        var boletim = resultado.Value!;
+        var trocouAno = _boletim?.AnoLetivo != boletim.AnoLetivo;
+        _boletim = boletim;
+        _ano = boletim.AnoLetivo;
+
+        if (trocouAno)
+        {
+            _periodo = boletim.AnoEncerrado ? PeriodoAno : boletim.BimestreVigente;
+        }
+
+        await OnCarregado.InvokeAsync(boletim);
+    }
+
+    public void Dispose()
+    {
+        _cts.Cancel();
+        _cts.Dispose();
+    }
+}

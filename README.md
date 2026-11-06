@@ -92,7 +92,7 @@ EduCore/
 - [x] Dados de demonstração (turma completa com notas e chamadas)
 - [x] Lançamento de notas por avaliação e chamada em lote, boletim com média ponderada e frequência, endpoints `/me` e acesso restrito ao que cada professor leciona (API)
 - [x] Professor: minhas turmas, diário de classe (avaliações com pesos por bimestre), lançamento de notas e chamada
-- [ ] Aluno: boletim e frequência
+- [x] Aluno: desempenho em gráficos (média e frequência por disciplina, com faixas de risco/atenção) e boletim completo; admin vê o boletim de cada aluno pela turma
 - [ ] Dashboards, CI no GitHub Actions e deploy gratuito
 - [ ] Front em React + TypeScript
 
