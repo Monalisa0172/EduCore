@@ -1,0 +1,37 @@
+.ficha-carregando {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.ficha-dados {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 24px;
+    margin: 0;
+}
+
+    .ficha-dados div {
+        display: flex;
+        gap: 6px;
+    }
+
+    .ficha-dados dt {
+        color: var(--colorNeutralForeground3);
+    }
+
+    .ficha-dados dd {
+        margin: 0;
+        font-weight: var(--fontWeightSemibold, 600);
+    }
+
+.ficha-resumo {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 10px;
+    margin: 0;
+    padding: 10px 14px;
+    border-radius: var(--borderRadiusLarge, 8px);
+    background: var(--colorNeutralBackground2);
+}

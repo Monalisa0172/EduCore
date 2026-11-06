@@ -15,15 +15,33 @@ public class UsuarioController : ControllerBase
     private readonly UsuarioService _usuarioService;
     private readonly UsuarioCadastroService _cadastroService;
     private readonly BoletimService _boletimService;
+    private readonly AcompanhamentoService _acompanhamentoService;
 
     public UsuarioController(
         UsuarioService usuarioService,
         UsuarioCadastroService cadastroService,
-        BoletimService boletimService)
+        BoletimService boletimService,
+        AcompanhamentoService acompanhamentoService)
     {
         _usuarioService = usuarioService;
         _cadastroService = cadastroService;
         _boletimService = boletimService;
+        _acompanhamentoService = acompanhamentoService;
+    }
+
+    /// <summary>
+    /// Acompanhamento do professor pela coordenação (ficha do professor): pendências de lançamento no
+    /// bimestre atual, desempenho de cada turma e projeção de reforço e reposição dos alunos em alerta.
+    /// </summary>
+    /// <param name="id">Id de usuário do professor.</param>
+    /// <response code="404">Usuário não é professor.</response>
+    [Authorize(Roles = Roles.Admin)]
+    [HttpGet("{id:int}/acompanhamento")]
+    [ProducesResponseType(typeof(AcompanhamentoDTO), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Acompanhamento(int id)
+    {
+        return this.ParaResposta(await _acompanhamentoService.ObterPorUsuarioAsync(id), Ok);
     }
 
     /// <summary>

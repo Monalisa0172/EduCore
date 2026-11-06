@@ -124,9 +124,12 @@
 
     private bool EhBoletim => string.Equals(Aba, "boletim", StringComparison.OrdinalIgnoreCase);
 
-    /// <summary>Aberta pela turma: "Início › Turmas › {turma} › {aluno}"; pelo painel: "Início › {aluno}".</summary>
+    /// <summary>
+    /// Aberta pela turma: "Início › Turmas › {turma} › {aluno}"; pela ficha do professor: "Início › {professor} › {aluno}";
+    /// pelo painel: "Início › {aluno}".
+    /// </summary>
     private IReadOnlyList<ItemTrilha> Trilha
-        => RetornoNavegacao.TrilhaDaTurma(Voltar, Origem, _usuario?.Nome ?? "Aluno")
+        => RetornoNavegacao.TrilhaDeRetorno(Voltar, Origem, _usuario?.Nome ?? "Aluno")
             ?? [ItemTrilha.Inicio, new(_usuario?.Nome ?? "Aluno")];
 
     /// <summary>As abas mantêm a origem, para a trilha não se perder ao trocar de aba.</summary>

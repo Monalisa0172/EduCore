@@ -6,7 +6,8 @@
 
 <PageTitle>@(_dados?.Avaliacao.Nome ?? "Notas") | EduCore</PageTitle>
 
-<AuthorizeView Roles="@Roles.Professor">
+@* Professor lanca; admin (coordenacao) consulta, sem editar. *@
+<AuthorizeView Roles="@($"{Roles.Professor},{Roles.Admin}")">
     <Authorized>
         @* Recarregar ou fechar a aba com notas nao salvas pede confirmacao do navegador. *@
         <NavigationLock ConfirmExternalNavigation="Alteradas > 0" />
@@ -47,7 +48,7 @@
                 <PageHeader Titulo="@av.Nome"
                             Secao="@($"Sala de aula · Notas")"
                             Icone="@(new Icons.Regular.Size24.TaskListSquareLtr())"
-                            Trilha="@([ItemTrilha.Inicio, new("Minhas turmas", "professor/turmas"), new($"{av.TurmaNome} · {av.DisciplinaNome}", UrlDiario), new(av.Nome)])">
+                            Trilha="@TrilhaDa(av)">
                     <Detalhes>
                         <dl class="notas-dados">
                             <div><dt>Turma</dt><dd>@av.TurmaNome</dd></div>
@@ -69,7 +70,13 @@
                     </FluentMessageBar>
                 }
 
-                @if (!dados.PodeLancar)
+                @if (_somenteLeitura)
+                {
+                    <FluentMessageBar Intent="MessageBarIntent.Info" Title="Consulta da coordenação" AllowDismiss="false">
+                        Notas lançadas pelo professor, só para leitura.
+                    </FluentMessageBar>
+                }
+                else if (!dados.PodeLancar)
                 {
                     <FluentMessageBar Intent="MessageBarIntent.Warning" Title="Só consulta" AllowDismiss="false">
                         @(av.Ativo ? "A turma está encerrada: as notas ficam só para consulta." : "A avaliação está inativa. Reative-a na lista de avaliações para lançar notas.")
@@ -86,7 +93,7 @@
                         </div>
                     </div>
 
-                    @if (dados.PodeLancar)
+                    @if (PodeLancar)
                     {
                         <p class="texto-suave">Notas de 0 a 10 (ex.: 7,5). Deixe em branco quem ainda não fez; para apagar uma nota, limpe o campo.</p>
                     }
@@ -122,7 +129,7 @@
                                                maxlength="5"
                                                aria-invalid="@(erroLinha is null ? "false" : "true")"
                                                aria-describedby="@(erroLinha is null ? null : $"nota-erro-{aluno.AlunoId}")"
-                                               disabled="@(!dados.PodeLancar || !aluno.Ativo)"
+                                               disabled="@(!PodeLancar || !aluno.Ativo)"
                                                value="@_textos[aluno.AlunoId]"
                                                @oninput="@(e => Digitar(aluno.AlunoId, e.Value as string))" />
                                         @if (erroLinha is not null)
@@ -136,7 +143,7 @@
                     }
                 </section>
 
-                @if (dados.PodeLancar && Lista.Count > 0)
+                @if (PodeLancar && Lista.Count > 0)
                 {
                     <div class="notas-rodape" role="region" aria-label="Resumo e salvamento">
                         <div class="notas-resumo">
@@ -206,6 +213,32 @@
     [Parameter]
     public int Id { get; set; }
 
+    /// <summary>Origem (ex.: ficha do professor, para a coordenação), validada contra redirecionamento externo.</summary>
+    [SupplyParameterFromQuery(Name = "voltar")]
+    public string? Voltar { get; set; }
+
+    [SupplyParameterFromQuery(Name = "origem")]
+    public string? Origem { get; set; }
+
+    [CascadingParameter]
+    private Task<AuthenticationState> EstadoAutenticacao { get; set; } = default!;
+
+    // Admin (coordenacao) so consulta.
+    private bool _somenteLeitura;
+
+    private bool PodeLancar => _dados is { PodeLancar: true } && !_somenteLeitura;
+
+    /// <summary>Professor: "Início › Minhas turmas › {turma · disciplina} › {avaliação}". Coordenação: "Início › {professor} › ...".</summary>
+    private IReadOnlyList<ItemTrilha> TrilhaDa(AvaliacaoItem av)
+    {
+        var consulta = RetornoNavegacao.ConsultaDeOrigem(Voltar, Origem);
+        var diario = new ItemTrilha($"{av.TurmaNome} · {av.DisciplinaNome}", UrlDiario + (consulta.Length > 0 ? $"&{consulta}" : null));
+
+        return _somenteLeitura
+            ? RetornoNavegacao.TrilhaDeRetorno(Voltar, Origem, [diario, new(av.Nome)]) ?? [ItemTrilha.Inicio, diario, new(av.Nome)]
+            : [ItemTrilha.Inicio, new("Minhas turmas", "professor/turmas"), diario, new(av.Nome)];
+    }
+
     /// <summary>Volta para a aba de avaliações no bimestre desta avaliação.</summary>
     private string UrlDiario => _dados is { } d
         ? $"professor/turmas/{d.Avaliacao.TurmaId}/disciplinas/{d.Avaliacao.DisciplinaId}/avaliacoes?bimestre={d.Avaliacao.Bimestre}"
@@ -237,6 +270,7 @@
     {
         _carregada = Id;
         _carregando = true;
+        _somenteLeitura = (await EstadoAutenticacao).User.IsInRole(Roles.Admin);
         _erro = null;
         _dados = null;
 

@@ -1,0 +1,54 @@
+.reforco-aviso {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    padding: 10px 14px;
+    border-radius: var(--borderRadiusLarge, 8px);
+    background: var(--educore-primary-tint);
+    color: var(--colorNeutralForeground2);
+}
+
+.reforco-rolagem {
+    overflow-x: auto;
+}
+
+.reforco {
+    width: 100%;
+    min-width: 640px;
+    border-collapse: collapse;
+}
+
+    .reforco th,
+    .reforco td {
+        padding: 10px 8px;
+        border-bottom: 1px solid var(--colorNeutralStroke2);
+        text-align: left;
+        vertical-align: middle;
+    }
+
+    .reforco thead th {
+        font-size: var(--fontSizeBase200, 12px);
+        font-weight: var(--fontWeightSemibold, 600);
+        color: var(--colorNeutralForeground3);
+    }
+
+    .reforco a {
+        color: var(--educore-primary-text);
+        font-weight: var(--fontWeightSemibold, 600);
+    }
+
+.reforco-numero {
+    text-align: center !important;
+    font-variant-numeric: tabular-nums;
+}
+
+.reforco-orientacao {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+}
+
+.reforco-nota {
+    font-size: var(--fontSizeBase200, 12px);
+}

@@ -18,7 +18,7 @@
             {
                 <FluentSwitch Label="Mostrar inativas" @bind-Value="_mostrarInativas" />
             }
-            @if (Diario.TurmaAtiva)
+            @if (PodeEditar)
             {
                 <FluentButton Appearance="ButtonAppearance.Primary"
                               IconStart="@(new Icons.Regular.Size20.Add())"
@@ -83,9 +83,9 @@
     else if (Visiveis.Count == 0)
     {
         <EmptyState Titulo="@($"Nenhuma avaliação no {_bimestre}º bimestre")"
-                    Descricao="@(Diario.TurmaAtiva ? "Crie as avaliações do bimestre; depois é só lançar as notas da turma." : "Esta turma não teve avaliações neste bimestre.")"
+                    Descricao="@(PodeEditar ? "Crie as avaliações do bimestre; depois é só lançar as notas da turma." : "Esta turma não teve avaliações neste bimestre.")"
                     Icone="@(new Icons.Regular.Size24.ClipboardTask())">
-            @if (Diario.TurmaAtiva)
+            @if (PodeEditar)
             {
                 <FluentButton Appearance="ButtonAppearance.Primary" IconStart="@(new Icons.Regular.Size20.Add())" OnClick="NovaAsync">
                     Nova avaliação
@@ -130,12 +130,12 @@
                     </div>
 
                     <div class="avaliacao-acoes">
-                        <a class="atalho @(avaliacao.Ativo && Diario.TurmaAtiva ? "atalho--destaque" : null)"
-                           href="@($"professor/turmas/{Diario.TurmaId}/disciplinas/{Diario.DisciplinaId}/avaliacoes/{avaliacao.Id}/notas")">
+                        <a class="atalho @(avaliacao.Ativo && PodeEditar ? "atalho--destaque" : null)"
+                           href="@($"professor/turmas/{Diario.TurmaId}/disciplinas/{Diario.DisciplinaId}/avaliacoes/{avaliacao.Id}/notas{(string.IsNullOrEmpty(ConsultaDeOrigem) ? null : $"?{ConsultaDeOrigem}")}")">
                             <FluentIcon Value="@(new Icons.Regular.Size16.TaskListSquareLtr())" Color="Color.Custom" CustomColor="currentColor" aria-hidden="true" />
-                            @(avaliacao.Ativo && Diario.TurmaAtiva ? "Lançar notas" : "Ver notas")
+                            @(avaliacao.Ativo && PodeEditar ? "Lançar notas" : "Ver notas")
                         </a>
-                        @if (Diario.TurmaAtiva)
+                        @if (PodeEditar)
                         {
                             @if (avaliacao.Ativo)
                             {
@@ -210,6 +210,14 @@
     [Parameter]
     public int? BimestreInicial { get; set; }
 
+    /// <summary>Consulta da coordenação: sem criar, editar ou inativar.</summary>
+    [Parameter]
+    public bool SomenteLeitura { get; set; }
+
+    /// <summary>Origem (voltar/origem) repetida nos links, para a trilha não se perder.</summary>
+    [Parameter]
+    public string? ConsultaDeOrigem { get; set; }
+
     [Parameter]
     public EventCallback<AvisoPagina> OnAviso { get; set; }
 
@@ -218,6 +226,8 @@
     public EventCallback OnPesosAlterados { get; set; }
 
     private DateOnly Hoje => DateOnly.FromDateTime(Relogio.GetLocalNow().DateTime);
+
+    private bool PodeEditar => Diario.TurmaAtiva && !SomenteLeitura;
 
     private IReadOnlyList<OpcaoSeletor<int>> OpcoesBimestre
         => Enumerable.Range(1, 4)
