@@ -1,12 +1,11 @@
 @inherits HomeViewBase
 
-@* Pagina inicial do perfil Professor. Estrutura inicial: layout e indicadores serao definidos depois. *@
-<section aria-labelledby="professor-home-title">
-    <FluentText As="TextTag.H1" Id="professor-home-title" Size="TextSize.Size800" Weight="TextWeight.Semibold" Block="true">
-        Painel do professor
-    </FluentText>
-    <FluentText Block="true">Olá, @PrimeiroNome</FluentText>
+@* Pagina inicial do professor: as turmas dele com os atalhos do dia a dia (chamada e notas). *@
+<div class="pagina">
+    <PageHeader Titulo="Sala de aula"
+                Secao="Visão geral"
+                Icone="@(new Icons.Regular.Size24.HatGraduation())"
+                Descricao="@($"Olá, {PrimeiroNome}. Escolha a turma para fazer a chamada ou lançar notas.")" />
 
-    @* TODO: minhas turmas e sub-disciplinas *@
-    @* TODO: proximas avaliacoes *@
-</section>
+    <MinhasTurmasLista />
+</div>

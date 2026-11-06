@@ -1,0 +1,88 @@
+@implements IDisposable
+@inject IDiarioApiClient DiarioApi
+
+@* Turmas e disciplinas do professor logado, com atalhos para a chamada e as avaliacoes.
+   Turmas inativas (anos anteriores) ficam recolhidas em "Turmas anteriores". *@
+@if (_erro is not null)
+{
+    <FluentMessageBar Intent="MessageBarIntent.Error" Title="@_erro.Title" AllowDismiss="false">
+        <ChildContent>@_erro.Message</ChildContent>
+        <ActionsTemplate>
+            <FluentButton Appearance="ButtonAppearance.Default" OnClick="CarregarAsync">Tentar novamente</FluentButton>
+        </ActionsTemplate>
+    </FluentMessageBar>
+}
+else if (_turmas is null)
+{
+    <div class="turmas-grade" aria-busy="true" aria-label="Carregando suas turmas">
+        @for (var i = 0; i < 2; i++)
+        {
+            <FluentSkeleton Height="160px" Shimmer="true" />
+        }
+    </div>
+}
+else if (_turmas.Count == 0)
+{
+    <section class="secao-card">
+        <EmptyState Titulo="Você ainda não tem turmas"
+                    Descricao="Quando a secretaria atribuir uma disciplina a você, a turma aparece aqui com os atalhos para chamada e notas."
+                    Icone="@(new Icons.Regular.Size24.PeopleTeam())" />
+    </section>
+}
+else
+{
+    <div class="turmas-grade">
+        @foreach (var turma in Ativas)
+        {
+            <CartaoTurma Turma="turma" />
+        }
+    </div>
+
+    @if (Anteriores.Count > 0)
+    {
+        <details class="turmas-anteriores">
+            <summary>Turmas anteriores (@Anteriores.Count) · só consulta</summary>
+            <div class="turmas-grade">
+                @foreach (var turma in Anteriores)
+                {
+                    <CartaoTurma Turma="turma" />
+                }
+            </div>
+        </details>
+    }
+}
+
+@code {
+    private readonly CancellationTokenSource _cts = new();
+
+    private List<TurmaDoProfessor>? _turmas;
+    private ApiError? _erro;
+
+    private IReadOnlyList<TurmaDoProfessor> Ativas => (_turmas ?? []).Where(t => t.Ativa).ToList();
+
+    private IReadOnlyList<TurmaDoProfessor> Anteriores => (_turmas ?? []).Where(t => !t.Ativa).ToList();
+
+    protected override Task OnInitializedAsync() => CarregarAsync();
+
+    private async Task CarregarAsync()
+    {
+        _erro = null;
+        _turmas = null;
+
+        var resultado = await DiarioApi.MinhasAtribuicoesAsync(_cts.Token);
+
+        if (!resultado.Succeeded)
+        {
+            _erro = resultado.Error;
+            return;
+        }
+
+        _turmas = TurmaDoProfessor.Agrupar(resultado.Value!);
+    }
+
+    public void Dispose()
+    {
+        _cts.Cancel();
+        _cts.Dispose();
+    }
+}

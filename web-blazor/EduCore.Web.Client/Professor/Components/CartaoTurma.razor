@@ -1,0 +1,45 @@
+@* Cartao de uma turma do professor: cada disciplina com os atalhos "Chamada" e "Avaliacoes e notas". *@
+<article class="cartao-turma @(Turma.Ativa ? null : "cartao-turma--anterior")" aria-labelledby="@IdTitulo">
+    <header class="cartao-turma-cabecalho">
+        <span class="cartao-turma-icone" aria-hidden="true">
+            <FluentIcon Value="@(new Icons.Regular.Size20.PeopleTeam())" Color="Color.Custom" CustomColor="var(--educore-primary-text)" />
+        </span>
+        <div class="cartao-turma-textos">
+            <FluentText As="TextTag.H2" Id="@IdTitulo" Size="TextSize.Size500" Weight="TextWeight.Semibold">@Turma.Nome</FluentText>
+            <span class="texto-suave">Ano letivo @Turma.AnoLetivo</span>
+        </div>
+    </header>
+
+    <ul class="cartao-turma-disciplinas">
+        @foreach (var disciplina in Turma.Disciplinas)
+        {
+            var baseUrl = $"professor/turmas/{Turma.TurmaId}/disciplinas/{disciplina.DisciplinaId}";
+            <li @key="disciplina.DisciplinaId">
+                <div class="cartao-turma-disciplina">
+                    <span class="cartao-turma-disciplina-nome">@disciplina.Nome</span>
+                    <span class="texto-suave">@disciplina.Detalhe</span>
+                </div>
+                <div class="cartao-turma-atalhos">
+                    @if (Turma.Ativa)
+                    {
+                        <a class="atalho atalho--destaque" href="@($"{baseUrl}/chamada")" aria-label="@($"Chamada de {disciplina.Nome} em {Turma.Nome}")">
+                            <FluentIcon Value="@(new Icons.Regular.Size16.ClipboardCheckmark())" Color="Color.Custom" CustomColor="currentColor" aria-hidden="true" />
+                            Chamada
+                        </a>
+                    }
+                    <a class="atalho" href="@($"{baseUrl}/avaliacoes")" aria-label="@($"Avaliações e notas de {disciplina.Nome} em {Turma.Nome}")">
+                        <FluentIcon Value="@(new Icons.Regular.Size16.ClipboardTask())" Color="Color.Custom" CustomColor="currentColor" aria-hidden="true" />
+                        Avaliações e notas
+                    </a>
+                </div>
+            </li>
+        }
+    </ul>
+</article>
+
+@code {
+    [Parameter, EditorRequired]
+    public TurmaDoProfessor Turma { get; set; } = default!;
+
+    private string IdTitulo => $"turma-{Turma.TurmaId}-titulo";
+}

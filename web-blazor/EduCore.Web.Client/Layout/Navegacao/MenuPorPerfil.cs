@@ -41,14 +41,9 @@ public static class MenuPorPerfil
         new(null, [Inicio]),
         new("Sala de aula",
         [
+            // Avaliacoes, notas e chamada sao sempre de uma turma + disciplina: ficam dentro de "Minhas turmas".
             new("Minhas turmas", "professor/turmas",
-                new Icons.Regular.Size20.PeopleTeam(), new Icons.Filled.Size20.PeopleTeam(), Disponivel: false),
-            new("Avaliações", "professor/avaliacoes",
-                new Icons.Regular.Size20.ClipboardTask(), new Icons.Filled.Size20.ClipboardTask(), Disponivel: false),
-            new("Lançar notas", "professor/notas",
-                new Icons.Regular.Size20.TaskListSquareLtr(), new Icons.Filled.Size20.TaskListSquareLtr(), Disponivel: false),
-            new("Chamada", "professor/chamada",
-                new Icons.Regular.Size20.ClipboardCheckmark(), new Icons.Filled.Size20.ClipboardCheckmark(), Disponivel: false),
+                new Icons.Regular.Size20.PeopleTeam(), new Icons.Filled.Size20.PeopleTeam()),
         ]),
     ];
 

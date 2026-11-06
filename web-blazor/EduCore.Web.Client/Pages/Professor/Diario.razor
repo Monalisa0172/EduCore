@@ -1,0 +1,181 @@
+@page "/professor/turmas/{TurmaId:int}/disciplinas/{DisciplinaId:int}"
+@page "/professor/turmas/{TurmaId:int}/disciplinas/{DisciplinaId:int}/{Aba}"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@implements IDisposable
+@inject IDiarioApiClient DiarioApi
+
+<PageTitle>@(_diario is null ? "Diário" : $"{_diario.Titulo} · {_diario.TurmaNome}") | EduCore</PageTitle>
+
+<AuthorizeView Roles="@Roles.Professor">
+    <Authorized>
+        <div class="pagina">
+            @if (_carregando)
+            {
+                <div class="diario-carregando" aria-busy="true" aria-label="Carregando diário">
+                    <FluentSkeleton Width="200px" Height="20px" Shimmer="true" />
+                    <FluentSkeleton Width="320px" Height="40px" Shimmer="true" />
+                    <FluentSkeleton Height="260px" Shimmer="true" />
+                </div>
+            }
+            else if (_erro is { Kind: ApiErrorKind.NotFound })
+            {
+                <PageHeader Titulo="Diário não encontrado" Trilha="TrilhaBase" />
+                <section class="secao-card">
+                    <EmptyState Titulo="Você não leciona esta disciplina nesta turma"
+                                Descricao="O endereço pode estar incorreto ou a atribuição foi encerrada. Volte para suas turmas."
+                                Icone="@(new Icons.Regular.Size24.PeopleTeam())">
+                        <a class="atalho atalho--destaque" href="professor/turmas">Minhas turmas</a>
+                    </EmptyState>
+                </section>
+            }
+            else if (_erro is not null)
+            {
+                <PageHeader Titulo="Diário" Trilha="TrilhaBase" />
+                <FluentMessageBar Intent="MessageBarIntent.Error" Title="@_erro.Title" AllowDismiss="false">
+                    <ChildContent>@_erro.Message</ChildContent>
+                    <ActionsTemplate>
+                        <FluentButton Appearance="ButtonAppearance.Default" OnClick="CarregarAsync">Tentar novamente</FluentButton>
+                    </ActionsTemplate>
+                </FluentMessageBar>
+            }
+            else if (_diario is { } diario)
+            {
+                <PageHeader Titulo="@diario.Titulo"
+                            Secao="@($"Sala de aula · {diario.TurmaNome}")"
+                            Icone="@(new Icons.Regular.Size24.BookOpen())"
+                            Trilha="@([ItemTrilha.Inicio, new("Minhas turmas", "professor/turmas"), new($"{diario.TurmaNome} · {diario.DisciplinaNome}")])">
+                    <Detalhes>
+                        <dl class="diario-dados">
+                            <div><dt>Turma</dt><dd>@diario.TurmaNome</dd></div>
+                            <div><dt>Ano letivo</dt><dd>@diario.AnoLetivo</dd></div>
+                            <div><dt>Alunos ativos</dt><dd>@diario.AlunosAtivos</dd></div>
+                            <div><dt>Bimestre atual</dt><dd>@(diario.BimestreVigente)º</dd></div>
+                        </dl>
+                    </Detalhes>
+                </PageHeader>
+
+                @if (_aviso is not null)
+                {
+                    <FluentMessageBar @key="_avisoId"
+                                      Intent="@(_aviso.Erro ? MessageBarIntent.Error : MessageBarIntent.Success)"
+                                      Title="@_aviso.Titulo"
+                                      AllowDismiss="true">
+                        @_aviso.Mensagem
+                    </FluentMessageBar>
+                }
+
+                @if (!diario.TurmaAtiva)
+                {
+                    <FluentMessageBar Intent="MessageBarIntent.Warning" Title="Turma encerrada" AllowDismiss="false">
+                        Esta turma é de um ano anterior ou foi inativada: avaliações, notas e chamadas ficam só para consulta.
+                    </FluentMessageBar>
+                }
+
+                <nav class="abas" aria-label="Diário de classe">
+                    <NavLink href="@($"{BaseUrl}/avaliacoes")" Match="NavLinkMatch.Prefix" class="@(EhChamada ? null : "active")" aria-current="@(EhChamada ? null : "page")">
+                        <FluentIcon Value="@(new Icons.Regular.Size20.ClipboardTask())" Color="Color.Custom" CustomColor="currentColor" aria-hidden="true" />
+                        Avaliações e notas
+                    </NavLink>
+                    <NavLink href="@($"{BaseUrl}/chamada")" Match="NavLinkMatch.Prefix" aria-current="@(EhChamada ? "page" : null)">
+                        <FluentIcon Value="@(new Icons.Regular.Size20.ClipboardCheckmark())" Color="Color.Custom" CustomColor="currentColor" aria-hidden="true" />
+                        Chamada
+                    </NavLink>
+                </nav>
+
+                @if (EhChamada)
+                {
+                    <ChamadaPainel Diario="diario" OnAviso="MostrarAviso" />
+                }
+                else
+                {
+                    <AvaliacoesPainel Diario="diario"
+                                      BimestreInicial="Bimestre"
+                                      OnAviso="MostrarAviso"
+                                      OnPesosAlterados="RecarregarDiarioAsync" />
+                }
+            }
+        </div>
+    </Authorized>
+    <NotAuthorized>
+        <AcessoNegadoOuLogin />
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private static readonly IReadOnlyList<ItemTrilha> TrilhaBase =
+        [ItemTrilha.Inicio, new("Minhas turmas", "professor/turmas"), new("Diário")];
+
+    private readonly CancellationTokenSource _cts = new();
+
+    private DiarioInfo? _diario;
+    private ApiError? _erro;
+    private bool _carregando = true;
+    private (int Turma, int Disciplina) _carregado;
+    private AvisoPagina? _aviso;
+    private int _avisoId;
+
+    [Parameter]
+    public int TurmaId { get; set; }
+
+    [Parameter]
+    public int DisciplinaId { get; set; }
+
+    /// <summary>"avaliacoes" (padrão) ou "chamada".</summary>
+    [Parameter]
+    public string? Aba { get; set; }
+
+    /// <summary>Bimestre a abrir na aba de avaliações (ex.: ao voltar do lançamento de notas).</summary>
+    [SupplyParameterFromQuery(Name = "bimestre")]
+    public int? Bimestre { get; set; }
+
+    private bool EhChamada => string.Equals(Aba, "chamada", StringComparison.OrdinalIgnoreCase);
+
+    private string BaseUrl => $"professor/turmas/{TurmaId}/disciplinas/{DisciplinaId}";
+
+    protected override Task OnParametersSetAsync()
+        => _carregado == (TurmaId, DisciplinaId) ? Task.CompletedTask : CarregarAsync();
+
+    private async Task CarregarAsync()
+    {
+        _carregado = (TurmaId, DisciplinaId);
+        _carregando = true;
+        _erro = null;
+        _diario = null;
+
+        var resultado = await DiarioApi.ObterDiarioAsync(TurmaId, DisciplinaId, _cts.Token);
+
+        _carregando = false;
+
+        if (resultado.Succeeded)
+        {
+            _diario = resultado.Value;
+        }
+        else
+        {
+            _erro = resultado.Error;
+        }
+    }
+
+    /// <summary>Pesos mudaram (avaliação criada, editada ou inativada): relê o resumo sem piscar a tela.</summary>
+    private async Task RecarregarDiarioAsync()
+    {
+        var resultado = await DiarioApi.ObterDiarioAsync(TurmaId, DisciplinaId, _cts.Token);
+        if (resultado.Succeeded)
+        {
+            _diario = resultado.Value;
+            StateHasChanged();
+        }
+    }
+
+    private void MostrarAviso(AvisoPagina aviso)
+    {
+        _aviso = aviso;
+        _avisoId++;
+    }
+
+    public void Dispose()
+    {
+        _cts.Cancel();
+        _cts.Dispose();
+    }
+}

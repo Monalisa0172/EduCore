@@ -76,6 +76,13 @@ public class AvaliacaoRepository : IAvaliacaoRepository
                 && a.Id != avaliacaoIgnoradaId)
             .SumAsync(a => a.Peso);
 
+    public Task<Dictionary<int, decimal>> GetPesosPorBimestreAsync(int turmaId, int disciplinaId)
+        => _context.Avaliacoes
+            .Where(a => a.Ativo && a.TurmaId == turmaId && a.DisciplinaId == disciplinaId)
+            .GroupBy(a => a.Bimestre)
+            .Select(g => new { Bimestre = g.Key, Peso = g.Sum(a => a.Peso) })
+            .ToDictionaryAsync(x => x.Bimestre, x => x.Peso);
+
     public async Task AddAsync(Avaliacao avaliacao)
     {
         await _context.Avaliacoes.AddAsync(avaliacao);

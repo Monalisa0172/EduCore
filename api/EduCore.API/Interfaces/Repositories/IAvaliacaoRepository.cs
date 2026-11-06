@@ -18,6 +18,9 @@ public interface IAvaliacaoRepository
     /// <summary>Soma dos pesos das avaliações ativas de turma + disciplina + bimestre.</summary>
     Task<decimal> GetPesoTotalAsync(int turmaId, int disciplinaId, int bimestre, int? avaliacaoIgnoradaId = null);
 
+    /// <summary>Soma dos pesos ativos por bimestre (todas as subdisciplinas e professores da disciplina).</summary>
+    Task<Dictionary<int, decimal>> GetPesosPorBimestreAsync(int turmaId, int disciplinaId);
+
     Task AddAsync(Avaliacao avaliacao);
 
     Task SalvarAsync();

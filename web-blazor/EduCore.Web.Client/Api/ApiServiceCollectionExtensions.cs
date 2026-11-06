@@ -1,6 +1,7 @@
 using EduCore.Web.Client.Atribuicoes.Services;
 using EduCore.Web.Client.Auth.Services;
 using EduCore.Web.Client.Disciplinas.Services;
+using EduCore.Web.Client.Professor.Services;
 using EduCore.Web.Client.Turmas.Services;
 using EduCore.Web.Client.Usuarios.Services;
 using Microsoft.AspNetCore.Components.Authorization;
@@ -40,6 +41,7 @@ public static class ApiServiceCollectionExtensions
         services.AddHttpClient<IDisciplinaApiClient, DisciplinaApiClient>(ConfigureClient);
         services.AddHttpClient<ISubDisciplinaApiClient, SubDisciplinaApiClient>(ConfigureClient);
         services.AddHttpClient<IAtribuicaoApiClient, AtribuicaoApiClient>(ConfigureClient);
+        services.AddHttpClient<IDiarioApiClient, DiarioApiClient>(ConfigureClient);
 
         return services;
 
