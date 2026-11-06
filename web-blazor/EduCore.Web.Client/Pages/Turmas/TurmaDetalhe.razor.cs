@@ -142,10 +142,10 @@ public partial class TurmaDetalhe : IDisposable
         => $"usuarios/{aluno.UsuarioId}?voltar={Uri.EscapeDataString($"/turmas/{Id}")}&origem={Uri.EscapeDataString(_turma?.Nome ?? "Turma")}";
 
     /// <summary>
-    /// Boletim do aluno (gráficos e notas), com a trilha de volta para esta turma.
+    /// Ficha do aluno (desempenho e boletim), com a trilha de volta para esta turma.
     /// </summary>
-    private string LinkBoletim(TurmaAluno aluno)
-        => $"alunos/{aluno.AlunoId}/boletim?voltar={Uri.EscapeDataString($"/turmas/{Id}")}&origem={Uri.EscapeDataString(_turma?.Nome ?? "Turma")}";
+    private string LinkFicha(TurmaAluno aluno)
+        => $"alunos/{aluno.UsuarioId}?voltar={Uri.EscapeDataString($"/turmas/{Id}")}&origem={Uri.EscapeDataString(_turma?.Nome ?? "Turma")}";
 
     /// <summary>
     /// Cadastro de aluno novo já com esta turma marcada; ao salvar ou cancelar, volta para cá.

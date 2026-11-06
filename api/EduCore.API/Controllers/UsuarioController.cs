@@ -14,13 +14,31 @@ public class UsuarioController : ControllerBase
 {
     private readonly UsuarioService _usuarioService;
     private readonly UsuarioCadastroService _cadastroService;
+    private readonly BoletimService _boletimService;
 
     public UsuarioController(
         UsuarioService usuarioService,
-        UsuarioCadastroService cadastroService)
+        UsuarioCadastroService cadastroService,
+        BoletimService boletimService)
     {
         _usuarioService = usuarioService;
         _cadastroService = cadastroService;
+        _boletimService = boletimService;
+    }
+
+    /// <summary>
+    /// Boletim do aluno pelo id de usuário (ficha do aluno). Vale para aluno inativo (histórico).
+    /// </summary>
+    /// <param name="id">Id de usuário do aluno.</param>
+    /// <param name="anoLetivo">Ano letivo; vazio para o mais recente com matrícula.</param>
+    /// <response code="404">Usuário não é aluno, ou o aluno não tem matrícula no ano.</response>
+    [Authorize(Roles = Roles.Admin)]
+    [HttpGet("{id:int}/boletim")]
+    [ProducesResponseType(typeof(BoletimDTO), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Boletim(int id, [FromQuery] int? anoLetivo)
+    {
+        return this.ParaResposta(await _boletimService.ObterPorUsuarioAsync(id, anoLetivo), Ok);
     }
 
     /// <summary>

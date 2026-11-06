@@ -36,4 +36,20 @@ public static class RetornoNavegacao
         var nome = string.IsNullOrWhiteSpace(origem) ? "Turma" : origem.Trim();
         return [ItemTrilha.Inicio, new("Turmas", "turmas"), new(nome, retorno), new(paginaAtual)];
     }
+
+    /// <summary>
+    /// Trilha conforme a origem: turma ("Início › Turmas › {turma} › {página}") ou ficha do aluno
+    /// ("Início › {aluno} › {página}"); nulo quando não há origem reconhecida.
+    /// </summary>
+    public static IReadOnlyList<ItemTrilha>? TrilhaDeRetorno(string? voltar, string? origem, string paginaAtual)
+    {
+        var retorno = CaminhoInterno(voltar);
+        if (retorno is not null && retorno.StartsWith("alunos/", StringComparison.Ordinal))
+        {
+            var nome = string.IsNullOrWhiteSpace(origem) ? "Aluno" : origem.Trim();
+            return [ItemTrilha.Inicio, new(nome, retorno), new(paginaAtual)];
+        }
+
+        return TrilhaDaTurma(voltar, origem, paginaAtual);
+    }
 }

@@ -1,0 +1,172 @@
+@page "/alunos/{UsuarioId:int}"
+@page "/alunos/{UsuarioId:int}/{Aba}"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@implements IDisposable
+@inject IUsuarioApiClient UsuarioApi
+@inject IBoletimApiClient BoletimApi
+
+<PageTitle>@(_usuario?.Nome ?? "Aluno") | EduCore</PageTitle>
+
+@* Ficha do aluno (admin): cabecalho com os dados e "Editar cadastro"; abas por rota
+   Desempenho (graficos) e Boletim (tabela). Aberta pelo nome no painel ou pela turma. *@
+<AuthorizeView Roles="@Roles.Admin">
+    <Authorized>
+        <div class="pagina">
+            @if (_carregando)
+            {
+                <div class="ficha-carregando" aria-busy="true" aria-label="Carregando ficha">
+                    <FluentSkeleton Width="200px" Height="20px" Shimmer="true" />
+                    <FluentSkeleton Width="320px" Height="40px" Shimmer="true" />
+                    <FluentSkeleton Height="260px" Shimmer="true" />
+                </div>
+            }
+            else if (_erro is { Kind: ApiErrorKind.NotFound } || _usuario is { IsAluno: false })
+            {
+                <PageHeader Titulo="Aluno não encontrado" Trilha="@([ItemTrilha.Inicio, new("Aluno")])" />
+                <section class="secao-card">
+                    <EmptyState Titulo="Esta ficha não existe"
+                                Descricao="@(_usuario is { IsAluno: false } ? "Este usuário não é aluno: abra o cadastro dele pelo painel." : "O endereço pode estar incorreto. Volte ao painel e escolha o aluno.")"
+                                Icone="@(new Icons.Regular.Size24.Person())">
+                        <a class="atalho atalho--destaque" href="">Voltar ao painel</a>
+                    </EmptyState>
+                </section>
+            }
+            else if (_erro is not null)
+            {
+                <PageHeader Titulo="Ficha do aluno" Trilha="@([ItemTrilha.Inicio, new("Aluno")])" />
+                <FluentMessageBar Intent="MessageBarIntent.Error" Title="@_erro.Title" AllowDismiss="false">
+                    <ChildContent>@_erro.Message</ChildContent>
+                    <ActionsTemplate>
+                        <FluentButton Appearance="ButtonAppearance.Default" OnClick="CarregarAsync">Tentar novamente</FluentButton>
+                    </ActionsTemplate>
+                </FluentMessageBar>
+            }
+            else if (_usuario is { } aluno)
+            {
+                <PageHeader Titulo="@aluno.Nome"
+                            Secao="Pessoas · Aluno"
+                            Icone="@(new Icons.Regular.Size24.Person())"
+                            Trilha="Trilha">
+                    <Selo>
+                        <StatusBadge Ativo="aluno.Ativo" TextoAtivo="Ativo" TextoInativo="Inativo" />
+                    </Selo>
+                    <Detalhes>
+                        <dl class="ficha-dados">
+                            <div><dt>E-mail</dt><dd>@aluno.Email</dd></div>
+                            @if (_boletim is { } b)
+                            {
+                                <div><dt>Turma</dt><dd><a href="@($"turmas/{b.TurmaId}")">@b.TurmaNome</a></dd></div>
+                                <div><dt>Ano letivo</dt><dd>@b.AnoLetivo</dd></div>
+                            }
+                        </dl>
+                    </Detalhes>
+                    <Acoes>
+                        <a class="atalho" href="@LinkEdicao">
+                            <FluentIcon Value="@(new Icons.Regular.Size16.Edit())" Color="Color.Custom" CustomColor="currentColor" aria-hidden="true" />
+                            Editar cadastro
+                        </a>
+                    </Acoes>
+                </PageHeader>
+
+                @if (!aluno.Ativo)
+                {
+                    <FluentMessageBar Intent="MessageBarIntent.Warning" Title="Aluno inativo" AllowDismiss="false">
+                        As notas e a frequência abaixo são o histórico do aluno.
+                    </FluentMessageBar>
+                }
+
+                <nav class="abas" aria-label="Ficha do aluno">
+                    <a href="@LinkAba("desempenho")" class="@(EhBoletim ? null : "active")" aria-current="@(EhBoletim ? null : "page")">
+                        <FluentIcon Value="@(new Icons.Regular.Size20.DataBarHorizontal())" Color="Color.Custom" CustomColor="currentColor" aria-hidden="true" />
+                        Desempenho
+                    </a>
+                    <a href="@LinkAba("boletim")" class="@(EhBoletim ? "active" : null)" aria-current="@(EhBoletim ? "page" : null)">
+                        <FluentIcon Value="@(new Icons.Regular.Size20.DocumentBulletList())" Color="Color.Custom" CustomColor="currentColor" aria-hidden="true" />
+                        Boletim
+                    </a>
+                </nav>
+
+                @* Mesmo componente nas duas abas: trocar de aba nao recarrega o boletim. *@
+                <BoletimView Carregar="CarregarBoletim"
+                             MostrarPainel="!EhBoletim"
+                             MostrarTabela="EhBoletim"
+                             OnCarregado="@(b => _boletim = b)" />
+            }
+        </div>
+    </Authorized>
+    <NotAuthorized>
+        <AcessoNegadoOuLogin />
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private readonly CancellationTokenSource _cts = new();
+
+    private UsuarioDetalhe? _usuario;
+    private Boletim? _boletim;
+    private ApiError? _erro;
+    private bool _carregando = true;
+    private int _carregado;
+
+    [Parameter]
+    public int UsuarioId { get; set; }
+
+    /// <summary>"desempenho" (padrão) ou "boletim".</summary>
+    [Parameter]
+    public string? Aba { get; set; }
+
+    /// <summary>Página de origem (ex.: /turmas/12), validada contra redirecionamento externo.</summary>
+    [SupplyParameterFromQuery(Name = "voltar")]
+    public string? Voltar { get; set; }
+
+    [SupplyParameterFromQuery(Name = "origem")]
+    public string? Origem { get; set; }
+
+    private bool EhBoletim => string.Equals(Aba, "boletim", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Aberta pela turma: "Início › Turmas › {turma} › {aluno}"; pelo painel: "Início › {aluno}".</summary>
+    private IReadOnlyList<ItemTrilha> Trilha
+        => RetornoNavegacao.TrilhaDaTurma(Voltar, Origem, _usuario?.Nome ?? "Aluno")
+            ?? [ItemTrilha.Inicio, new(_usuario?.Nome ?? "Aluno")];
+
+    /// <summary>As abas mantêm a origem, para a trilha não se perder ao trocar de aba.</summary>
+    private string LinkAba(string aba)
+        => $"alunos/{UsuarioId}/{aba}{(RetornoNavegacao.CaminhoInterno(Voltar) is null ? null : $"?voltar={Uri.EscapeDataString(Voltar!)}&origem={Uri.EscapeDataString(Origem ?? string.Empty)}")}";
+
+    /// <summary>Edição do cadastro que, ao salvar ou cancelar, volta para esta ficha.</summary>
+    private string LinkEdicao
+        => $"usuarios/{UsuarioId}?voltar={Uri.EscapeDataString($"/alunos/{UsuarioId}")}&origem={Uri.EscapeDataString(_usuario?.Nome ?? "Aluno")}";
+
+    protected override Task OnParametersSetAsync() => _carregado == UsuarioId ? Task.CompletedTask : CarregarAsync();
+
+    private async Task CarregarAsync()
+    {
+        _carregado = UsuarioId;
+        _carregando = true;
+        _erro = null;
+        _usuario = null;
+        _boletim = null;
+
+        var resultado = await UsuarioApi.GetByIdAsync(UsuarioId, _cts.Token);
+
+        _carregando = false;
+
+        if (resultado.Succeeded)
+        {
+            _usuario = resultado.Value;
+        }
+        else
+        {
+            _erro = resultado.Error;
+        }
+    }
+
+    private Task<ApiResult<Boletim>> CarregarBoletim(int? ano, CancellationToken cancellationToken)
+        => BoletimApi.BoletimDoUsuarioAsync(UsuarioId, ano, cancellationToken);
+
+    public void Dispose()
+    {
+        _cts.Cancel();
+        _cts.Dispose();
+    }
+}

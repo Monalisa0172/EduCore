@@ -194,9 +194,9 @@
                                             <FluentIcon Value="@(new Icons.Regular.Size16.Open())" Color="Color.Custom" CustomColor="currentColor" aria-hidden="true" />
                                             Abrir cadastro
                                         </a>
-                                        <a class="aluno-abrir" href="@LinkBoletim(aluno)" title="@($"Ver o boletim de {aluno.Nome}")">
+                                        <a class="aluno-abrir" href="@LinkFicha(aluno)" title="@($"Ver desempenho e boletim de {aluno.Nome}")">
                                             <FluentIcon Value="@(new Icons.Regular.Size16.DocumentBulletList())" Color="Color.Custom" CustomColor="currentColor" aria-hidden="true" />
-                                            Boletim
+                                            Desempenho
                                         </a>
                                         @if (turma.Ativo)
                                         {
