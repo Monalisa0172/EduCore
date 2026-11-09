@@ -74,6 +74,12 @@ EduCore/
 4. No Visual Studio: **Configure Startup Projects** → **Multiple startup projects** → `EduCore.API` e `EduCore.Web`.
 5. Execute (F5). A API publica o Swagger e o front abre na tela de login.
 
+**E-mail ("Esqueci minha senha"):** em desenvolvimento, sem SMTP configurado, a API não envia nada. Ela grava cada e-mail como HTML em `api/EduCore.API/emails-dev/` (ignorada pelo Git) e escreve o link no log. Para enviar de verdade, configure `Email:Smtp:Host`, `Porta`, `Usuario`, `Email:RemetenteEndereco` e `RedefinicaoSenha:UrlFront` (endereço do front usado no link). A senha do SMTP vai em User Secrets:
+
+```bash
+dotnet user-secrets set "Email:Smtp:Senha" "<senha-do-smtp>" --project api/EduCore.API
+```
+
 > Para ver o sistema com dados, aplique também o `002_dados_demonstracao.sql`: ele cria uma turma completa com professores, alunos, notas e chamadas. Os e-mails e a senha de acesso estão no [README dos scripts](database/scripts/README.md#acesso-de-demonstração).
 
 ---
@@ -91,8 +97,11 @@ EduCore/
 - [x] Admin: atribuição de professores na tela da turma
 - [x] Dados de demonstração (turma completa com notas e chamadas)
 - [x] Lançamento de notas por avaliação e chamada em lote, boletim com média ponderada e frequência, endpoints `/me` e acesso restrito ao que cada professor leciona (API)
-- [ ] Professor: minhas turmas, avaliações, lançamento de notas e chamada
-- [ ] Aluno: boletim e frequência
+- [x] Professor: minhas turmas, diário de classe (avaliações com pesos por bimestre), lançamento de notas e chamada
+- [x] Aluno: desempenho em gráficos (média e frequência por disciplina, com faixas de risco/atenção) e boletim completo
+- [x] Admin: ficha do aluno (desempenho e boletim) e ficha do professor (pendências de lançamento, desempenho das turmas, projeção de reforço e reposição e diário em consulta)
+- [x] Esqueci minha senha: link por e-mail de uso único (30 minutos, só o hash fica no banco), resposta igual para e-mail existente ou não e limite de tentativas por IP no login e na redefinição
+- [x] Acabamentos: tratamento global de erros (API com ProblemDetails e traceId; front com aviso por área e "Tentar de novo"), página 404 e "Alterar minha senha"
 - [ ] Dashboards, CI no GitHub Actions e deploy gratuito
 - [ ] Front em React + TypeScript
 

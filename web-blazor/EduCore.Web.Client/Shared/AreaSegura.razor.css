@@ -1,0 +1,40 @@
+/* Mesmo desenho do estado vazio, com o icone na cor de risco */
+.area-erro {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    margin: 24px auto;
+    max-width: 560px;
+    padding: 32px 16px;
+    text-align: center;
+    border: 1px solid var(--colorNeutralStroke2);
+    border-radius: var(--borderRadiusLarge, 8px);
+    background: var(--colorNeutralBackground1);
+}
+
+.area-erro-icone {
+    display: grid;
+    place-items: center;
+    width: 56px;
+    height: 56px;
+    margin-bottom: 6px;
+    border-radius: 50%;
+    color: var(--educore-status-risco);
+    background: color-mix(in srgb, var(--educore-status-risco) 12%, transparent);
+}
+
+.area-erro-descricao {
+    max-width: 440px;
+    margin: 0;
+    font-size: var(--fontSizeBase300, 14px);
+    color: var(--colorNeutralForeground3);
+}
+
+.area-erro-acoes {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 10px;
+}

@@ -1,0 +1,116 @@
+@using System.Globalization
+
+@* Graficos de desempenho por disciplina no periodo escolhido: media e frequencia em graficos separados
+   (escalas diferentes nunca dividem um eixo), com o resumo da situacao em uma frase. *@
+<p class="painel-resumo" role="status">
+    @if (Periodo.EhAno && Boletim.AnoEncerrado)
+    {
+        <IconeSituacao Nivel="@(Reprovadas.Count == 0 ? NivelDesempenho.Ok : NivelDesempenho.Risco)"
+                       Texto="@(Reprovadas.Count == 0 ? "Ano encerrado" : "Ano encerrado")" />
+        <span>
+            Aprovação em <strong>@(Boletim.Disciplinas.Count - Reprovadas.Count) de @Boletim.Disciplinas.Count</strong> disciplinas@(Reprovadas.Count == 0 ? "." : $". Reprovação em {string.Join(", ", Reprovadas)}.")
+        </span>
+    }
+    else if (EmRisco == 0 && EmAtencao == 0)
+    {
+        <IconeSituacao Nivel="@(ComDados == 0 ? NivelDesempenho.SemDados : NivelDesempenho.Ok)" Texto="@(ComDados == 0 ? "Sem lançamentos" : "Tudo certo")" />
+        <span>@(ComDados == 0 ? $"Ainda não há notas nem chamadas no {Periodo.Rotulo.ToLowerInvariant()}." : $"Nenhuma disciplina em risco ou perto do limite no {Periodo.Rotulo.ToLowerInvariant()}.")</span>
+    }
+    else
+    {
+        @if (EmRisco > 0)
+        {
+            <IconeSituacao Nivel="NivelDesempenho.Risco" Texto="@(EmRisco == 1 ? "1 em risco" : $"{EmRisco} em risco")" />
+        }
+        @if (EmAtencao > 0)
+        {
+            <IconeSituacao Nivel="NivelDesempenho.Atencao" Texto="@(EmAtencao == 1 ? "1 pede atenção" : $"{EmAtencao} pedem atenção")" />
+        }
+        <span>no @Periodo.Rotulo.ToLowerInvariant(). Toque em uma disciplina para ver o detalhe.</span>
+    }
+</p>
+
+<div class="painel-graficos">
+    <section class="secao-card">
+        <GraficoBarras Id="grafico-media"
+                       Titulo="Média por disciplina"
+                       Subtitulo="@(Periodo.EhAno ? "Média dos bimestres, de 0 a 10" : $"Média ponderada do {Periodo.Rotulo}, de 0 a 10")"
+                       NomeValor="Média"
+                       Itens="ItensMedia"
+                       Maximo="10"
+                       Marcas="MarcasMedia"
+                       Referencias="@([new ReferenciaGrafico(Boletim.Criterios.MediaMinima, $"mín. {Num(Boletim.Criterios.MediaMinima)}")])"
+                       TextoSemItens="Nenhuma disciplina neste período.">
+            <Legenda>
+                <IconeSituacao Nivel="NivelDesempenho.Ok" Texto="@($"Bom: acima de {Num(Boletim.Criterios.MediaAtencaoAte)}")" />
+                <IconeSituacao Nivel="NivelDesempenho.Atencao" Texto="@($"Atenção: de {Num(Boletim.Criterios.MediaMinima)} a {Num(Boletim.Criterios.MediaAtencaoAte)}")" />
+                <IconeSituacao Nivel="NivelDesempenho.Risco" Texto="@($"Risco: abaixo de {Num(Boletim.Criterios.MediaMinima)}")" />
+            </Legenda>
+        </GraficoBarras>
+    </section>
+
+    <section class="secao-card">
+        <GraficoBarras Id="grafico-frequencia"
+                       Titulo="Frequência por disciplina"
+                       Subtitulo="@($"Presença nas aulas com chamada, {(Periodo.EhAno ? "no ano" : $"no {Periodo.Rotulo}")}")"
+                       NomeValor="Frequência"
+                       Itens="ItensFrequencia"
+                       Maximo="100"
+                       Marcas="MarcasFrequencia"
+                       FormatarMarca="@(v => $"{Num(v)}%")"
+                       Referencias="@([new ReferenciaGrafico(Boletim.Criterios.FrequenciaMinima, $"mín. {Num(Boletim.Criterios.FrequenciaMinima)}%")])"
+                       TextoSemItens="Nenhuma disciplina neste período.">
+            <Legenda>
+                <IconeSituacao Nivel="NivelDesempenho.Ok" Texto="@($"Bom: acima de {Num(Boletim.Criterios.FrequenciaAtencaoAte)}%")" />
+                <IconeSituacao Nivel="NivelDesempenho.Atencao" Texto="@($"Atenção: de {Num(Boletim.Criterios.FrequenciaMinima)}% a {Num(Boletim.Criterios.FrequenciaAtencaoAte)}%")" />
+                <IconeSituacao Nivel="NivelDesempenho.Risco" Texto="@($"Risco: abaixo de {Num(Boletim.Criterios.FrequenciaMinima)}%")" />
+            </Legenda>
+        </GraficoBarras>
+    </section>
+</div>
+
+@code {
+    private static readonly CultureInfo PtBr = CultureInfo.GetCultureInfo("pt-BR");
+    private static readonly IReadOnlyList<decimal> MarcasMedia = [0, 2, 4, 6, 8, 10];
+    private static readonly IReadOnlyList<decimal> MarcasFrequencia = [0, 25, 50, 75, 100];
+
+    [Parameter, EditorRequired]
+    public Boletim Boletim { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public PeriodoBoletim Periodo { get; set; } = default!;
+
+    private IReadOnlyList<DesempenhoDisciplina> Desempenhos
+        => Boletim.Disciplinas.Select(d => DesempenhoDisciplina.De(d, Periodo, Boletim.Criterios)).ToList();
+
+    private int EmRisco => Desempenhos.Count(d => d.Nivel == NivelDesempenho.Risco);
+
+    private int EmAtencao => Desempenhos.Count(d => d.Nivel == NivelDesempenho.Atencao);
+
+    private int ComDados => Desempenhos.Count(d => d.Nivel != NivelDesempenho.SemDados);
+
+    private IReadOnlyList<string> Reprovadas
+        => Boletim.Disciplinas.Where(d => d.Situacao == SituacaoFinal.Reprovado).Select(d => d.Nome).ToList();
+
+    private IReadOnlyList<ItemGrafico> ItensMedia => Desempenhos
+        .Select(d => new ItemGrafico(
+            d.Disciplina,
+            d.Media,
+            d.Media is { } m ? m.ToString("0.0", PtBr) : "—",
+            d.NivelMedia,
+            d.Media is null
+                ? "Ainda sem notas lançadas."
+                : d.MediaParcial ? "Média parcial: ainda há avaliação sem nota ou pesos abaixo de 100." : "Média fechada."))
+        .ToList();
+
+    private IReadOnlyList<ItemGrafico> ItensFrequencia => Desempenhos
+        .Select(d => new ItemGrafico(
+            d.Disciplina,
+            d.Frequencia,
+            d.Frequencia is { } f ? $"{f.ToString("0", PtBr)}%" : "—",
+            d.NivelFrequencia,
+            d.Aulas == 0 ? "Ainda sem chamadas registradas." : $"{d.Faltas} {(d.Faltas == 1 ? "falta" : "faltas")} em {d.Aulas} aulas."))
+        .ToList();
+
+    private static string Num(decimal valor) => valor.ToString("0.##", PtBr);
+}

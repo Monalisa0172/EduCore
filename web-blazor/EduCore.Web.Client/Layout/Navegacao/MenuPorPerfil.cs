@@ -41,14 +41,9 @@ public static class MenuPorPerfil
         new(null, [Inicio]),
         new("Sala de aula",
         [
+            // Avaliacoes, notas e chamada sao sempre de uma turma + disciplina: ficam dentro de "Minhas turmas".
             new("Minhas turmas", "professor/turmas",
-                new Icons.Regular.Size20.PeopleTeam(), new Icons.Filled.Size20.PeopleTeam(), Disponivel: false),
-            new("Avaliações", "professor/avaliacoes",
-                new Icons.Regular.Size20.ClipboardTask(), new Icons.Filled.Size20.ClipboardTask(), Disponivel: false),
-            new("Lançar notas", "professor/notas",
-                new Icons.Regular.Size20.TaskListSquareLtr(), new Icons.Filled.Size20.TaskListSquareLtr(), Disponivel: false),
-            new("Chamada", "professor/chamada",
-                new Icons.Regular.Size20.ClipboardCheckmark(), new Icons.Filled.Size20.ClipboardCheckmark(), Disponivel: false),
+                new Icons.Regular.Size20.PeopleTeam(), new Icons.Filled.Size20.PeopleTeam()),
         ]),
     ];
 
@@ -57,10 +52,9 @@ public static class MenuPorPerfil
         new(null, [Inicio]),
         new("Vida escolar",
         [
+            // Frequencia aparece no grafico do Inicio e no boletim: nao precisa de pagina propria.
             new("Boletim", "aluno/boletim",
-                new Icons.Regular.Size20.DocumentBulletList(), new Icons.Filled.Size20.DocumentBulletList(), Disponivel: false),
-            new("Frequência", "aluno/frequencia",
-                new Icons.Regular.Size20.CalendarCheckmark(), new Icons.Filled.Size20.CalendarCheckmark(), Disponivel: false),
+                new Icons.Regular.Size20.DocumentBulletList(), new Icons.Filled.Size20.DocumentBulletList()),
         ]),
     ];
 

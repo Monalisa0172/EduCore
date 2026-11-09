@@ -1,0 +1,365 @@
+@implements IDisposable
+@using System.Globalization
+@inject IDiarioApiClient DiarioApi
+@inject TimeProvider Relogio
+
+@* Chamada do dia: todos comecam presentes (o professor so marca quem faltou), contador ao vivo,
+   salvamento em lote e o historico de aulas para abrir e corrigir uma chamada anterior. *@
+<div class="chamada-layout">
+    <section class="secao-card" aria-labelledby="chamada-titulo">
+        <div class="secao-cabecalho">
+            <div class="secao-titulo">
+                <FluentText As="TextTag.H2" Id="chamada-titulo" Size="TextSize.Size600" Weight="TextWeight.Semibold">
+                    Chamada de @DataPorExtenso(_data)
+                </FluentText>
+                @if (_chamada is not null && (!SomenteLeitura || _chamada.Registrada))
+                {
+                    <span class="secao-contagem" role="status">@Presentes de @Lista.Count presentes · @(Lista.Count - Presentes) @(Lista.Count - Presentes == 1 ? "falta" : "faltas")</span>
+                }
+            </div>
+
+            <div class="secao-acoes chamada-data">
+                <FluentDatePicker TValue="DateOnly?"
+                                  Id="chamada-data"
+                                  Label="Data da aula"
+                                  Value="_data"
+                                  ValueChanged="TrocarDataAsync"
+                                  Culture="PtBr" />
+                @if (_data != Hoje)
+                {
+                    <FluentButton Appearance="ButtonAppearance.Subtle" OnClick="@(() => TrocarDataAsync(Hoje))">Hoje</FluentButton>
+                }
+            </div>
+        </div>
+
+        @if (_erro is not null)
+        {
+            <FluentMessageBar Intent="MessageBarIntent.Error" Title="@_erro.Title" AllowDismiss="false">
+                <ChildContent>@_erro.Message</ChildContent>
+                <ActionsTemplate>
+                    <FluentButton Appearance="ButtonAppearance.Default" OnClick="CarregarChamadaAsync">Tentar novamente</FluentButton>
+                </ActionsTemplate>
+            </FluentMessageBar>
+        }
+        else if (_chamada is null)
+        {
+            <div class="chamada-carregando" aria-busy="true" aria-label="Carregando chamada">
+                @for (var i = 0; i < 4; i++)
+                {
+                    <FluentSkeleton Height="48px" Shimmer="true" />
+                }
+            </div>
+        }
+        else
+        {
+            @if (SomenteLeitura)
+            {
+                <p class="chamada-status @(_chamada.Registrada ? "chamada-status--feita" : null)">
+                    <FluentIcon Value="@(new Icons.Regular.Size16.Info())" Color="Color.Custom" CustomColor="currentColor" aria-hidden="true" />
+                    @(_chamada.Registrada ? $"Chamada registrada neste dia ({_chamada.Bimestre}º bimestre)." : "Sem chamada registrada neste dia.")
+                </p>
+            }
+            else if (!_chamada.PodeRegistrar)
+            {
+                <FluentMessageBar Intent="MessageBarIntent.Warning" AllowDismiss="false">
+                    @(_data > Hoje
+                        ? "Não dá para fazer chamada de uma data futura. Escolha hoje ou um dia anterior."
+                        : !Diario.TurmaAtiva
+                            ? "Turma encerrada: a chamada fica só para consulta."
+                            : $"Escolha uma data do ano letivo {Diario.AnoLetivo}.")
+                </FluentMessageBar>
+            }
+            else if (_chamada.Registrada)
+            {
+                <p class="chamada-status chamada-status--feita">
+                    <FluentIcon Value="@(new Icons.Regular.Size16.CheckmarkCircle())" Color="Color.Custom" CustomColor="currentColor" aria-hidden="true" />
+                    Chamada já registrada neste dia (@(_chamada.Bimestre)º bimestre). Você pode corrigir e salvar de novo.
+                </p>
+            }
+            else
+            {
+                <p class="chamada-status">
+                    <FluentIcon Value="@(new Icons.Regular.Size16.Info())" Color="Color.Custom" CustomColor="currentColor" aria-hidden="true" />
+                    Chamada ainda não feita neste dia. Todos começam como presentes: toque em quem faltou.
+                </p>
+            }
+
+            @if (Lista.Count == 0)
+            {
+                <EmptyState Titulo="Nenhum aluno ativo na turma"
+                            Descricao="Quando a secretaria matricular os alunos, eles aparecem aqui."
+                            Icone="@(new Icons.Regular.Size24.PeopleList())" />
+            }
+            else
+            {
+                @if (PodeRegistrar)
+                {
+                    <div class="chamada-barra">
+                        <FluentButton Appearance="ButtonAppearance.Subtle" Size="ButtonSize.Small"
+                                      IconStart="@(new Icons.Regular.Size16.CheckmarkCircle())"
+                                      Disabled="Presentes == Lista.Count"
+                                      OnClick="MarcarTodosPresentes">
+                            Marcar todos presentes
+                        </FluentButton>
+                        @if (_alterada)
+                        {
+                            <span class="chamada-pendente" role="status">Alterações não salvas</span>
+                        }
+                    </div>
+                }
+
+                <ul class="chamada-lista" aria-labelledby="chamada-titulo">
+                    @foreach (var aluno in Lista)
+                    {
+                        var presente = _presencas[aluno.AlunoId];
+                        // Consulta: dia sem chamada nao vira "todos presentes" (isso so vale para o professor comecar a marcar).
+                        var semRegistro = SomenteLeitura && aluno.Presente is null;
+                        <li @key="aluno.AlunoId">
+                            <button type="button"
+                                    class="chamada-aluno @(semRegistro ? null : presente ? "chamada-aluno--presente" : "chamada-aluno--falta")"
+                                    aria-pressed="@(presente ? "false" : "true")"
+                                    aria-label="@($"{aluno.Nome}: {(semRegistro ? "sem registro" : presente ? "presente" : "falta")}.{(PodeRegistrar ? " Tocar para alternar." : null)}")"
+                                    disabled="@(!PodeRegistrar)"
+                                    @onclick="@(() => Alternar(aluno.AlunoId))">
+                                <FluentAvatar Name="@aluno.Nome" Size="AvatarSize.Size32" Color="AvatarColor.Colorful" aria-hidden="true" />
+                                <span class="chamada-nome">@aluno.Nome</span>
+                                @if (semRegistro)
+                                {
+                                    <span class="chamada-marca texto-suave">Sem registro</span>
+                                }
+                                else
+                                {
+                                    <span class="chamada-marca">
+                                        <FluentIcon Value="@(presente ? IconePresente : IconeFalta)" Color="Color.Custom" CustomColor="currentColor" aria-hidden="true" />
+                                        @(presente ? "Presente" : "Falta")
+                                    </span>
+                                }
+                            </button>
+                        </li>
+                    }
+                </ul>
+
+                @if (PodeRegistrar)
+                {
+                    @if (_erroSalvar is not null)
+                    {
+                        <FluentMessageBar Intent="MessageBarIntent.Error" Title="@_erroSalvar.Title" AllowDismiss="false">@_erroSalvar.Message</FluentMessageBar>
+                    }
+
+                    <div class="chamada-acoes">
+                        <FluentButton Appearance="ButtonAppearance.Primary"
+                                      IconStart="@(new Icons.Regular.Size20.Save())"
+                                      Loading="_salvando"
+                                      OnClick="SalvarAsync">
+                            @(_chamada.Registrada ? "Salvar correção" : "Salvar chamada")
+                        </FluentButton>
+                    </div>
+                }
+            }
+        }
+    </section>
+
+    <aside class="secao-card chamada-historico" aria-labelledby="historico-titulo">
+        <FluentText As="TextTag.H2" Id="historico-titulo" Size="TextSize.Size500" Weight="TextWeight.Semibold">
+            Aulas registradas
+        </FluentText>
+
+        @if (_aulas is null)
+        {
+            <FluentSkeleton Height="120px" Shimmer="true" />
+        }
+        else if (_aulas.Count == 0)
+        {
+            <p class="texto-suave">Nenhuma chamada registrada ainda. As aulas aparecem aqui depois de salvas.</p>
+        }
+        else
+        {
+            <p class="texto-suave">@_aulas.Count @(_aulas.Count == 1 ? "aula" : "aulas") no ano. Toque para abrir e corrigir.</p>
+            <ul class="historico-lista">
+                @foreach (var aula in AulasVisiveis)
+                {
+                    <li @key="aula.Data">
+                        <button type="button"
+                                class="historico-aula @(aula.Data == _data ? "historico-aula--atual" : null)"
+                                aria-current="@(aula.Data == _data ? "true" : null)"
+                                @onclick="@(() => TrocarDataAsync(aula.Data))">
+                            <span>@aula.Data.ToString("ddd, dd/MM", PtBr)</span>
+                            <span class="texto-suave">@aula.Presentes/@aula.Total</span>
+                        </button>
+                    </li>
+                }
+            </ul>
+            @if (_aulas.Count > LimiteHistorico && !_historicoCompleto)
+            {
+                <FluentButton Appearance="ButtonAppearance.Subtle" Size="ButtonSize.Small" OnClick="@(() => _historicoCompleto = true)">
+                    Ver todas (@_aulas.Count)
+                </FluentButton>
+            }
+        }
+    </aside>
+</div>
+
+@code {
+    private const int LimiteHistorico = 10;
+    private static readonly Icon IconePresente = new Icons.Regular.Size16.Checkmark();
+    private static readonly Icon IconeFalta = new Icons.Regular.Size16.Dismiss();
+    private static readonly CultureInfo PtBr = CultureInfo.GetCultureInfo("pt-BR");
+
+    private readonly CancellationTokenSource _cts = new();
+    private readonly Dictionary<int, bool> _presencas = [];
+
+    private DateOnly _data;
+    private ChamadaInfo? _chamada;
+    private ApiError? _erro;
+    private ApiError? _erroSalvar;
+    private List<AulaRegistrada>? _aulas;
+    private bool _alterada;
+    private bool _salvando;
+    private bool _historicoCompleto;
+
+    [Parameter, EditorRequired]
+    public DiarioInfo Diario { get; set; } = default!;
+
+    /// <summary>Consulta da coordenação: vê a chamada de cada dia, sem marcar nem salvar.</summary>
+    [Parameter]
+    public bool SomenteLeitura { get; set; }
+
+    [Parameter]
+    public EventCallback<AvisoPagina> OnAviso { get; set; }
+
+    private bool PodeRegistrar => _chamada is { PodeRegistrar: true } && !SomenteLeitura;
+
+    private DateOnly Hoje => DateOnly.FromDateTime(Relogio.GetLocalNow().DateTime);
+
+    /// <summary>Alunos ativos e, de dias passados, inativos que já têm registro (histórico).</summary>
+    private IReadOnlyList<ChamadaAluno> Lista
+        => (_chamada?.Alunos ?? []).Where(a => a.Ativo || a.Presente is not null).ToList();
+
+    private int Presentes => Lista.Count(a => _presencas.GetValueOrDefault(a.AlunoId));
+
+    private IReadOnlyList<AulaRegistrada> AulasVisiveis
+        => _historicoCompleto ? _aulas ?? [] : (_aulas ?? []).Take(LimiteHistorico).ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _data = Hoje;
+        await Task.WhenAll(CarregarChamadaAsync(), CarregarAulasAsync());
+    }
+
+    private async Task TrocarDataAsync(DateOnly? data)
+    {
+        if (data is not { } nova || nova == _data)
+        {
+            return;
+        }
+
+        _data = nova;
+        await CarregarChamadaAsync();
+    }
+
+    private async Task CarregarChamadaAsync()
+    {
+        _erro = null;
+        _erroSalvar = null;
+        _chamada = null;
+        _alterada = false;
+        StateHasChanged();
+
+        var data = _data;
+        var resultado = await DiarioApi.ObterChamadaAsync(Diario.TurmaId, Diario.DisciplinaId, data, _cts.Token);
+
+        // O usuario pode ter trocado de data enquanto carregava.
+        if (data != _data)
+        {
+            return;
+        }
+
+        if (!resultado.Succeeded)
+        {
+            _erro = resultado.Error;
+            return;
+        }
+
+        Aplicar(resultado.Value!);
+    }
+
+    private async Task CarregarAulasAsync()
+    {
+        var resultado = await DiarioApi.ListarAulasAsync(Diario.TurmaId, Diario.DisciplinaId, _cts.Token);
+        _aulas = resultado.Succeeded ? [.. resultado.Value!] : [];
+        StateHasChanged();
+    }
+
+    /// <summary>Chamada nova: todos presentes. Já registrada: o que foi salvo.</summary>
+    private void Aplicar(ChamadaInfo chamada)
+    {
+        _chamada = chamada;
+        _presencas.Clear();
+        foreach (var aluno in chamada.Alunos)
+        {
+            _presencas[aluno.AlunoId] = aluno.Presente ?? true;
+        }
+    }
+
+    private void Alternar(int alunoId)
+    {
+        _presencas[alunoId] = !_presencas[alunoId];
+        _alterada = true;
+    }
+
+    private void MarcarTodosPresentes()
+    {
+        foreach (var aluno in Lista)
+        {
+            _presencas[aluno.AlunoId] = true;
+        }
+
+        _alterada = true;
+    }
+
+    private async Task SalvarAsync()
+    {
+        if (_chamada is null || _salvando)
+        {
+            return;
+        }
+
+        _salvando = true;
+        _erroSalvar = null;
+
+        // So alunos ativos: inativos ficam com o registro que ja tinham.
+        var presencas = _chamada.Alunos
+            .Where(a => a.Ativo)
+            .Select(a => new PresencaLancamento(a.AlunoId, _presencas[a.AlunoId]))
+            .ToList();
+
+        var resultado = await DiarioApi.RegistrarChamadaAsync(Diario.TurmaId, Diario.DisciplinaId, _data, presencas, _cts.Token);
+
+        _salvando = false;
+
+        if (!resultado.Succeeded)
+        {
+            _erroSalvar = resultado.Error;
+            return;
+        }
+
+        var corrigida = _chamada.Registrada;
+        Aplicar(resultado.Value!);
+        _alterada = false;
+        await CarregarAulasAsync();
+
+        var faltas = Lista.Count - Presentes;
+        await OnAviso.InvokeAsync(new AvisoPagina(
+            corrigida ? "Chamada corrigida" : "Chamada salva",
+            $"{DataPorExtenso(_data)}: {Presentes} presentes e {faltas} {(faltas == 1 ? "falta" : "faltas")}."));
+    }
+
+    private string DataPorExtenso(DateOnly data)
+        => data == Hoje ? $"hoje, {data:dd/MM}" : data.ToString("dddd, dd/MM", PtBr);
+
+    public void Dispose()
+    {
+        _cts.Cancel();
+        _cts.Dispose();
+    }
+}

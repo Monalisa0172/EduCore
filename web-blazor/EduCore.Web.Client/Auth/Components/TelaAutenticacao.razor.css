@@ -1,0 +1,315 @@
+/* Layout dividido: painel da marca (40%) + formulario (60%) */
+.login-page {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    min-height: 100vh;
+    min-height: 100dvh;
+}
+
+/* ---------- Painel da marca ---------- */
+.brand-panel {
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 32px;
+    padding: 40px 48px;
+    color: #FFFFFF;
+    background: linear-gradient(160deg, var(--educore-primary) 0%, var(--educore-primary-dark) 100%);
+}
+
+    /* Formas decorativas ao fundo */
+    .brand-panel::before,
+    .brand-panel::after {
+        content: "";
+        position: absolute;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.06);
+        pointer-events: none;
+    }
+
+    .brand-panel::before {
+        width: 420px;
+        height: 420px;
+        top: -160px;
+        right: -180px;
+    }
+
+    .brand-panel::after {
+        width: 300px;
+        height: 300px;
+        bottom: -140px;
+        left: -120px;
+    }
+
+.brand-logo {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.brand-logo-mark {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: #FFFFFF;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+}
+
+.brand-logo-text {
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+}
+
+/* Ilustracao e textos centralizados no painel azul */
+.brand-hero {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    align-self: center;
+    gap: 12px;
+    width: 100%;
+    max-width: 440px;
+    text-align: center;
+}
+
+.brand-illustration {
+    width: 100%;
+    max-width: 360px;
+    height: auto;
+    margin-bottom: 24px;
+    animation: brand-float 6s ease-in-out infinite;
+}
+
+.brand-title {
+    margin: 0;
+    font-size: 32px;
+    line-height: 40px;
+    font-weight: 600;
+}
+
+.brand-text {
+    margin: 0;
+    font-size: 16px;
+    line-height: 24px;
+    color: rgba(255, 255, 255, 0.88);
+}
+
+.brand-footer {
+    position: relative;
+    z-index: 1;
+    margin: 0;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+/* ---------- Painel do formulario ---------- */
+.form-panel {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 24px;
+    background: var(--colorNeutralBackground1);
+}
+
+.form-container {
+    width: 100%;
+    min-width: 0;
+    max-width: 400px;
+    animation: login-enter 320ms ease-out;
+}
+
+.login-header {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 32px;
+}
+
+.form-panel ::deep .login-subtitle {
+    color: var(--colorNeutralForeground3);
+}
+
+.form-panel ::deep .login-alert {
+    animation: login-shake 360ms ease-in-out;
+}
+
+.form-panel ::deep .login-submit {
+    width: 100%;
+    margin-top: 8px;
+}
+
+.login-footer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 32px;
+    padding-top: 16px;
+    border-top: 1px solid var(--colorNeutralStroke2);
+}
+
+.form-panel ::deep .login-footer-text {
+    color: var(--colorNeutralForeground3);
+}
+
+/* ---------- Esqueci minha senha / nova senha ---------- */
+.form-panel ::deep .senha-confirmacao {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 24px;
+    line-height: 1.5;
+}
+
+    .form-panel ::deep .senha-confirmacao p {
+        margin: 0;
+    }
+
+.form-panel ::deep .senha-confirmacao-icone {
+    display: grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: var(--educore-primary-tint);
+}
+
+.form-panel ::deep .senha-confirmacao-icone--alerta {
+    background: var(--educore-secondary-tint);
+}
+
+.form-panel ::deep .senha-dicas {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 0;
+    padding-left: 20px;
+    color: var(--colorNeutralForeground2);
+}
+
+.form-panel ::deep .senha-verificando {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* Regra da senha: vira "ok" (azul) quando atendida */
+.form-panel ::deep .senha-regra {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: -8px 0 0;
+    font-size: var(--fontSizeBase200, 12px);
+    color: var(--colorNeutralForeground3);
+}
+
+.form-panel ::deep .senha-regra--ok {
+    color: var(--educore-primary-text);
+}
+
+/* Link com aparencia do botao principal (navegacao, nao envio de formulario) */
+.form-panel ::deep .senha-botao {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 40px;
+    border-radius: var(--borderRadiusMedium, 4px);
+    background: var(--educore-primary);
+    color: #fff;
+    font-weight: var(--fontWeightSemibold, 600);
+    text-decoration: none;
+}
+
+    .form-panel ::deep .senha-botao:hover {
+        background: var(--educore-primary-dark);
+    }
+
+    .form-panel ::deep .senha-botao:focus-visible {
+        outline: 2px solid var(--colorStrokeFocus2);
+        outline-offset: 2px;
+    }
+
+.form-panel ::deep .senha-voltar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    color: var(--educore-primary-text);
+    font-size: var(--fontSizeBase300, 14px);
+    text-decoration: none;
+}
+
+    .form-panel ::deep .senha-voltar:hover,
+    .form-panel ::deep .senha-voltar:focus-visible {
+        text-decoration: underline;
+    }
+
+/* ---------- Responsivo ---------- */
+@media (max-width: 1100px) {
+    .brand-panel {
+        padding: 32px;
+    }
+
+    .brand-title {
+        font-size: 28px;
+        line-height: 36px;
+    }
+}
+
+/* Celular/tablet: painel vira faixa no topo, so com o logo */
+@media (max-width: 768px) {
+    .login-page {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: auto 1fr;
+    }
+
+    .brand-panel {
+        padding: 16px;
+    }
+
+        .brand-panel::before,
+        .brand-panel::after,
+        .brand-hero,
+        .brand-footer {
+            display: none;
+        }
+
+    .form-panel {
+        align-items: flex-start;
+        padding: 32px 16px;
+    }
+}
+
+@keyframes login-enter {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes login-shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-4px); }
+    75% { transform: translateX(4px); }
+}
+
+@keyframes brand-float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .form-container,
+    .brand-illustration,
+    .form-panel ::deep .login-alert {
+        animation: none;
+    }
+}

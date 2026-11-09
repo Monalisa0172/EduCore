@@ -1,0 +1,75 @@
+.nao-encontrado {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    max-width: 520px;
+    margin: 48px auto;
+    padding: 0 16px;
+    text-align: center;
+}
+
+.nao-encontrado-icone {
+    display: grid;
+    place-items: center;
+    width: 88px;
+    height: 88px;
+    margin-bottom: 8px;
+    border-radius: 50%;
+    color: var(--educore-primary-text);
+    background: var(--educore-primary-tint);
+}
+
+    /* Icone de 24 ampliado (SVG escala sem perder qualidade). O FluentIcon grava
+       "width: 24px" inline no svg, por isso o !important. */
+    .nao-encontrado-icone ::deep svg {
+        width: 44px !important;
+        height: 44px !important;
+    }
+
+/* Faixa ambar: mesmo acento usado no "Secao" do PageHeader */
+.nao-encontrado-codigo {
+    margin: 0;
+    padding-left: 8px;
+    border-left: 3px solid var(--educore-secondary, #f2a900);
+    font-size: var(--fontSizeBase200, 12px);
+    font-weight: var(--fontWeightSemibold, 600);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--colorNeutralForeground3);
+}
+
+.nao-encontrado-titulo {
+    margin: 0;
+    font-size: var(--fontSizeHero700, 28px);
+    line-height: 1.25;
+    font-weight: var(--fontWeightSemibold, 600);
+}
+
+.nao-encontrado-texto {
+    margin: 0 0 12px;
+    color: var(--colorNeutralForeground2);
+    line-height: 1.5;
+}
+
+.nao-encontrado-botao {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 40px;
+    padding: 0 20px;
+    border-radius: var(--borderRadiusMedium, 4px);
+    color: #fff;
+    background: var(--educore-primary);
+    font-weight: var(--fontWeightSemibold, 600);
+    text-decoration: none;
+}
+
+    .nao-encontrado-botao:hover {
+        background: var(--educore-primary-dark);
+    }
+
+    .nao-encontrado-botao:focus-visible {
+        outline: 2px solid var(--colorStrokeFocus2);
+        outline-offset: 2px;
+    }

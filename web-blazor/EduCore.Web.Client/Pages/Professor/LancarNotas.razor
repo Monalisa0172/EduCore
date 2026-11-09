@@ -1,0 +1,394 @@
+@page "/professor/turmas/{TurmaId:int}/disciplinas/{DisciplinaId:int}/avaliacoes/{Id:int}/notas"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@implements IDisposable
+@using System.Globalization
+@inject IDiarioApiClient DiarioApi
+
+<PageTitle>@(_dados?.Avaliacao.Nome ?? "Notas") | EduCore</PageTitle>
+
+<AreaSegura>
+    @* Professor lanca; admin (coordenacao) consulta, sem editar. *@
+    <AuthorizeView Roles="@($"{Roles.Professor},{Roles.Admin}")">
+        <Authorized>
+            @* Recarregar ou fechar a aba com notas nao salvas pede confirmacao do navegador. *@
+            <NavigationLock ConfirmExternalNavigation="Alteradas > 0" />
+
+            <div class="pagina">
+                @if (_carregando)
+                {
+                    <div class="notas-carregando" aria-busy="true" aria-label="Carregando notas">
+                        <FluentSkeleton Width="200px" Height="20px" Shimmer="true" />
+                        <FluentSkeleton Width="320px" Height="40px" Shimmer="true" />
+                        <FluentSkeleton Height="300px" Shimmer="true" />
+                    </div>
+                }
+                else if (_erro is { Kind: ApiErrorKind.NotFound })
+                {
+                    <PageHeader Titulo="Avaliação não encontrada" Trilha="TrilhaBase" />
+                    <section class="secao-card">
+                        <EmptyState Titulo="Esta avaliação não está disponível"
+                                    Descricao="Ela pode ser de uma disciplina que você não leciona, ou o endereço está incorreto."
+                                    Icone="@(new Icons.Regular.Size24.ClipboardTask())">
+                            <a class="atalho atalho--destaque" href="professor/turmas">Minhas turmas</a>
+                        </EmptyState>
+                    </section>
+                }
+                else if (_erro is not null)
+                {
+                    <PageHeader Titulo="Notas" Trilha="TrilhaBase" />
+                    <FluentMessageBar Intent="MessageBarIntent.Error" Title="@_erro.Title" AllowDismiss="false">
+                        <ChildContent>@_erro.Message</ChildContent>
+                        <ActionsTemplate>
+                            <FluentButton Appearance="ButtonAppearance.Default" OnClick="CarregarAsync">Tentar novamente</FluentButton>
+                        </ActionsTemplate>
+                    </FluentMessageBar>
+                }
+                else if (_dados is { } dados)
+                {
+                    var av = dados.Avaliacao;
+                    <PageHeader Titulo="@av.Nome"
+                                Secao="@($"Sala de aula · Notas")"
+                                Icone="@(new Icons.Regular.Size24.TaskListSquareLtr())"
+                                Trilha="@TrilhaDa(av)">
+                        <Detalhes>
+                            <dl class="notas-dados">
+                                <div><dt>Turma</dt><dd>@av.TurmaNome</dd></div>
+                                <div><dt>Disciplina</dt><dd>@av.DisciplinaNome@(av.SubDisciplinaNome is null ? null : $" · {av.SubDisciplinaNome}")</dd></div>
+                                <div><dt>Bimestre</dt><dd>@(av.Bimestre)º</dd></div>
+                                <div><dt>Peso</dt><dd>@av.Peso.ToString("0.##", PtBr)</dd></div>
+                                <div><dt>Aplicação</dt><dd>@av.Data.ToString("dd/MM/yyyy")</dd></div>
+                            </dl>
+                        </Detalhes>
+                    </PageHeader>
+
+                    @if (_aviso is not null)
+                    {
+                        <FluentMessageBar @key="_avisoId"
+                                          Intent="@(_aviso.Erro ? MessageBarIntent.Error : MessageBarIntent.Success)"
+                                          Title="@_aviso.Titulo"
+                                          AllowDismiss="true">
+                            @_aviso.Mensagem
+                        </FluentMessageBar>
+                    }
+
+                    @if (_somenteLeitura)
+                    {
+                        <FluentMessageBar Intent="MessageBarIntent.Info" Title="Consulta da coordenação" AllowDismiss="false">
+                            Notas lançadas pelo professor, só para leitura.
+                        </FluentMessageBar>
+                    }
+                    else if (!dados.PodeLancar)
+                    {
+                        <FluentMessageBar Intent="MessageBarIntent.Warning" Title="Só consulta" AllowDismiss="false">
+                            @(av.Ativo ? "A turma está encerrada: as notas ficam só para consulta." : "A avaliação está inativa. Reative-a na lista de avaliações para lançar notas.")
+                        </FluentMessageBar>
+                    }
+
+                    <section class="secao-card" aria-labelledby="notas-titulo">
+                        <div class="secao-cabecalho">
+                            <div class="secao-titulo">
+                                <FluentText As="TextTag.H2" Id="notas-titulo" Size="TextSize.Size600" Weight="TextWeight.Semibold">
+                                    Notas da turma
+                                </FluentText>
+                                <span class="secao-contagem" role="status">@ComNota de @Ativos com nota</span>
+                            </div>
+                        </div>
+
+                        @if (PodeLancar)
+                        {
+                            <p class="texto-suave">Notas de 0 a 10 (ex.: 7,5). Deixe em branco quem ainda não fez; para apagar uma nota, limpe o campo.</p>
+                        }
+
+                        @if (Lista.Count == 0)
+                        {
+                            <EmptyState Titulo="Nenhum aluno na turma"
+                                        Descricao="Quando a secretaria matricular os alunos, eles aparecem aqui."
+                                        Icone="@(new Icons.Regular.Size24.PeopleList())" />
+                        }
+                        else
+                        {
+                            <ol class="notas-lista" aria-labelledby="notas-titulo">
+                                @foreach (var aluno in Lista)
+                                {
+                                    var erroLinha = ErroDe(aluno.AlunoId);
+                                    <li class="nota-linha @(Alterou(aluno.AlunoId) ? "nota-linha--alterada" : null)" @key="aluno.AlunoId">
+                                        <FluentAvatar Name="@aluno.Nome" Size="AvatarSize.Size32" Color="AvatarColor.Colorful" aria-hidden="true" />
+                                        <label class="nota-nome" for="@($"nota-{aluno.AlunoId}")">
+                                            @aluno.Nome
+                                            @if (!aluno.Ativo)
+                                            {
+                                                <span class="texto-suave"> · inativo</span>
+                                            }
+                                        </label>
+                                        <div class="nota-campo">
+                                            <input id="@($"nota-{aluno.AlunoId}")"
+                                                   class="nota-input @(erroLinha is null ? null : "nota-input--erro")"
+                                                   type="text"
+                                                   inputmode="decimal"
+                                                   autocomplete="off"
+                                                   placeholder="—"
+                                                   maxlength="5"
+                                                   aria-invalid="@(erroLinha is null ? "false" : "true")"
+                                                   aria-describedby="@(erroLinha is null ? null : $"nota-erro-{aluno.AlunoId}")"
+                                                   disabled="@(!PodeLancar || !aluno.Ativo)"
+                                                   value="@_textos[aluno.AlunoId]"
+                                                   @oninput="@(e => Digitar(aluno.AlunoId, e.Value as string))" />
+                                            @if (erroLinha is not null)
+                                            {
+                                                <span class="nota-erro" id="@($"nota-erro-{aluno.AlunoId}")">@erroLinha</span>
+                                            }
+                                        </div>
+                                    </li>
+                                }
+                            </ol>
+                        }
+                    </section>
+
+                    @if (PodeLancar && Lista.Count > 0)
+                    {
+                        <div class="notas-rodape" role="region" aria-label="Resumo e salvamento">
+                            <div class="notas-resumo">
+                                <span><strong>@ComNota</strong> de @Ativos com nota</span>
+                                @if (Media is { } media)
+                                {
+                                    <span>Média da turma <strong>@media.ToString("0.0", PtBr)</strong></span>
+                                }
+                                @if (Alteradas > 0)
+                                {
+                                    <span class="notas-pendentes">@Alteradas @(Alteradas == 1 ? "alteração não salva" : "alterações não salvas")</span>
+                                }
+                            </div>
+                            @if (_erroSalvar is not null)
+                            {
+                                <span class="nota-erro">@_erroSalvar.Message</span>
+                            }
+                            <div class="notas-acoes">
+                                <FluentButton Appearance="ButtonAppearance.Default" Disabled="@(Alteradas == 0 || _salvando)" OnClick="Descartar">
+                                    Descartar
+                                </FluentButton>
+                                <FluentButton Appearance="ButtonAppearance.Primary"
+                                              IconStart="@(new Icons.Regular.Size20.Save())"
+                                              Disabled="@(Alteradas == 0 || TemErro)"
+                                              Loading="_salvando"
+                                              OnClick="SalvarAsync">
+                                    Salvar notas
+                                </FluentButton>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+        </Authorized>
+        <NotAuthorized>
+            <AcessoNegadoOuLogin />
+        </NotAuthorized>
+    </AuthorizeView>
+</AreaSegura>
+
+@code {
+    private static readonly CultureInfo PtBr = CultureInfo.GetCultureInfo("pt-BR");
+    private static readonly IReadOnlyList<ItemTrilha> TrilhaBase =
+        [ItemTrilha.Inicio, new("Minhas turmas", "professor/turmas"), new("Notas")];
+
+    private readonly CancellationTokenSource _cts = new();
+
+    // Texto digitado por aluno (o campo mostra exatamente o que o professor escreveu)
+    private readonly Dictionary<int, string> _textos = [];
+
+    private NotasDaAvaliacao? _dados;
+    private ApiError? _erro;
+    private ApiError? _erroSalvar;
+    private bool _carregando = true;
+    private bool _salvando;
+    private int _carregada;
+    private AvisoPagina? _aviso;
+    private int _avisoId;
+
+    // Turma e disciplina na rota: o endereco reflete a hierarquia e o menu "Minhas turmas" fica ativo.
+    // Os dados exibidos vem sempre da avaliacao (a API e quem confere o acesso).
+    [Parameter]
+    public int TurmaId { get; set; }
+
+    [Parameter]
+    public int DisciplinaId { get; set; }
+
+    [Parameter]
+    public int Id { get; set; }
+
+    /// <summary>Origem (ex.: ficha do professor, para a coordenação), validada contra redirecionamento externo.</summary>
+    [SupplyParameterFromQuery(Name = "voltar")]
+    public string? Voltar { get; set; }
+
+    [SupplyParameterFromQuery(Name = "origem")]
+    public string? Origem { get; set; }
+
+    [CascadingParameter]
+    private Task<AuthenticationState> EstadoAutenticacao { get; set; } = default!;
+
+    // Admin (coordenacao) so consulta.
+    private bool _somenteLeitura;
+
+    private bool PodeLancar => _dados is { PodeLancar: true } && !_somenteLeitura;
+
+    /// <summary>Professor: "Início › Minhas turmas › {turma · disciplina} › {avaliação}". Coordenação: "Início › {professor} › ...".</summary>
+    private IReadOnlyList<ItemTrilha> TrilhaDa(AvaliacaoItem av)
+    {
+        var consulta = RetornoNavegacao.ConsultaDeOrigem(Voltar, Origem);
+        var diario = new ItemTrilha($"{av.TurmaNome} · {av.DisciplinaNome}", UrlDiario + (consulta.Length > 0 ? $"&{consulta}" : null));
+
+        return _somenteLeitura
+            ? RetornoNavegacao.TrilhaDeRetorno(Voltar, Origem, [diario, new(av.Nome)]) ?? [ItemTrilha.Inicio, diario, new(av.Nome)]
+            : [ItemTrilha.Inicio, new("Minhas turmas", "professor/turmas"), diario, new(av.Nome)];
+    }
+
+    /// <summary>Volta para a aba de avaliações no bimestre desta avaliação.</summary>
+    private string UrlDiario => _dados is { } d
+        ? $"professor/turmas/{d.Avaliacao.TurmaId}/disciplinas/{d.Avaliacao.DisciplinaId}/avaliacoes?bimestre={d.Avaliacao.Bimestre}"
+        : "professor/turmas";
+
+    /// <summary>Alunos ativos e, de turmas passadas, inativos que têm nota.</summary>
+    private IReadOnlyList<NotaAluno> Lista => (_dados?.Alunos ?? []).Where(a => a.Ativo || a.Nota is not null).ToList();
+
+    private int Ativos => Lista.Count(a => a.Ativo);
+
+    private int ComNota => Lista.Count(a => Valor(a.AlunoId).Nota is not null);
+
+    private decimal? Media
+    {
+        get
+        {
+            var notas = Lista.Select(a => Valor(a.AlunoId).Nota).OfType<decimal>().ToList();
+            return notas.Count == 0 ? null : notas.Average();
+        }
+    }
+
+    private int Alteradas => Lista.Count(a => Alterou(a.AlunoId));
+
+    private bool TemErro => Lista.Any(a => ErroDe(a.AlunoId) is not null);
+
+    protected override Task OnParametersSetAsync() => _carregada == Id ? Task.CompletedTask : CarregarAsync();
+
+    private async Task CarregarAsync()
+    {
+        _carregada = Id;
+        _carregando = true;
+        _somenteLeitura = (await EstadoAutenticacao).User.IsInRole(Roles.Admin);
+        _erro = null;
+        _dados = null;
+
+        var resultado = await DiarioApi.ObterNotasAsync(Id, _cts.Token);
+
+        _carregando = false;
+
+        if (resultado.Succeeded)
+        {
+            Aplicar(resultado.Value!);
+        }
+        else
+        {
+            _erro = resultado.Error;
+        }
+    }
+
+    private void Aplicar(NotasDaAvaliacao dados)
+    {
+        _dados = dados;
+        _textos.Clear();
+        foreach (var aluno in dados.Alunos)
+        {
+            _textos[aluno.AlunoId] = Texto(aluno.Nota);
+        }
+    }
+
+    private void Digitar(int alunoId, string? texto)
+    {
+        _textos[alunoId] = texto ?? string.Empty;
+        _erroSalvar = null;
+    }
+
+    private void Descartar()
+    {
+        if (_dados is not null)
+        {
+            Aplicar(_dados);
+        }
+
+        _erroSalvar = null;
+    }
+
+    /// <summary>Nota interpretada do texto digitado (aceita vírgula ou ponto); erro quando inválida.</summary>
+    private (decimal? Nota, string? Erro) Valor(int alunoId)
+    {
+        var texto = _textos.GetValueOrDefault(alunoId, string.Empty).Trim();
+        if (texto.Length == 0)
+        {
+            return (null, null);
+        }
+
+        if (!decimal.TryParse(texto.Replace('.', ','), NumberStyles.Number, PtBr, out var nota))
+        {
+            return (null, "Use um número, ex.: 7,5");
+        }
+
+        if (nota is < 0 or > 10)
+        {
+            return (null, "De 0 a 10");
+        }
+
+        return decimal.Round(nota, 2) != nota ? (null, "Até 2 casas") : (nota, null);
+    }
+
+    private string? ErroDe(int alunoId) => Valor(alunoId).Erro;
+
+    private bool Alterou(int alunoId)
+    {
+        var original = _dados?.Alunos.FirstOrDefault(a => a.AlunoId == alunoId)?.Nota;
+        var (nota, erro) = Valor(alunoId);
+        return erro is not null || nota != original;
+    }
+
+    private async Task SalvarAsync()
+    {
+        if (_dados is null || _salvando || TemErro)
+        {
+            return;
+        }
+
+        var alteradas = Lista
+            .Where(a => a.Ativo && Alterou(a.AlunoId))
+            .Select(a => new NotaLancamento(a.AlunoId, Valor(a.AlunoId).Nota))
+            .ToList();
+
+        if (alteradas.Count == 0)
+        {
+            return;
+        }
+
+        _salvando = true;
+        _erroSalvar = null;
+
+        var resultado = await DiarioApi.LancarNotasAsync(Id, alteradas, _cts.Token);
+
+        _salvando = false;
+
+        if (!resultado.Succeeded)
+        {
+            _erroSalvar = resultado.Error;
+            return;
+        }
+
+        Aplicar(resultado.Value!);
+        _aviso = new AvisoPagina(
+            "Notas salvas",
+            $"{(alteradas.Count == 1 ? "1 nota atualizada" : $"{alteradas.Count} notas atualizadas")}. {ComNota} de {Ativos} alunos com nota.");
+        _avisoId++;
+    }
+
+    private static string Texto(decimal? nota) => nota?.ToString("0.##", PtBr) ?? string.Empty;
+
+    public void Dispose()
+    {
+        _cts.Cancel();
+        _cts.Dispose();
+    }
+}

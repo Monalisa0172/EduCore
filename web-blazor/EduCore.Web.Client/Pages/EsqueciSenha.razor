@@ -1,0 +1,131 @@
+@page "/esqueci-senha"
+@layout AuthLayout
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@implements IDisposable
+@using EduCore.Web.Client.Auth.Models
+@inject ISenhaApiClient SenhaApi
+@inject EmailInformado EmailInformado
+
+<PageTitle>Esqueci minha senha | EduCore</PageTitle>
+
+@* Pede o link de redefinicao. A resposta e sempre a mesma, exista ou nao a conta (nao revela e-mails). *@
+@if (_enviado)
+{
+    <TelaAutenticacao Titulo="Confira seu e-mail">
+        <div class="senha-confirmacao" role="status">
+            <span class="senha-confirmacao-icone" aria-hidden="true">
+                <FluentIcon Value="@(new Icons.Regular.Size24.MailCheckmark())" Color="Color.Custom" CustomColor="var(--educore-primary-text)" />
+            </span>
+            <p>Se houver uma conta com <strong>@_modelo.Email</strong>, enviamos um link para criar uma nova senha.</p>
+            <ul class="senha-dicas">
+                <li>O link vale por <strong>30 minutos</strong> e só pode ser usado uma vez.</li>
+                <li>Não chegou? Confira a caixa de spam ou lixo eletrônico.</li>
+                <li>Pedir de novo envia um link novo e o anterior deixa de valer.</li>
+            </ul>
+        </div>
+
+        <FluentStack Orientation="Orientation.Vertical" VerticalGap="12px" HorizontalAlignment="HorizontalAlignment.Stretch">
+            <a class="senha-botao" href="login">Voltar para o login</a>
+            <FluentButton Appearance="ButtonAppearance.Subtle" OnClick="@(() => _enviado = false)">Usar outro e-mail</FluentButton>
+        </FluentStack>
+    </TelaAutenticacao>
+}
+else
+{
+    <TelaAutenticacao Titulo="Esqueceu a senha?" Subtitulo="Informe o e-mail da sua conta. Enviaremos um link para você criar uma nova senha.">
+        <EditForm EditContext="_editContext" OnValidSubmit="EnviarAsync" FormName="esqueci-senha" novalidate>
+            <DataAnnotationsValidator />
+
+            <FluentStack Orientation="Orientation.Vertical" VerticalGap="20px" HorizontalAlignment="HorizontalAlignment.Stretch">
+                @if (_erro is not null)
+                {
+                    <FluentMessageBar Intent="MessageBarIntent.Error" Title="@_erro.Title" AllowDismiss="true" Class="login-alert">
+                        @_erro.Message
+                    </FluentMessageBar>
+                }
+
+                <FluentTextInput Id="esqueci-email"
+                                 Label="E-mail"
+                                 @bind-Value="_modelo.Email"
+                                 TextInputType="TextInputType.Email"
+                                 AutoComplete="username"
+                                 InputMode="TextInputMode.Email"
+                                 Spellcheck="false"
+                                 Placeholder="nome@escola.com"
+                                 MaxLength="100"
+                                 Required="true"
+                                 Immediate="true"
+                                 ImmediateDelay="0"
+                                 Autofocus="true"
+                                 Disabled="_enviando"
+                                 Size="TextInputSize.Large"
+                                 Width="100%">
+                    <StartTemplate>
+                        <FluentIcon Value="@(new Icons.Regular.Size20.Mail())" />
+                    </StartTemplate>
+                </FluentTextInput>
+
+                <FluentButton Type="ButtonType.Submit"
+                              Appearance="ButtonAppearance.Primary"
+                              Size="ButtonSize.Large"
+                              Loading="_enviando"
+                              Class="login-submit">
+                    @(_enviando ? "Enviando..." : "Enviar link")
+                </FluentButton>
+
+                <a class="senha-voltar" href="login">
+                    <FluentIcon Value="@(new Icons.Regular.Size16.ArrowLeft())" Color="Color.Custom" CustomColor="currentColor" aria-hidden="true" />
+                    Voltar para o login
+                </a>
+            </FluentStack>
+        </EditForm>
+    </TelaAutenticacao>
+}
+
+@code {
+    private readonly CancellationTokenSource _cts = new();
+    private readonly EsqueciSenhaModel _modelo = new();
+
+    private EditContext _editContext = default!;
+    private ApiError? _erro;
+    private bool _enviando;
+    private bool _enviado;
+
+    protected override void OnInitialized()
+    {
+        // E-mail ja digitado no login (passado em memoria, nao pela URL).
+        _modelo.Email = EmailInformado.Consumir() ?? string.Empty;
+        _editContext = new EditContext(_modelo);
+    }
+
+    private async Task EnviarAsync()
+    {
+        if (_enviando)
+        {
+            return;
+        }
+
+        _enviando = true;
+        _erro = null;
+
+        var resultado = await SenhaApi.SolicitarAsync(_modelo.Email, _cts.Token);
+
+        _enviando = false;
+
+        if (resultado.Succeeded)
+        {
+            _modelo.Email = _modelo.Email.Trim();
+            _enviado = true;
+        }
+        else
+        {
+            _erro = resultado.Error;
+        }
+    }
+
+    public void Dispose()
+    {
+        _cts.Cancel();
+        _cts.Dispose();
+    }
+}

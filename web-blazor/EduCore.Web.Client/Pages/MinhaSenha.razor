@@ -1,0 +1,192 @@
+@page "/minha-conta/senha"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@implements IDisposable
+@using EduCore.Web.Client.Auth.Models
+@inject IMinhaContaApiClient MinhaContaApi
+
+<PageTitle>Alterar senha | EduCore</PageTitle>
+
+<AreaSegura>
+    <AuthorizeView>
+        <Authorized>
+            <div class="pagina">
+                <PageHeader Titulo="Alterar senha"
+                            Secao="Minha conta"
+                            Icone="@(new Icons.Regular.Size24.Key())"
+                            Descricao="@($"Conta de {context.User.Email()}. Para sua segurança, confirme a senha atual.")"
+                            Trilha="@([ItemTrilha.Inicio, new("Alterar senha")])" />
+
+                <section class="secao-card minha-senha" aria-label="Alterar senha">
+                    @if (_alterada)
+                    {
+                        <FluentMessageBar Intent="MessageBarIntent.Success" Title="Senha alterada" AllowDismiss="true" OnDismiss="@(() => _alterada = false)">
+                            A partir de agora, entre com a nova senha.
+                        </FluentMessageBar>
+                    }
+
+                    @if (_erro is not null)
+                    {
+                        <FluentMessageBar Intent="MessageBarIntent.Error" Title="@_erro.Title" AllowDismiss="true">
+                            @_erro.Message
+                        </FluentMessageBar>
+                    }
+
+                    <EditForm EditContext="_editContext" OnValidSubmit="SalvarAsync" FormName="alterar-senha" Context="formulario" novalidate>
+                        <DataAnnotationsValidator />
+
+                        <FluentStack Orientation="Orientation.Vertical" VerticalGap="20px" HorizontalAlignment="HorizontalAlignment.Stretch">
+                            <FluentTextInput Id="senha-atual"
+                                             Label="Senha atual"
+                                             @bind-Value="_modelo.SenhaAtual"
+                                             TextInputType="@(_mostrar ? TextInputType.Text : TextInputType.Password)"
+                                             AutoComplete="current-password"
+                                             Spellcheck="false"
+                                             MaxLength="128"
+                                             Required="true"
+                                             Immediate="true"
+                                             ImmediateDelay="0"
+                                             Autofocus="true"
+                                             Disabled="_salvando"
+                                             Width="100%">
+                                <StartTemplate>
+                                    <FluentIcon Value="@(new Icons.Regular.Size20.LockClosed())" />
+                                </StartTemplate>
+                                <EndTemplate>
+                                    <FluentButton Type="ButtonType.Button"
+                                                  Appearance="ButtonAppearance.Transparent"
+                                                  Size="ButtonSize.Small"
+                                                  IconOnly="true"
+                                                  IconStart="@(_mostrar ? IconeOcultar : IconeMostrar)"
+                                                  Title="@(_mostrar ? "Ocultar senhas" : "Mostrar senhas")"
+                                                  aria-label="@(_mostrar ? "Ocultar senhas" : "Mostrar senhas")"
+                                                  aria-pressed="@(_mostrar ? "true" : "false")"
+                                                  OnClick="@(() => _mostrar = !_mostrar)" />
+                                </EndTemplate>
+                            </FluentTextInput>
+
+                            <FluentTextInput Id="nova-senha"
+                                             Label="Nova senha"
+                                             @bind-Value="_modelo.NovaSenha"
+                                             TextInputType="@(_mostrar ? TextInputType.Text : TextInputType.Password)"
+                                             AutoComplete="new-password"
+                                             Spellcheck="false"
+                                             MaxLength="100"
+                                             Required="true"
+                                             Immediate="true"
+                                             ImmediateDelay="0"
+                                             Disabled="_salvando"
+                                             Width="100%">
+                                <StartTemplate>
+                                    <FluentIcon Value="@(new Icons.Regular.Size20.Key())" />
+                                </StartTemplate>
+                            </FluentTextInput>
+
+                            <p class="senha-regra @(_modelo.NovaSenha.Length >= 8 ? "senha-regra--ok" : null)" aria-live="polite">
+                                <FluentIcon Value="@(_modelo.NovaSenha.Length >= 8 ? IconeOk : IconeRegra)" Color="Color.Custom" CustomColor="currentColor" aria-hidden="true" />
+                                Pelo menos 8 caracteres (@_modelo.NovaSenha.Length)
+                            </p>
+
+                            <FluentTextInput Id="nova-senha-confirmacao"
+                                             Label="Repita a nova senha"
+                                             @bind-Value="_modelo.Confirmacao"
+                                             TextInputType="@(_mostrar ? TextInputType.Text : TextInputType.Password)"
+                                             AutoComplete="new-password"
+                                             Spellcheck="false"
+                                             MaxLength="100"
+                                             Required="true"
+                                             Immediate="true"
+                                             ImmediateDelay="0"
+                                             Disabled="_salvando"
+                                             Width="100%">
+                                <StartTemplate>
+                                    <FluentIcon Value="@(new Icons.Regular.Size20.Key())" />
+                                </StartTemplate>
+                            </FluentTextInput>
+
+                            <div class="minha-senha-acoes">
+                                <FluentButton Type="ButtonType.Submit"
+                                              Appearance="ButtonAppearance.Primary"
+                                              Loading="_salvando">
+                                    @(_salvando ? "Salvando..." : "Salvar nova senha")
+                                </FluentButton>
+                                <a class="minha-senha-esqueci" href="esqueci-senha">Não lembra a senha atual?</a>
+                            </div>
+                        </FluentStack>
+                    </EditForm>
+                </section>
+            </div>
+        </Authorized>
+        <NotAuthorized>
+            <AcessoNegadoOuLogin />
+        </NotAuthorized>
+    </AuthorizeView>
+</AreaSegura>
+
+@code {
+    private static readonly Icon IconeMostrar = new Icons.Regular.Size20.Eye();
+    private static readonly Icon IconeOcultar = new Icons.Regular.Size20.EyeOff();
+    private static readonly Icon IconeOk = new Icons.Regular.Size16.CheckmarkCircle();
+    private static readonly Icon IconeRegra = new Icons.Regular.Size16.Circle();
+    private static readonly string[] Campos = [nameof(AlterarSenhaModel.SenhaAtual), nameof(AlterarSenhaModel.NovaSenha)];
+
+    private readonly CancellationTokenSource _cts = new();
+
+    private AlterarSenhaModel _modelo = new();
+    private EditContext _editContext = default!;
+    private ValidationMessageStore _errosDoServidor = default!;
+    private ApiError? _erro;
+    private bool _salvando;
+    private bool _mostrar;
+    private bool _alterada;
+
+    protected override void OnInitialized() => NovoFormulario();
+
+    private void NovoFormulario()
+    {
+        _modelo = new AlterarSenhaModel();
+        _editContext = new EditContext(_modelo);
+        _errosDoServidor = new ValidationMessageStore(_editContext);
+
+        // Ao corrigir o campo, o erro que veio da API some.
+        _editContext.OnFieldChanged += (_, e) =>
+        {
+            _errosDoServidor.Clear(e.FieldIdentifier);
+            _editContext.NotifyValidationStateChanged();
+        };
+    }
+
+    private async Task SalvarAsync()
+    {
+        if (_salvando)
+        {
+            return;
+        }
+
+        _salvando = true;
+        _erro = null;
+        _alterada = false;
+        _errosDoServidor.Clear();
+
+        var resultado = await MinhaContaApi.AlterarSenhaAsync(_modelo.SenhaAtual, _modelo.NovaSenha, _cts.Token);
+
+        _salvando = false;
+
+        if (resultado.Succeeded)
+        {
+            // Limpa os campos: as senhas nao ficam na tela nem na memoria do formulario.
+            NovoFormulario();
+            _mostrar = false;
+            _alterada = true;
+            return;
+        }
+
+        _erro = ErrosDeFormulario.Aplicar(resultado.Error, _errosDoServidor, _modelo, Campos);
+        _editContext.NotifyValidationStateChanged();
+    }
+
+    public void Dispose()
+    {
+        _cts.Cancel();
+        _cts.Dispose();
+    }
+}

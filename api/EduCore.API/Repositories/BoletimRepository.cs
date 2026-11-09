@@ -17,6 +17,9 @@ public class BoletimRepository : IBoletimRepository
     public Task<string?> GetNomeDoAlunoAsync(int alunoId)
         => _context.Alunos.Where(a => a.Id == alunoId).Select(a => a.Usuario!.Nome).FirstOrDefaultAsync();
 
+    public Task<int?> GetAlunoIdPorUsuarioAsync(int usuarioId)
+        => _context.Alunos.Where(a => a.UsuarioId == usuarioId).Select(a => (int?)a.Id).FirstOrDefaultAsync();
+
     public Task<List<TurmaDoAluno>> GetTurmasDoAlunoAsync(int alunoId)
         => _context.Matriculas
             .AsNoTracking()

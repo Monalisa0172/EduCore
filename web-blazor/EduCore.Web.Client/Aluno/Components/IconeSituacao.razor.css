@@ -1,0 +1,34 @@
+.situacao {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+    font-size: var(--fontSizeBase200, 12px);
+    font-weight: var(--fontWeightSemibold, 600);
+}
+
+/* So o icone leva a cor da situacao; o texto segue a cor de texto */
+.situacao-texto {
+    color: var(--colorNeutralForeground1);
+}
+
+.situacao--ok {
+    color: var(--educore-status-ok);
+}
+
+.situacao--atencao {
+    color: var(--educore-status-atencao);
+}
+
+.situacao--risco {
+    color: var(--educore-status-risco);
+}
+
+.situacao--sem-dados {
+    color: var(--colorNeutralForeground3);
+}
+
+    .situacao--sem-dados .situacao-texto {
+        color: var(--colorNeutralForeground3);
+        font-weight: var(--fontWeightRegular, 400);
+    }

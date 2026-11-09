@@ -1,3 +1,4 @@
+using EduCore.Web.Client.Auth;
 using EduCore.Web.Client.Auth.Models;
 using EduCore.Web.Client.Auth.Services;
 using Microsoft.AspNetCore.Components;
@@ -39,6 +40,18 @@ public partial class Login : IAsyncDisposable
 
     [SupplyParameterFromQuery]
     public string? ReturnUrl { get; set; }
+
+    /// <summary>"redefinida" quando a pessoa acabou de criar uma nova senha.</summary>
+    [SupplyParameterFromQuery(Name = "senha")]
+    public string? Senha { get; set; }
+
+    private bool SenhaRedefinida => string.Equals(Senha, "redefinida", StringComparison.OrdinalIgnoreCase);
+
+    [Inject]
+    private EmailInformado EmailInformado { get; set; } = default!;
+
+    /// <summary>Guarda o e-mail já digitado para a tela "Esqueci minha senha" (sem colocá-lo na URL).</summary>
+    private void GuardarEmail() => EmailInformado.Guardar(_model.Email);
 
     // Enquanto o WebAssembly carrega (prerender), o formulario fica bloqueado para evitar submit sem handler.
     private bool CanSubmit => RendererInfo.IsInteractive && !_isSubmitting;
@@ -185,6 +198,7 @@ public partial class Login : IAsyncDisposable
 
     /// <summary>
     /// Aceita apenas caminhos relativos da propria aplicacao (evita open redirect).
+    /// Telas de acesso (o proprio login) viram a pagina inicial.
     /// </summary>
     private string GetSafeReturnUrl()
     {
@@ -192,7 +206,8 @@ public partial class Login : IAsyncDisposable
             || !ReturnUrl.StartsWith('/')
             || ReturnUrl.StartsWith("//", StringComparison.Ordinal)
             || ReturnUrl.StartsWith("/\\", StringComparison.Ordinal)
-            || !Uri.IsWellFormedUriString(ReturnUrl, UriKind.Relative))
+            || !Uri.IsWellFormedUriString(ReturnUrl, UriKind.Relative)
+            || PaginasDeAcesso.Contem(ReturnUrl))
         {
             return DefaultRedirect;
         }

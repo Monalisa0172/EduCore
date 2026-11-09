@@ -40,6 +40,8 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<Professor> Professors { get; set; }
 
+    public virtual DbSet<RedefinicaoSenha> RedefinicoesSenha { get; set; }
+
     public virtual DbSet<SubDisciplina> SubDisciplinas { get; set; }
 
     public virtual DbSet<Turma> Turmas { get; set; }
@@ -48,6 +50,13 @@ public partial class AppDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<RedefinicaoSenha>(entity =>
+        {
+            entity.Property(e => e.TokenHash).IsFixedLength();
+            entity.HasIndex(e => e.TokenHash, "UX_RedefinicaoSenha_TokenHash").IsUnique();
+            entity.HasIndex(e => new { e.UsuarioId, e.CriadoEm }, "IX_RedefinicaoSenha_Usuario");
+        });
+
         modelBuilder.Entity<Aluno>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK__Aluno__3214EC0745EFD30B");

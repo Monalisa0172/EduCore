@@ -111,7 +111,10 @@
                         <div class="user-cell">
                             <FluentAvatar Name="@context.Nome" Size="AvatarSize.Size32" Color="AvatarColor.Colorful" aria-hidden="true" />
                             <div class="user-text">
-                                <span class="user-name">@context.Nome</span>
+                                @* O nome abre a ficha (aluno: desempenho e boletim; professor: acompanhamento); editar fica no menu Acoes. *@
+                                <a class="user-name user-name--link"
+                                   href="@($"{(context.IsAluno ? "alunos" : "professores")}/{context.UsuarioId}")"
+                                   title="@($"Abrir a ficha de {context.Nome}")">@context.Nome</a>
                                 <span class="user-email">@context.Email</span>
                             </div>
                         </div>

@@ -1,0 +1,121 @@
+@using System.Globalization
+
+@* Uma turma + disciplina do professor: pendencias de lancamento no bimestre atual (cada uma com link
+   para conferir) e o desempenho da turma no ano. *@
+<article class="secao-card acompanhamento" aria-labelledby="@IdTitulo">
+    <div class="secao-cabecalho">
+        <div class="acompanhamento-titulo">
+            <FluentText As="TextTag.H2" Id="@IdTitulo" Size="TextSize.Size500" Weight="TextWeight.Semibold">
+                @Item.TurmaNome · @Item.Titulo
+            </FluentText>
+            <span class="texto-suave">Ano letivo @Item.AnoLetivo · @(Item.BimestreVigente)º bimestre atual · @Item.AlunosAtivos alunos</span>
+        </div>
+        <a class="atalho" href="@UrlDiario("avaliacoes")">
+            <FluentIcon Value="@(new Icons.Regular.Size16.BookOpen())" Color="Color.Custom" CustomColor="currentColor" aria-hidden="true" />
+            Abrir diário
+        </a>
+    </div>
+
+    <div class="acompanhamento-colunas">
+        <section aria-label="Pendências do bimestre">
+            <h3 class="acompanhamento-subtitulo">Lançamentos do @(Item.BimestreVigente)º bimestre</h3>
+            <ul class="acompanhamento-lista">
+                <li>
+                    @if (Item.PesosIncompletos)
+                    {
+                        <span class="chip-atencao">Pesos: @Num(Item.PesoTotalBimestre) de 100</span>
+                        <span class="texto-suave">falta cadastrar avaliação para fechar a média</span>
+                    }
+                    else
+                    {
+                        <span class="chip-ok">Pesos completos</span>
+                        <span class="texto-suave">avaliações do bimestre somam 100</span>
+                    }
+                </li>
+
+                @if (Item.AvaliacoesPendentes.Count == 0)
+                {
+                    <li>
+                        <span class="chip-ok">Notas em dia</span>
+                        <span class="texto-suave">todas as avaliações aplicadas têm nota</span>
+                    </li>
+                }
+                @foreach (var av in Item.AvaliacoesPendentes)
+                {
+                    <li @key="av.Id">
+                        <span class="chip-atencao">@av.NotasLancadas de @Item.AlunosAtivos notas</span>
+                        <a href="@UrlNotas(av.Id)">@av.Nome</a>
+                        <span class="texto-suave">aplicada em @av.DataAplicacao.ToString("dd/MM")@(av.Bimestre == Item.BimestreVigente ? null : $" ({av.Bimestre}º bim.)")</span>
+                    </li>
+                }
+
+                <li>
+                    @if (Item.UltimaChamada is null)
+                    {
+                        <span class="chip-atencao">Sem chamada</span>
+                        <span class="texto-suave">nenhuma aula registrada ainda</span>
+                    }
+                    else
+                    {
+                        <span class="@(Item.ChamadaAtrasada ? "chip-atencao" : "chip-ok")">
+                            Última chamada @(Item.DiasSemChamada == 0 ? "hoje" : Item.DiasSemChamada == 1 ? "ontem" : $"há {Item.DiasSemChamada} dias")
+                        </span>
+                        <a href="@UrlDiario("chamada")">@Item.UltimaChamada.Value.ToString("dd/MM")</a>
+                        <span class="texto-suave">· @Item.AulasNoBimestre @(Item.AulasNoBimestre == 1 ? "aula" : "aulas") no bimestre</span>
+                    }
+                </li>
+            </ul>
+        </section>
+
+        <section aria-label="Desempenho da turma">
+            <h3 class="acompanhamento-subtitulo">Desempenho da turma no ano</h3>
+            <dl class="acompanhamento-numeros">
+                <div><dt>Média</dt><dd>@(Item.MediaTurma is { } m ? m.ToString("0.0", PtBr) : "—")</dd></div>
+                <div><dt>Frequência</dt><dd>@(Item.FrequenciaTurma is { } f ? $"{f.ToString("0", PtBr)}%" : "—")</dd></div>
+            </dl>
+            <p class="acompanhamento-alertas">
+                @if (Item.AlunosEmRisco == 0 && Item.AlunosEmAtencao == 0)
+                {
+                    <IconeSituacao Nivel="NivelDesempenho.Ok" Texto="Nenhum aluno em alerta" />
+                }
+                else
+                {
+                    @if (Item.AlunosEmRisco > 0)
+                    {
+                        <IconeSituacao Nivel="NivelDesempenho.Risco" Texto="@($"{Item.AlunosEmRisco} em risco")" />
+                    }
+                    @if (Item.AlunosEmAtencao > 0)
+                    {
+                        <IconeSituacao Nivel="NivelDesempenho.Atencao" Texto="@($"{Item.AlunosEmAtencao} em atenção")" />
+                    }
+                    <a href="@UrlReforco">Ver alunos</a>
+                }
+            </p>
+        </section>
+    </div>
+</article>
+
+@code {
+    private static readonly CultureInfo PtBr = CultureInfo.GetCultureInfo("pt-BR");
+
+    [Parameter, EditorRequired]
+    public AcompanhamentoItem Item { get; set; } = default!;
+
+    /// <summary>Consulta "voltar=...&amp;origem=..." para os links voltarem à ficha.</summary>
+    [Parameter, EditorRequired]
+    public string ConsultaDeOrigem { get; set; } = string.Empty;
+
+    /// <summary>Endereço da aba de reforço da ficha.</summary>
+    [Parameter, EditorRequired]
+    public string UrlReforco { get; set; } = string.Empty;
+
+    private string IdTitulo => $"acompanhamento-{Item.TurmaId}-{Item.DisciplinaId}";
+
+    private string Base => $"professor/turmas/{Item.TurmaId}/disciplinas/{Item.DisciplinaId}";
+
+    private string UrlDiario(string aba) => $"{Base}/{aba}?{ConsultaDeOrigem}";
+
+    private string UrlNotas(int avaliacaoId) => $"{Base}/avaliacoes/{avaliacaoId}/notas?{ConsultaDeOrigem}";
+
+    private static string Num(decimal valor) => valor.ToString("0.##", PtBr);
+}

@@ -1,10 +1,12 @@
 using EduCore.API.Constants;
+using EduCore.API.DTOs.Request;
 using EduCore.API.DTOs.Response;
 using EduCore.API.Interfaces.Repositories;
 using EduCore.API.Services;
 using EduCore.API.Services.Acesso;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace EduCore.API.Controllers;
 
@@ -20,12 +22,32 @@ public class MeController : ControllerBase
     private readonly IAcessoAcademico _acesso;
     private readonly IAtribuicaoRepository _atribuicaoRepository;
     private readonly BoletimService _boletimService;
+    private readonly AlteracaoSenhaService _alteracaoSenha;
 
-    public MeController(IAcessoAcademico acesso, IAtribuicaoRepository atribuicaoRepository, BoletimService boletimService)
+    public MeController(
+        IAcessoAcademico acesso,
+        IAtribuicaoRepository atribuicaoRepository,
+        BoletimService boletimService,
+        AlteracaoSenhaService alteracaoSenha)
     {
         _acesso = acesso;
         _atribuicaoRepository = atribuicaoRepository;
         _boletimService = boletimService;
+        _alteracaoSenha = alteracaoSenha;
+    }
+
+    /// <summary>
+    /// Troca a senha do usuário logado (qualquer perfil). Exige a senha atual.
+    /// Mesmo limite de tentativas do login: impede adivinhar a senha atual por força bruta.
+    /// </summary>
+    [HttpPut("senha")]
+    [EnableRateLimiting(AuthController.PoliticaLogin)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
+    public async Task<IActionResult> AlterarSenha([FromBody] AlterarSenhaRequest request)
+    {
+        return this.ParaResposta(await _alteracaoSenha.AlterarAsync(request), _ => NoContent());
     }
 
     /// <summary>

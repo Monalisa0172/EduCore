@@ -1,0 +1,44 @@
+@implements IDisposable
+@inject NavigationManager Navigation
+
+@* Envolve o conteudo da pagina: se um componente falhar, so esta area mostra o aviso
+   (menu e cabecalho continuam funcionando) e "Tentar de novo" monta o conteudo outra vez. *@
+<ErrorBoundary @ref="_limite">
+    <ChildContent>
+        @ChildContent
+    </ChildContent>
+    <ErrorContent>
+        <div class="area-erro" role="alert">
+            <span class="area-erro-icone" aria-hidden="true">
+                <FluentIcon Value="@(new Icons.Regular.Size24.ErrorCircle())" Color="Color.Custom" CustomColor="currentColor" />
+            </span>
+            <FluentText Weight="TextWeight.Semibold" Block="true">Não foi possível exibir esta tela</FluentText>
+            <p class="area-erro-descricao">
+                Algo inesperado aconteceu ao montar o conteúdo. O restante do sistema continua funcionando.
+                Tente de novo; se continuar, recarregue a página.
+            </p>
+            <div class="area-erro-acoes">
+                <FluentButton Appearance="ButtonAppearance.Primary" OnClick="TentarDeNovo">Tentar de novo</FluentButton>
+                <FluentButton Appearance="ButtonAppearance.Outline" OnClick="Recarregar">Recarregar a página</FluentButton>
+            </div>
+        </div>
+    </ErrorContent>
+</ErrorBoundary>
+
+@code {
+    private ErrorBoundary? _limite;
+
+    [Parameter, EditorRequired]
+    public RenderFragment ChildContent { get; set; } = default!;
+
+    protected override void OnInitialized() => Navigation.LocationChanged += AoNavegar;
+
+    private void TentarDeNovo() => _limite?.Recover();
+
+    private void Recarregar() => Navigation.Refresh(forceReload: true);
+
+    // Trocar de aba ou de registro na mesma pagina tambem limpa o erro.
+    private void AoNavegar(object? sender, LocationChangedEventArgs e) => InvokeAsync(TentarDeNovo);
+
+    public void Dispose() => Navigation.LocationChanged -= AoNavegar;
+}

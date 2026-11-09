@@ -1,0 +1,19 @@
+@* Ultimo recurso para falhas que escapam da AreaSegura (ex.: erro no carregamento da propria pagina).
+   O blazor.web.js mostra este bloco e liga os botoes: .reload recarrega a pagina e .dismiss fecha o aviso. *@
+<div id="blazor-error-ui" data-nosnippet role="alert">
+    <div class="erro-global">
+        <span class="erro-global-icone" aria-hidden="true">
+            <FluentIcon Value="@(new Icons.Regular.Size20.ErrorCircle())" Color="Color.Custom" CustomColor="currentColor" />
+        </span>
+        <div class="erro-global-texto">
+            <strong>Algo deu errado</strong>
+            <span>Esta tela parou de responder. Recarregue a página para continuar; o que já foi salvo continua salvo.</span>
+        </div>
+        <div class="erro-global-acoes">
+            <button type="button" class="reload">Recarregar</button>
+            <button type="button" class="dismiss" aria-label="Fechar aviso" title="Fechar aviso">
+                <FluentIcon Value="@(new Icons.Regular.Size16.Dismiss())" Color="Color.Custom" CustomColor="currentColor" />
+            </button>
+        </div>
+    </div>
+</div>

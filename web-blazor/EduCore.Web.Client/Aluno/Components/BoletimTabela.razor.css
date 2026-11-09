@@ -1,0 +1,114 @@
+/* Tabela com rolagem lateral no celular (sem esmagar as colunas) */
+.boletim-rolagem {
+    overflow-x: auto;
+}
+
+.boletim {
+    width: 100%;
+    min-width: 720px;
+    border-collapse: collapse;
+}
+
+    .boletim th,
+    .boletim td {
+        padding: 10px 8px;
+        border-bottom: 1px solid var(--colorNeutralStroke2);
+        text-align: left;
+        vertical-align: middle;
+    }
+
+    .boletim thead th {
+        font-size: var(--fontSizeBase200, 12px);
+        font-weight: var(--fontWeightSemibold, 600);
+        color: var(--colorNeutralForeground3);
+        white-space: nowrap;
+    }
+
+.boletim-numero {
+    text-align: center !important;
+    font-variant-numeric: tabular-nums;
+}
+
+.boletim-forte {
+    font-weight: var(--fontWeightSemibold, 600);
+}
+
+/* Bimestre atual destacado com a faixa ambar da marca */
+.boletim-atual {
+    background: color-mix(in srgb, var(--educore-secondary-tint) 50%, transparent);
+}
+
+thead .boletim-atual {
+    box-shadow: inset 0 3px 0 var(--educore-secondary);
+}
+
+.boletim-atual-rotulo {
+    display: block;
+    font-size: var(--fontSizeBase100, 10px);
+    color: var(--educore-secondary-text);
+    text-transform: uppercase;
+}
+
+.boletim-disciplina {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px;
+    border: none;
+    border-radius: var(--borderRadiusMedium, 4px);
+    background: transparent;
+    color: var(--colorNeutralForeground1);
+    font: inherit;
+    font-weight: var(--fontWeightSemibold, 600);
+    text-align: left;
+    cursor: pointer;
+}
+
+    .boletim-disciplina:hover {
+        background: var(--colorSubtleBackgroundHover);
+    }
+
+    .boletim-disciplina:focus-visible {
+        outline: 2px solid var(--colorStrokeFocus2);
+    }
+
+.boletim-detalhe td {
+    background: var(--colorNeutralBackground2);
+}
+
+.boletim-bimestres {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(160px, 1fr));
+    gap: 16px;
+}
+
+.boletim-bimestre {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: var(--fontSizeBase200, 12px);
+}
+
+    .boletim-bimestre ul {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    .boletim-bimestre li {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+    }
+
+.boletim-bimestre-titulo {
+    font-weight: var(--fontWeightSemibold, 600);
+    color: var(--colorNeutralForeground1);
+}
+
+.boletim-nota {
+    font-size: var(--fontSizeBase200, 12px);
+}

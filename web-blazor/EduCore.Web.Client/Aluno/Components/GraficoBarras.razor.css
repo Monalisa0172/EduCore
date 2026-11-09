@@ -1,0 +1,229 @@
+.grafico {
+    --grafico-grade: var(--colorNeutralStroke2);
+    --grafico-colunas: minmax(96px, 150px) minmax(0, 1fr) 44px 92px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 0;
+    margin: 0;
+}
+
+.grafico-cabecalho {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.grafico-subtitulo {
+    font-size: var(--fontSizeBase200, 12px);
+}
+
+.grafico-corpo {
+    display: flex;
+    flex-direction: column;
+}
+
+.grafico-lista {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+/* Linha: rotulo | trilho com a barra | valor | situacao */
+.grafico-linha {
+    position: relative;
+    display: grid;
+    grid-template-columns: var(--grafico-colunas);
+    grid-template-areas: "rotulo trilho valor situacao";
+    align-items: center;
+    gap: 0 12px;
+    min-height: 40px;
+    border-radius: var(--borderRadiusMedium, 4px);
+    outline: none;
+}
+
+.grafico-rotulo {
+    grid-area: rotulo;
+}
+
+.grafico-trilho {
+    grid-area: trilho;
+}
+
+.grafico-valor {
+    grid-area: valor;
+}
+
+.grafico-linha ::deep .situacao {
+    grid-area: situacao;
+}
+
+    .grafico-lista .grafico-linha:hover,
+    .grafico-lista .grafico-linha:focus {
+        background: var(--colorSubtleBackgroundHover);
+    }
+
+    .grafico-lista .grafico-linha:focus-visible {
+        box-shadow: inset 0 0 0 2px var(--colorStrokeFocus2);
+    }
+
+.grafico-linha--eixo {
+    min-height: 20px;
+}
+
+.grafico-rotulo {
+    overflow: hidden;
+    padding-left: 4px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* O trilho ocupa a altura toda da linha: grade e referencias ficam continuas entre as linhas */
+.grafico-trilho {
+    position: relative;
+    align-self: stretch;
+    display: flex;
+    align-items: center;
+    border-left: 1px solid var(--colorNeutralStroke1);
+    background-repeat: no-repeat;
+}
+
+.grafico-trilho--rotulos {
+    border-left-color: transparent;
+}
+
+/* Barra: 16px, ponta arredondada (4px), base reta no eixo */
+.grafico-barra {
+    position: relative;
+    z-index: 1;
+    height: 16px;
+    border-radius: 0 4px 4px 0;
+    transition: width 240ms ease-out;
+}
+
+.grafico-barra--ok {
+    background: var(--educore-status-ok);
+}
+
+.grafico-barra--atencao {
+    background: var(--educore-status-atencao);
+}
+
+.grafico-barra--risco {
+    background: var(--educore-status-risco);
+}
+
+/* Linha de referencia (limite): linha fina e solida, um pouco mais forte que a grade */
+.grafico-referencia {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 0;
+    border-left: 1px solid var(--colorNeutralForeground3);
+}
+
+.grafico-referencia-rotulo,
+.grafico-marca {
+    position: absolute;
+    transform: translateX(-50%);
+    font-size: var(--fontSizeBase100, 10px);
+    color: var(--colorNeutralForeground3);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.grafico-referencia-rotulo {
+    font-weight: var(--fontWeightSemibold, 600);
+    color: var(--colorNeutralForeground2);
+}
+
+.grafico-valor {
+    font-weight: var(--fontWeightSemibold, 600);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Detalhe no hover e no foco: aparece acima da linha */
+.grafico-dica {
+    position: absolute;
+    bottom: calc(100% + 4px);
+    left: 50%;
+    z-index: 2;
+    display: none;
+    flex-direction: column;
+    gap: 2px;
+    max-width: min(320px, 90%);
+    padding: 8px 10px;
+    border: 1px solid var(--colorNeutralStroke2);
+    border-radius: var(--borderRadiusMedium, 4px);
+    background: var(--colorNeutralBackground1);
+    box-shadow: var(--shadow8, 0 2px 8px rgba(0, 0, 0, 0.18));
+    font-size: var(--fontSizeBase200, 12px);
+    color: var(--colorNeutralForeground2);
+    transform: translateX(-50%);
+    pointer-events: none;
+}
+
+    .grafico-dica strong {
+        font-size: var(--fontSizeBase400, 16px);
+        color: var(--colorNeutralForeground1);
+    }
+
+/* :focus (e nao so :focus-visible): no celular, tocar na linha da o foco e mostra o detalhe */
+.grafico-linha:hover .grafico-dica,
+.grafico-linha:focus .grafico-dica {
+    display: flex;
+}
+
+.grafico-legenda {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+    font-size: var(--fontSizeBase200, 12px);
+    color: var(--colorNeutralForeground3);
+}
+
+.grafico-tabela {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+    .grafico-tabela th,
+    .grafico-tabela td {
+        padding: 8px;
+        border-bottom: 1px solid var(--colorNeutralStroke2);
+        text-align: left;
+    }
+
+    .grafico-tabela thead th {
+        font-size: var(--fontSizeBase200, 12px);
+        color: var(--colorNeutralForeground3);
+    }
+
+.grafico-tabela-numero {
+    font-weight: var(--fontWeightSemibold, 600);
+    font-variant-numeric: tabular-nums;
+}
+
+/* Celular: nome da disciplina em cima; barra, valor e situacao embaixo (situacao nunca some) */
+@media (max-width: 520px) {
+    .grafico {
+        --grafico-colunas: minmax(0, 1fr) 40px 84px;
+    }
+
+    .grafico-lista .grafico-linha {
+        grid-template-areas:
+            "rotulo rotulo rotulo"
+            "trilho valor situacao";
+        padding: 4px 0;
+    }
+
+    .grafico-linha--eixo {
+        grid-template-areas: "trilho valor situacao";
+    }
+
+    .grafico-trilho {
+        min-height: 28px;
+    }
+}

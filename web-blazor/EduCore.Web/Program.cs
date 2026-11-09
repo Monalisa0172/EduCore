@@ -29,6 +29,9 @@ else
     app.UseHsts();
 }
 
+// Endereco inexistente: devolve 404 com a pagina "nao encontrada" (e nao uma tela em branco).
+app.UseStatusCodePagesWithReExecute("/nao-encontrado", createScopeForStatusCodePages: true);
+
 app.UseHttpsRedirection();
 
 

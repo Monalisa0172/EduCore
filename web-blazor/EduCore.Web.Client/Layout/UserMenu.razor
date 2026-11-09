@@ -6,7 +6,11 @@
 <AuthorizeView>
     <Authorized>
         <div class="user-menu">
-            <span class="user-menu-email" title="@context.User.Email()">@context.User.NomeExibicao()</span>
+            @* Nome leva a "Minha conta" (alterar senha). No celular fica so o icone. *@
+            <a class="user-menu-conta" href="minha-conta/senha" title="Minha conta: alterar senha (@context.User.Email())" aria-label="Minha conta: alterar senha">
+                <FluentIcon Value="@(new Icons.Regular.Size20.PersonCircle())" Color="Color.Custom" CustomColor="currentColor" aria-hidden="true" />
+                <span class="user-menu-email">@context.User.NomeExibicao()</span>
+            </a>
             <FluentButton Appearance="ButtonAppearance.Transparent"
                           Color="var(--colorNeutralForegroundOnBrand)"
                           IconStart="@(new Icons.Regular.Size20.SignOut())"

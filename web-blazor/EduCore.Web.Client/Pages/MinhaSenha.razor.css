@@ -1,0 +1,37 @@
+.minha-senha {
+    width: 100%;
+    max-width: 520px;
+}
+
+/* Regra da senha: vira "ok" (azul) quando atendida (mesmo desenho da tela de nova senha) */
+.minha-senha ::deep .senha-regra {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: -8px 0 0;
+    font-size: var(--fontSizeBase200, 12px);
+    color: var(--colorNeutralForeground3);
+}
+
+.minha-senha ::deep .senha-regra--ok {
+    color: var(--educore-primary-text);
+}
+
+.minha-senha-acoes {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px 20px;
+    margin-top: 4px;
+}
+
+.minha-senha-esqueci {
+    color: var(--educore-primary-text);
+    font-size: var(--fontSizeBase300, 14px);
+    text-decoration: none;
+}
+
+    .minha-senha-esqueci:hover,
+    .minha-senha-esqueci:focus-visible {
+        text-decoration: underline;
+    }

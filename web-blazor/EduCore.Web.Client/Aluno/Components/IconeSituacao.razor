@@ -1,0 +1,27 @@
+@* Icone + rotulo da situacao. O icone leva a cor; o texto fica na cor de texto (legivel em qualquer tema). *@
+<span class="situacao situacao--@Situacoes.Classe(Nivel)">
+    <FluentIcon Value="Icone" Color="Color.Custom" CustomColor="currentColor" aria-hidden="true" />
+    <span class="situacao-texto">@(Texto ?? Situacoes.Rotulo(Nivel))</span>
+</span>
+
+@code {
+    private static readonly Icon IconeRisco = new Icons.Filled.Size16.ErrorCircle();
+    private static readonly Icon IconeAtencao = new Icons.Filled.Size16.Warning();
+    private static readonly Icon IconeOk = new Icons.Filled.Size16.CheckmarkCircle();
+    private static readonly Icon IconeSemDados = new Icons.Regular.Size16.Circle();
+
+    [Parameter, EditorRequired]
+    public NivelDesempenho Nivel { get; set; }
+
+    /// <summary>Texto no lugar do rótulo padrão (ex.: "Aprovado").</summary>
+    [Parameter]
+    public string? Texto { get; set; }
+
+    private Icon Icone => Nivel switch
+    {
+        NivelDesempenho.Risco => IconeRisco,
+        NivelDesempenho.Atencao => IconeAtencao,
+        NivelDesempenho.Ok => IconeOk,
+        _ => IconeSemDados
+    };
+}

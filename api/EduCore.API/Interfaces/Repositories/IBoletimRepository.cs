@@ -6,6 +6,9 @@ public interface IBoletimRepository
 {
     Task<string?> GetNomeDoAlunoAsync(int alunoId);
 
+    /// <summary>Aluno do usuário, ativo ou não (nulo se o usuário não for aluno).</summary>
+    Task<int?> GetAlunoIdPorUsuarioAsync(int usuarioId);
+
     /// <summary>Turmas em que o aluno tem matrícula, do ano mais recente para o mais antigo.</summary>
     Task<List<TurmaDoAluno>> GetTurmasDoAlunoAsync(int alunoId);
 

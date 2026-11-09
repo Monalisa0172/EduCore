@@ -5,6 +5,26 @@
     color: var(--colorNeutralForegroundOnBrand);
 }
 
+.user-menu-conta {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 32px;
+    padding: 0 8px;
+    border-radius: var(--borderRadiusMedium, 4px);
+    color: inherit;
+    text-decoration: none;
+}
+
+    .user-menu-conta:hover {
+        background: rgba(255, 255, 255, 0.12);
+    }
+
+    .user-menu-conta:focus-visible {
+        outline: 2px solid var(--colorNeutralForegroundOnBrand);
+        outline-offset: 2px;
+    }
+
 .user-menu-email {
     font-size: var(--fontSizeBase300, 14px);
     overflow: hidden;

@@ -14,13 +14,49 @@ public class UsuarioController : ControllerBase
 {
     private readonly UsuarioService _usuarioService;
     private readonly UsuarioCadastroService _cadastroService;
+    private readonly BoletimService _boletimService;
+    private readonly AcompanhamentoService _acompanhamentoService;
 
     public UsuarioController(
         UsuarioService usuarioService,
-        UsuarioCadastroService cadastroService)
+        UsuarioCadastroService cadastroService,
+        BoletimService boletimService,
+        AcompanhamentoService acompanhamentoService)
     {
         _usuarioService = usuarioService;
         _cadastroService = cadastroService;
+        _boletimService = boletimService;
+        _acompanhamentoService = acompanhamentoService;
+    }
+
+    /// <summary>
+    /// Acompanhamento do professor pela coordenação (ficha do professor): pendências de lançamento no
+    /// bimestre atual, desempenho de cada turma e projeção de reforço e reposição dos alunos em alerta.
+    /// </summary>
+    /// <param name="id">Id de usuário do professor.</param>
+    /// <response code="404">Usuário não é professor.</response>
+    [Authorize(Roles = Roles.Admin)]
+    [HttpGet("{id:int}/acompanhamento")]
+    [ProducesResponseType(typeof(AcompanhamentoDTO), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Acompanhamento(int id)
+    {
+        return this.ParaResposta(await _acompanhamentoService.ObterPorUsuarioAsync(id), Ok);
+    }
+
+    /// <summary>
+    /// Boletim do aluno pelo id de usuário (ficha do aluno). Vale para aluno inativo (histórico).
+    /// </summary>
+    /// <param name="id">Id de usuário do aluno.</param>
+    /// <param name="anoLetivo">Ano letivo; vazio para o mais recente com matrícula.</param>
+    /// <response code="404">Usuário não é aluno, ou o aluno não tem matrícula no ano.</response>
+    [Authorize(Roles = Roles.Admin)]
+    [HttpGet("{id:int}/boletim")]
+    [ProducesResponseType(typeof(BoletimDTO), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Boletim(int id, [FromQuery] int? anoLetivo)
+    {
+        return this.ParaResposta(await _boletimService.ObterPorUsuarioAsync(id, anoLetivo), Ok);
     }
 
     /// <summary>

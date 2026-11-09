@@ -1,7 +1,10 @@
 using System.Reflection;
 using System.Text;
+using System.Threading.RateLimiting;
+using EduCore.API.Controllers;
 using EduCore.API.Data;
 using EduCore.API.Extensions;
+using EduCore.API.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -10,6 +13,10 @@ using Microsoft.OpenApi;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
+
+// Erros nao previstos viram ProblemDetails (com traceId) em vez de 500 vazio.
+builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<TratadorErrosGlobal>();
 
 builder.Services.AddEndpointsApiExplorer();
 
@@ -71,7 +78,33 @@ builder.Services.AddCors(options =>
     options.AddPolicy(FrontendCorsPolicy, policy =>
         policy.WithOrigins(allowedOrigins)
             .WithHeaders("Authorization", "Content-Type")
-            .WithMethods("GET", "POST", "PUT", "PATCH", "DELETE"));
+            .WithMethods("GET", "POST", "PUT", "PATCH", "DELETE")
+            // O front le o tempo de espera de um 429 ("aguarde X segundos").
+            .WithExposedHeaders("Retry-After"));
+});
+
+// Limite de tentativas por IP nas rotas publicas de autenticacao (forca bruta e abuso do envio de e-mail).
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    options.AddPolicy(AuthController.PoliticaLogin, contexto => RateLimitPartition.GetFixedWindowLimiter(
+        contexto.Connection.RemoteIpAddress?.ToString() ?? "desconhecido",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
+
+    options.AddPolicy(AuthController.PoliticaSenha, contexto => RateLimitPartition.GetFixedWindowLimiter(
+        contexto.Connection.RemoteIpAddress?.ToString() ?? "desconhecido",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 5, Window = TimeSpan.FromMinutes(10), QueueLimit = 0 }));
+
+    options.OnRejected = (contexto, _) =>
+    {
+        if (contexto.Lease.TryGetMetadata(MetadataName.RetryAfter, out var espera))
+        {
+            contexto.HttpContext.Response.Headers.RetryAfter = ((int)Math.Ceiling(espera.TotalSeconds)).ToString();
+        }
+
+        return ValueTask.CompletedTask;
+    };
 });
 
 builder.Services.AddAuthentication(
@@ -106,6 +139,10 @@ builder.Services.AddApplication(builder.Configuration);
 
 var app = builder.Build();
 
+// Primeiro do pipeline: pega excecoes de tudo que vem depois. Os cabecalhos de CORS sao
+// aplicados no inicio da resposta, entao o front tambem consegue ler a resposta de erro.
+app.UseExceptionHandler();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -116,6 +153,9 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.UseCors(FrontendCorsPolicy);
+
+// Depois do CORS: a resposta 429 tambem leva os cabecalhos de CORS (o front consegue ler).
+app.UseRateLimiter();
 
 app.UseAuthentication();
 

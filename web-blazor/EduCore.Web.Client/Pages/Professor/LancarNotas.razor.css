@@ -1,0 +1,148 @@
+.notas-carregando {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.notas-dados {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 24px;
+    margin: 0;
+}
+
+    .notas-dados div {
+        display: flex;
+        gap: 6px;
+    }
+
+    .notas-dados dt {
+        color: var(--colorNeutralForeground3);
+    }
+
+    .notas-dados dd {
+        margin: 0;
+        font-weight: var(--fontWeightSemibold, 600);
+    }
+
+.notas-lista {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.nota-linha {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) 140px;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 8px;
+    border-top: 1px solid var(--colorNeutralStroke2);
+    border-left: 3px solid transparent;
+}
+
+    .nota-linha:first-child {
+        border-top: none;
+    }
+
+/* Linha alterada e ainda nao salva: marcador ambar */
+.nota-linha--alterada {
+    border-left-color: var(--educore-secondary);
+    /* Tom ambar bem leve: o marcador principal e a barra lateral */
+    background: color-mix(in srgb, var(--educore-secondary-tint) 45%, transparent);
+}
+
+.nota-nome {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.nota-campo {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+/* Input nativo: digitacao rapida (Tab entre alunos), aceita virgula, sem setinhas */
+.nota-input {
+    width: 100%;
+    height: 36px;
+    padding: 0 10px;
+    border: 1px solid var(--colorNeutralStroke1);
+    border-bottom-color: var(--colorNeutralStrokeAccessible, var(--colorNeutralStroke1));
+    border-radius: var(--borderRadiusMedium, 4px);
+    background: var(--colorNeutralBackground1);
+    color: var(--colorNeutralForeground1);
+    font: inherit;
+    font-size: var(--fontSizeBase400, 16px);
+    font-weight: var(--fontWeightSemibold, 600);
+    text-align: center;
+}
+
+    .nota-input:focus {
+        border-bottom: 2px solid var(--educore-primary);
+        outline: none;
+    }
+
+    .nota-input:focus-visible {
+        outline: 2px solid var(--colorStrokeFocus2);
+        outline-offset: 1px;
+    }
+
+    .nota-input:disabled {
+        background: var(--colorNeutralBackgroundDisabled, var(--colorNeutralBackground3));
+        color: var(--colorNeutralForegroundDisabled, var(--colorNeutralForeground3));
+    }
+
+.nota-input--erro {
+    border-color: var(--colorStatusDangerBorder2, #c50f1f);
+}
+
+.nota-erro {
+    font-size: var(--fontSizeBase200, 12px);
+    color: var(--colorStatusDangerForeground1, #b10e1c);
+}
+
+/* Rodape fixo: resumo e salvar sempre a vista em listas longas */
+.notas-rodape {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 16px;
+    padding: 12px 16px;
+    border: 1px solid var(--colorNeutralStroke2);
+    border-radius: var(--borderRadiusLarge, 8px);
+    background: var(--colorNeutralBackground1);
+    box-shadow: var(--shadow8, 0 -2px 8px rgba(0, 0, 0, 0.12));
+}
+
+.notas-resumo {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 16px;
+}
+
+.notas-pendentes {
+    font-weight: var(--fontWeightSemibold, 600);
+    color: var(--educore-secondary-text);
+}
+
+.notas-acoes {
+    display: flex;
+    gap: 8px;
+}
+
+@media (max-width: 600px) {
+    .nota-linha {
+        grid-template-columns: auto minmax(0, 1fr) 96px;
+        gap: 8px;
+    }
+}
