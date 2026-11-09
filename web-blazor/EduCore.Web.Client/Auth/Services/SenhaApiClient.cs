@@ -1,5 +1,3 @@
-using System.Globalization;
-using System.Net;
 using System.Net.Http.Json;
 using EduCore.Web.Client.Api;
 
@@ -33,7 +31,7 @@ public sealed class SenhaApiClient(HttpClient httpClient) : ISenhaApiClient
             using var resposta = await httpClient.GetAsync($"{Base}/redefinir-senha/validar?token={Uri.EscapeDataString(token)}", cancellationToken);
             if (!resposta.IsSuccessStatusCode)
             {
-                return ApiResult<bool>.Failure(await ErroAsync(resposta, cancellationToken));
+                return ApiResult<bool>.Failure(await ApiErrors.FromResponseAsync(resposta, cancellationToken));
             }
 
             var corpo = await resposta.Content.ReadFromJsonAsync<RespostaValidacao>(cancellationToken);
@@ -59,7 +57,7 @@ public sealed class SenhaApiClient(HttpClient httpClient) : ISenhaApiClient
             using var resposta = await requisicao();
             return resposta.IsSuccessStatusCode
                 ? ApiResult.Success()
-                : ApiResult.Failure(await ErroAsync(resposta, cancellationToken));
+                : ApiResult.Failure(await ApiErrors.FromResponseAsync(resposta, cancellationToken));
         }
         catch (HttpRequestException)
         {
@@ -69,20 +67,6 @@ public sealed class SenhaApiClient(HttpClient httpClient) : ISenhaApiClient
         {
             return ApiResult.Failure(ApiErrors.Timeout);
         }
-    }
-
-    private static async Task<ApiError> ErroAsync(HttpResponseMessage resposta, CancellationToken cancellationToken)
-    {
-        if (resposta.StatusCode == HttpStatusCode.TooManyRequests)
-        {
-            var segundos = resposta.Headers.RetryAfter?.Delta?.TotalSeconds;
-            var espera = segundos is > 60
-                ? $"cerca de {Math.Ceiling(segundos.Value / 60).ToString(CultureInfo.InvariantCulture)} minuto(s)"
-                : segundos is > 0 ? $"{Math.Ceiling(segundos.Value).ToString(CultureInfo.InvariantCulture)} segundo(s)" : "alguns instantes";
-            return new ApiError(ApiErrorKind.Unexpected, "Muitas tentativas", $"Por segurança, aguarde {espera} antes de tentar de novo.");
-        }
-
-        return await ApiErrors.FromResponseAsync(resposta, cancellationToken);
     }
 
     private sealed record RespostaValidacao(bool Valido);

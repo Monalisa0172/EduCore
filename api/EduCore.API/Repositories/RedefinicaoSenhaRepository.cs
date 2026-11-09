@@ -18,6 +18,9 @@ public class RedefinicaoSenhaRepository : IRedefinicaoSenhaRepository
     public Task<Usuario?> GetUsuarioAtivoPorEmailAsync(string email)
         => _context.Usuarios.FirstOrDefaultAsync(u => u.Email == email && u.Ativo);
 
+    public Task<Usuario?> GetUsuarioAtivoAsync(int usuarioId)
+        => _context.Usuarios.FirstOrDefaultAsync(u => u.Id == usuarioId && u.Ativo);
+
     public Task<List<RedefinicaoSenha>> GetAbertasAsync(int usuarioId)
         => _context.RedefinicoesSenha.Where(r => r.UsuarioId == usuarioId && r.UsadoEm == null).ToListAsync();
 

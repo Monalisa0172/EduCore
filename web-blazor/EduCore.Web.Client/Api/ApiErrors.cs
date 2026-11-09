@@ -60,6 +60,8 @@ public static class ApiErrors
                 problem?.UserMessage ?? "O registro foi alterado por outra pessoa. Atualize a página e tente novamente.",
                 problem?.Errors),
 
+            HttpStatusCode.TooManyRequests => MuitasTentativas(response),
+
             HttpStatusCode.RequestTimeout or HttpStatusCode.GatewayTimeout => Timeout,
 
             >= HttpStatusCode.InternalServerError => new ApiError(
@@ -75,6 +77,17 @@ public static class ApiErrors
                     "Ocorreu um erro inesperado (código {0}). Se o problema persistir, procure o suporte.",
                     (int)response.StatusCode))
         };
+    }
+
+    /// <summary>429 do limite de tentativas: diz quanto esperar (cabeçalho Retry-After).</summary>
+    private static ApiError MuitasTentativas(HttpResponseMessage response)
+    {
+        var segundos = response.Headers.RetryAfter?.Delta?.TotalSeconds;
+        var espera = segundos is > 60
+            ? $"cerca de {Math.Ceiling(segundos.Value / 60).ToString(CultureInfo.InvariantCulture)} minuto(s)"
+            : segundos is > 0 ? $"{Math.Ceiling(segundos.Value).ToString(CultureInfo.InvariantCulture)} segundo(s)" : "alguns instantes";
+
+        return new ApiError(ApiErrorKind.TooManyAttempts, "Muitas tentativas", $"Por segurança, aguarde {espera} antes de tentar de novo.");
     }
 
     public static async Task<ApiProblem?> TryReadProblemAsync(HttpResponseMessage response, CancellationToken cancellationToken)

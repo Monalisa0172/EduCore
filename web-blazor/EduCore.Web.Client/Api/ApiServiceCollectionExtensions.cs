@@ -47,6 +47,7 @@ public static class ApiServiceCollectionExtensions
         services.AddHttpClient<IDiarioApiClient, DiarioApiClient>(ConfigureClient);
         services.AddHttpClient<IBoletimApiClient, BoletimApiClient>(ConfigureClient);
         services.AddHttpClient<IAcompanhamentoApiClient, AcompanhamentoApiClient>(ConfigureClient);
+        services.AddHttpClient<IMinhaContaApiClient, MinhaContaApiClient>(ConfigureClient);
 
         return services;
 

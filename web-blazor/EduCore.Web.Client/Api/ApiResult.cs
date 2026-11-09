@@ -9,6 +9,7 @@ public enum ApiErrorKind
     Forbidden,
     NotFound,
     Conflict,
+    TooManyAttempts,
     ServerError,
     Unavailable,
     Timeout,

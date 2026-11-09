@@ -42,6 +42,7 @@ public static class DependencyInjection
         services.AddSingleton<FilaRedefinicaoSenha>();
         services.AddHostedService<ProcessadorRedefinicaoSenha>();
         services.AddScoped<RedefinicaoSenhaService>();
+        services.AddScoped<AlteracaoSenhaService>();
         services.AddScoped<IRedefinicaoSenhaRepository, RedefinicaoSenhaRepository>();
 
         services.AddScoped<AuthService>();

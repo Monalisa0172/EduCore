@@ -101,6 +101,7 @@ dotnet user-secrets set "Email:Smtp:Senha" "<senha-do-smtp>" --project api/EduCo
 - [x] Aluno: desempenho em gráficos (média e frequência por disciplina, com faixas de risco/atenção) e boletim completo
 - [x] Admin: ficha do aluno (desempenho e boletim) e ficha do professor (pendências de lançamento, desempenho das turmas, projeção de reforço e reposição e diário em consulta)
 - [x] Esqueci minha senha: link por e-mail de uso único (30 minutos, só o hash fica no banco), resposta igual para e-mail existente ou não e limite de tentativas por IP no login e na redefinição
+- [x] Acabamentos: tratamento global de erros (API com ProblemDetails e traceId; front com aviso por área e "Tentar de novo"), página 404 e "Alterar minha senha"
 - [ ] Dashboards, CI no GitHub Actions e deploy gratuito
 - [ ] Front em React + TypeScript
 
