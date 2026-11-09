@@ -1,0 +1,21 @@
+@page "/nao-encontrado"
+
+<PageTitle>Página não encontrada | EduCore</PageTitle>
+
+@* Endereco que nao existe (Router.NotFoundPage + status 404 reexecutado no servidor).
+   Pagina estatica: funciona mesmo antes de o WebAssembly carregar. *@
+<div class="nao-encontrado" role="main">
+    <span class="nao-encontrado-icone" aria-hidden="true">
+        <FluentIcon Value="@(new Icons.Regular.Size24.DocumentSearch())" Color="Color.Custom" CustomColor="currentColor" />
+    </span>
+    <p class="nao-encontrado-codigo">Erro 404</p>
+    <h1 class="nao-encontrado-titulo">Página não encontrada</h1>
+    <p class="nao-encontrado-texto">
+        O endereço pode estar digitado errado ou a página mudou de lugar.
+        Volte para o início e siga pelo menu.
+    </p>
+    <a class="nao-encontrado-botao" href="">
+        <FluentIcon Value="@(new Icons.Regular.Size20.Home())" Color="Color.Custom" CustomColor="currentColor" aria-hidden="true" />
+        Ir para o início
+    </a>
+</div>
