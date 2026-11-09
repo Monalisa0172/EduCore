@@ -38,6 +38,18 @@ public class BoletimService
     }
 
     /// <summary>
+    /// Boletim pelo usuário do aluno (ficha do aluno no admin). Vale também para aluno inativo: o histórico continua consultável.
+    /// </summary>
+    public async Task<ResultadoOperacao<BoletimDTO>> ObterPorUsuarioAsync(int usuarioId, int? anoLetivo)
+    {
+        var alunoId = await _boletimRepository.GetAlunoIdPorUsuarioAsync(usuarioId);
+
+        return alunoId is null
+            ? ResultadoOperacao<BoletimDTO>.NaoEncontrado("Aluno não encontrado.")
+            : await ObterAsync(alunoId.Value, anoLetivo);
+    }
+
+    /// <summary>
     /// Boletim de um aluno. Sem ano informado, usa o ano letivo mais recente com matrícula.
     /// </summary>
     public async Task<ResultadoOperacao<BoletimDTO>> ObterAsync(int alunoId, int? anoLetivo)

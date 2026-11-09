@@ -1,0 +1,159 @@
+@using System.Globalization
+
+@* Grafico de barras horizontais por disciplina, uma serie (o titulo diz o que e medido).
+   Barras partem do zero; cor = situacao, sempre com icone + rotulo; linhas de referencia nos limites;
+   detalhe no hover e no foco do teclado; "Ver tabela" mostra os mesmos dados sem grafico. *@
+<figure class="grafico" aria-labelledby="@($"{Id}-titulo")">
+    <figcaption class="grafico-cabecalho">
+        <div>
+            <FluentText As="TextTag.H2" Id="@($"{Id}-titulo")" Size="TextSize.Size500" Weight="TextWeight.Semibold">@Titulo</FluentText>
+            @if (!string.IsNullOrWhiteSpace(Subtitulo))
+            {
+                <p class="texto-suave grafico-subtitulo">@Subtitulo</p>
+            }
+        </div>
+        <FluentButton Appearance="ButtonAppearance.Subtle"
+                      Size="ButtonSize.Small"
+                      IconStart="@(_tabela ? IconeGrafico : IconeTabela)"
+                      aria-pressed="@(_tabela ? "true" : "false")"
+                      OnClick="@(() => _tabela = !_tabela)">
+            @(_tabela ? "Ver gráfico" : "Ver tabela")
+        </FluentButton>
+    </figcaption>
+
+    @if (Itens.Count == 0)
+    {
+        <p class="texto-suave">@TextoSemItens</p>
+    }
+    else if (_tabela)
+    {
+        <table class="grafico-tabela">
+            <thead>
+                <tr><th scope="col">Disciplina</th><th scope="col">@NomeValor</th><th scope="col">Situação</th><th scope="col">Detalhe</th></tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Itens)
+                {
+                    <tr>
+                        <th scope="row">@item.Rotulo</th>
+                        <td class="grafico-tabela-numero">@item.ValorTexto</td>
+                        <td><IconeSituacao Nivel="item.Nivel" /></td>
+                        <td class="texto-suave">@item.Detalhe</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+    else
+    {
+        <div class="grafico-corpo">
+            @* Rotulos das linhas de referencia, acima das barras *@
+            <div class="grafico-linha grafico-linha--eixo" aria-hidden="true">
+                <div class="grafico-trilho grafico-trilho--rotulos">
+                    @foreach (var referencia in Referencias)
+                    {
+                        <span class="grafico-referencia-rotulo" style="left: @Pct(referencia.Valor)">@referencia.Rotulo</span>
+                    }
+                </div>
+            </div>
+
+            <ul class="grafico-lista" aria-label="@Titulo">
+                @foreach (var item in Itens)
+                {
+                    <li class="grafico-linha" tabindex="0" @key="item.Rotulo"
+                        aria-label="@($"{item.Rotulo}: {item.ValorTexto}, {Situacoes.Rotulo(item.Nivel)}. {item.Detalhe}")">
+                        <span class="grafico-rotulo">@item.Rotulo</span>
+                        <div class="grafico-trilho" style="@FundoGrade">
+                            @foreach (var referencia in Referencias)
+                            {
+                                <span class="grafico-referencia" style="left: @Pct(referencia.Valor)"></span>
+                            }
+                            @if (item.Valor is { } valor)
+                            {
+                                <span class="grafico-barra grafico-barra--@Situacoes.Classe(item.Nivel)" style="width: @Pct(valor)"></span>
+                            }
+                        </div>
+                        <span class="grafico-valor">@item.ValorTexto</span>
+                        <IconeSituacao Nivel="item.Nivel" />
+
+                        @if (!string.IsNullOrWhiteSpace(item.Detalhe))
+                        {
+                            <span class="grafico-dica" role="tooltip">
+                                <strong>@item.ValorTexto</strong>
+                                <span>@item.Rotulo · @item.Detalhe</span>
+                            </span>
+                        }
+                    </li>
+                }
+            </ul>
+
+            @* Eixo: marcas abaixo das barras *@
+            <div class="grafico-linha grafico-linha--eixo" aria-hidden="true">
+                <div class="grafico-trilho grafico-trilho--rotulos">
+                    @foreach (var marca in Marcas)
+                    {
+                        <span class="grafico-marca" style="left: @Pct(marca)">@FormatarMarca(marca)</span>
+                    }
+                </div>
+            </div>
+        </div>
+
+        @if (Legenda is not null)
+        {
+            <div class="grafico-legenda">@Legenda</div>
+        }
+    }
+</figure>
+
+@code {
+    private static readonly Icon IconeTabela = new Icons.Regular.Size20.Table();
+    private static readonly Icon IconeGrafico = new Icons.Regular.Size20.DataBarHorizontal();
+
+    private bool _tabela;
+
+    /// <summary>Prefixo dos ids (dois gráficos na mesma página).</summary>
+    [Parameter, EditorRequired]
+    public string Id { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string Titulo { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? Subtitulo { get; set; }
+
+    /// <summary>Nome da coluna de valores na tabela (ex.: "Média", "Frequência").</summary>
+    [Parameter]
+    public string NomeValor { get; set; } = "Valor";
+
+    [Parameter, EditorRequired]
+    public IReadOnlyList<ItemGrafico> Itens { get; set; } = [];
+
+    [Parameter, EditorRequired]
+    public decimal Maximo { get; set; }
+
+    [Parameter]
+    public IReadOnlyList<decimal> Marcas { get; set; } = [];
+
+    [Parameter]
+    public Func<decimal, string> FormatarMarca { get; set; } = v => v.ToString("0.##", CultureInfo.GetCultureInfo("pt-BR"));
+
+    [Parameter]
+    public IReadOnlyList<ReferenciaGrafico> Referencias { get; set; } = [];
+
+    /// <summary>Explicação das cores (faixas de cada situação).</summary>
+    [Parameter]
+    public RenderFragment? Legenda { get; set; }
+
+    [Parameter]
+    public string TextoSemItens { get; set; } = "Sem dados para exibir.";
+
+    private string Pct(decimal valor)
+        => (Math.Clamp(valor / Maximo, 0, 1) * 100).ToString("0.##", CultureInfo.InvariantCulture) + "%";
+
+    /// <summary>Linhas de grade finas nas marcas do eixo (fundo do trilho, sem elementos extras).</summary>
+    private string FundoGrade
+        => Marcas.Count == 0
+            ? string.Empty
+            : "background-image: " + string.Join(", ", Marcas.Select(m =>
+                $"linear-gradient(to right, transparent calc({Pct(m)} - 0.5px), var(--grafico-grade) calc({Pct(m)} - 0.5px), var(--grafico-grade) calc({Pct(m)} + 0.5px), transparent calc({Pct(m)} + 0.5px))")) + ";";
+}

@@ -91,6 +91,17 @@
     color: var(--colorNeutralForeground1);
 }
 
+/* Nome que abre a ficha: aparencia de link sem poluir a lista (sublinha no hover/foco) */
+.user-name--link {
+    color: var(--educore-primary-text);
+    text-decoration: none;
+}
+
+    .user-name--link:hover,
+    .user-name--link:focus-visible {
+        text-decoration: underline;
+    }
+
 .user-name,
 .user-email,
 .especificacao {

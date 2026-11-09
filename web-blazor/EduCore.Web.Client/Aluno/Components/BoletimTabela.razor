@@ -1,0 +1,160 @@
+@using System.Globalization
+
+@* Boletim completo: uma linha por disciplina com as medias dos 4 bimestres, a media anual, a frequencia
+   e a situacao. "Detalhes" abre as avaliacoes e notas de cada bimestre. *@
+<section class="secao-card" aria-labelledby="boletim-titulo">
+    <div class="secao-cabecalho">
+        <div class="secao-titulo">
+            <FluentText As="TextTag.H2" Id="boletim-titulo" Size="TextSize.Size600" Weight="TextWeight.Semibold">
+                Boletim @Boletim.AnoLetivo
+            </FluentText>
+            <span class="secao-contagem">@Boletim.TurmaNome</span>
+        </div>
+    </div>
+
+    @if (Boletim.Disciplinas.Count == 0)
+    {
+        <EmptyState Titulo="Nenhuma disciplina ainda"
+                    Descricao="Quando os professores forem atribuídos à turma, as disciplinas aparecem aqui."
+                    Icone="@(new Icons.Regular.Size24.DocumentBulletList())" />
+    }
+    else
+    {
+        <div class="boletim-rolagem">
+            <table class="boletim">
+                <thead>
+                    <tr>
+                        <th scope="col">Disciplina</th>
+                        @for (var b = 1; b <= 4; b++)
+                        {
+                            <th scope="col" class="boletim-numero @(b == Boletim.BimestreVigente && !Boletim.AnoEncerrado ? "boletim-atual" : null)">
+                                @(b)º bim.
+                                @if (b == Boletim.BimestreVigente && !Boletim.AnoEncerrado)
+                                {
+                                    <span class="boletim-atual-rotulo">atual</span>
+                                }
+                            </th>
+                        }
+                        <th scope="col" class="boletim-numero">Média anual</th>
+                        <th scope="col" class="boletim-numero">Frequência</th>
+                        <th scope="col">Situação</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var d in Boletim.Disciplinas)
+                    {
+                        var aberto = _abertas.Contains(d.DisciplinaId);
+                        <tr @key="d.DisciplinaId">
+                            <th scope="row">
+                                <button type="button" class="boletim-disciplina" aria-expanded="@(aberto ? "true" : "false")"
+                                        aria-controls="@($"detalhe-{d.DisciplinaId}")"
+                                        @onclick="@(() => Alternar(d.DisciplinaId))">
+                                    <FluentIcon Value="@(aberto ? IconeAberto : IconeFechado)" Color="Color.Custom" CustomColor="currentColor" aria-hidden="true" />
+                                    @d.Nome
+                                </button>
+                            </th>
+                            @foreach (var bim in d.Bimestres)
+                            {
+                                <td class="boletim-numero @(bim.Bimestre == Boletim.BimestreVigente && !Boletim.AnoEncerrado ? "boletim-atual" : null)">
+                                    @Media(bim.Media, bim.MediaParcial)
+                                </td>
+                            }
+                            <td class="boletim-numero boletim-forte">@Media(d.MediaAnual, d.MediaAnualParcial)</td>
+                            <td class="boletim-numero">@(d.Frequencia is { } f ? $"{f.ToString("0", PtBr)}%" : "—")</td>
+                            <td>
+                                @if (d.Situacao == SituacaoFinal.Aprovado)
+                                {
+                                    <IconeSituacao Nivel="NivelDesempenho.Ok" Texto="Aprovado" />
+                                }
+                                else if (d.Situacao == SituacaoFinal.Reprovado)
+                                {
+                                    <IconeSituacao Nivel="NivelDesempenho.Risco" Texto="Reprovado" />
+                                }
+                                else
+                                {
+                                    <IconeSituacao Nivel="d.Nivel" />
+                                }
+                            </td>
+                        </tr>
+                        @if (aberto)
+                        {
+                            <tr class="boletim-detalhe" id="@($"detalhe-{d.DisciplinaId}")">
+                                <td colspan="8">
+                                    <div class="boletim-bimestres">
+                                        @foreach (var bim in d.Bimestres)
+                                        {
+                                            <div class="boletim-bimestre">
+                                                <span class="boletim-bimestre-titulo">@(bim.Bimestre)º bimestre</span>
+                                                @if (bim.Avaliacoes.Count == 0)
+                                                {
+                                                    <span class="texto-suave">Sem avaliações.</span>
+                                                }
+                                                else
+                                                {
+                                                    <ul>
+                                                        @foreach (var av in bim.Avaliacoes)
+                                                        {
+                                                            <li>
+                                                                <span>@av.Nome<span class="texto-suave"> · peso @av.Peso.ToString("0.##", PtBr)@(av.SubDisciplinaNome is null ? null : $" · {av.SubDisciplinaNome}")</span></span>
+                                                                <strong class="@(av.Nota is null ? "texto-suave" : null)">@(av.Nota is { } n ? n.ToString("0.0#", PtBr) : "pendente")</strong>
+                                                            </li>
+                                                        }
+                                                    </ul>
+                                                }
+                                                <span class="texto-suave">
+                                                    @(bim.Aulas == 0 ? "Sem chamadas." : $"{bim.Faltas} {(bim.Faltas == 1 ? "falta" : "faltas")} em {bim.Aulas} aulas")
+                                                </span>
+                                            </div>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <p class="texto-suave boletim-nota">
+            * Média parcial: ainda há avaliação sem nota ou os pesos do bimestre não somam 100.
+            Aprovação: média anual a partir de @Num(Boletim.Criterios.MediaMinima) e frequência a partir de @Num(Boletim.Criterios.FrequenciaMinima)%.
+        </p>
+    }
+</section>
+
+@code {
+    private static readonly CultureInfo PtBr = CultureInfo.GetCultureInfo("pt-BR");
+    private static readonly Icon IconeFechado = new Icons.Regular.Size16.ChevronRight();
+    private static readonly Icon IconeAberto = new Icons.Regular.Size16.ChevronDown();
+
+    private readonly HashSet<int> _abertas = [];
+
+    [Parameter, EditorRequired]
+    public Boletim Boletim { get; set; } = default!;
+
+    private void Alternar(int disciplinaId)
+    {
+        if (!_abertas.Remove(disciplinaId))
+        {
+            _abertas.Add(disciplinaId);
+        }
+    }
+
+    private static RenderFragment Media(decimal? media, bool parcial) => __builder =>
+    {
+        if (media is not { } m)
+        {
+            <span class="texto-suave">—</span>
+        }
+        else if (parcial)
+        {
+            <span>@m.ToString("0.0", PtBr)<sup title="Média parcial">*</sup></span>
+        }
+        else
+        {
+            <span>@m.ToString("0.0", PtBr)</span>
+        }
+    };
+
+    private static string Num(decimal valor) => valor.ToString("0.##", PtBr);
+}

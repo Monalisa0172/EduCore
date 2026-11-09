@@ -6,8 +6,10 @@
 
 <PageTitle>@(_diario is null ? "Diário" : $"{_diario.Titulo} · {_diario.TurmaNome}") | EduCore</PageTitle>
 
-<AuthorizeView Roles="@Roles.Professor">
-    <Authorized>
+@* Professor: o proprio diario. Admin (coordenacao): consulta, sem acoes de lancamento. *@
+<AuthorizeView Roles="@($"{Roles.Professor},{Roles.Admin}")">
+    <Authorized Context="autenticacao">
+        @{ var somenteLeitura = autenticacao.User.IsInRole(Roles.Admin); }
         <div class="pagina">
             @if (_carregando)
             {
@@ -43,7 +45,7 @@
                 <PageHeader Titulo="@diario.Titulo"
                             Secao="@($"Sala de aula · {diario.TurmaNome}")"
                             Icone="@(new Icons.Regular.Size24.BookOpen())"
-                            Trilha="@([ItemTrilha.Inicio, new("Minhas turmas", "professor/turmas"), new($"{diario.TurmaNome} · {diario.DisciplinaNome}")])">
+                            Trilha="@TrilhaDo(diario, somenteLeitura)">
                     <Detalhes>
                         <dl class="diario-dados">
                             <div><dt>Turma</dt><dd>@diario.TurmaNome</dd></div>
@@ -64,6 +66,13 @@
                     </FluentMessageBar>
                 }
 
+                @if (somenteLeitura)
+                {
+                    <FluentMessageBar Intent="MessageBarIntent.Info" Title="Consulta da coordenação" AllowDismiss="false">
+                        Você está vendo o diário do professor: avaliações, notas e chamadas ficam só para leitura.
+                    </FluentMessageBar>
+                }
+
                 @if (!diario.TurmaAtiva)
                 {
                     <FluentMessageBar Intent="MessageBarIntent.Warning" Title="Turma encerrada" AllowDismiss="false">
@@ -72,11 +81,11 @@
                 }
 
                 <nav class="abas" aria-label="Diário de classe">
-                    <NavLink href="@($"{BaseUrl}/avaliacoes")" Match="NavLinkMatch.Prefix" class="@(EhChamada ? null : "active")" aria-current="@(EhChamada ? null : "page")">
+                    <NavLink href="@($"{BaseUrl}/avaliacoes{Consulta}")" Match="NavLinkMatch.Prefix" class="@(EhChamada ? null : "active")" aria-current="@(EhChamada ? null : "page")">
                         <FluentIcon Value="@(new Icons.Regular.Size20.ClipboardTask())" Color="Color.Custom" CustomColor="currentColor" aria-hidden="true" />
                         Avaliações e notas
                     </NavLink>
-                    <NavLink href="@($"{BaseUrl}/chamada")" Match="NavLinkMatch.Prefix" aria-current="@(EhChamada ? "page" : null)">
+                    <NavLink href="@($"{BaseUrl}/chamada{Consulta}")" Match="NavLinkMatch.Prefix" aria-current="@(EhChamada ? "page" : null)">
                         <FluentIcon Value="@(new Icons.Regular.Size20.ClipboardCheckmark())" Color="Color.Custom" CustomColor="currentColor" aria-hidden="true" />
                         Chamada
                     </NavLink>
@@ -84,11 +93,13 @@
 
                 @if (EhChamada)
                 {
-                    <ChamadaPainel Diario="diario" OnAviso="MostrarAviso" />
+                    <ChamadaPainel Diario="diario" SomenteLeitura="somenteLeitura" OnAviso="MostrarAviso" />
                 }
                 else
                 {
                     <AvaliacoesPainel Diario="diario"
+                                      SomenteLeitura="somenteLeitura"
+                                      ConsultaDeOrigem="@RetornoNavegacao.ConsultaDeOrigem(Voltar, Origem)"
                                       BimestreInicial="Bimestre"
                                       OnAviso="MostrarAviso"
                                       OnPesosAlterados="RecarregarDiarioAsync" />
@@ -128,7 +139,27 @@
     [SupplyParameterFromQuery(Name = "bimestre")]
     public int? Bimestre { get; set; }
 
+    /// <summary>Origem (ex.: ficha do professor, para a coordenação), validada contra redirecionamento externo.</summary>
+    [SupplyParameterFromQuery(Name = "voltar")]
+    public string? Voltar { get; set; }
+
+    [SupplyParameterFromQuery(Name = "origem")]
+    public string? Origem { get; set; }
+
     private bool EhChamada => string.Equals(Aba, "chamada", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>As abas repetem a origem, para a trilha não se perder.</summary>
+    private string Consulta => RetornoNavegacao.ConsultaDeOrigem(Voltar, Origem) is { Length: > 0 } c ? $"?{c}" : string.Empty;
+
+    /// <summary>Professor: "Início › Minhas turmas › {turma · disciplina}". Coordenação: "Início › {professor} › {turma · disciplina}".</summary>
+    private IReadOnlyList<ItemTrilha> TrilhaDo(DiarioInfo diario, bool somenteLeitura)
+    {
+        var titulo = $"{diario.TurmaNome} · {diario.DisciplinaNome}";
+
+        return somenteLeitura
+            ? RetornoNavegacao.TrilhaDeRetorno(Voltar, Origem, titulo) ?? [ItemTrilha.Inicio, new(titulo)]
+            : [ItemTrilha.Inicio, new("Minhas turmas", "professor/turmas"), new(titulo)];
+    }
 
     private string BaseUrl => $"professor/turmas/{TurmaId}/disciplinas/{DisciplinaId}";
 

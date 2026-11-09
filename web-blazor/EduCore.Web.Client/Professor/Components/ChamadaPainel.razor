@@ -12,7 +12,7 @@
                 <FluentText As="TextTag.H2" Id="chamada-titulo" Size="TextSize.Size600" Weight="TextWeight.Semibold">
                     Chamada de @DataPorExtenso(_data)
                 </FluentText>
-                @if (_chamada is not null)
+                @if (_chamada is not null && (!SomenteLeitura || _chamada.Registrada))
                 {
                     <span class="secao-contagem" role="status">@Presentes de @Lista.Count presentes · @(Lista.Count - Presentes) @(Lista.Count - Presentes == 1 ? "falta" : "faltas")</span>
                 }
@@ -52,7 +52,14 @@
         }
         else
         {
-            @if (!_chamada.PodeRegistrar)
+            @if (SomenteLeitura)
+            {
+                <p class="chamada-status @(_chamada.Registrada ? "chamada-status--feita" : null)">
+                    <FluentIcon Value="@(new Icons.Regular.Size16.Info())" Color="Color.Custom" CustomColor="currentColor" aria-hidden="true" />
+                    @(_chamada.Registrada ? $"Chamada registrada neste dia ({_chamada.Bimestre}º bimestre)." : "Sem chamada registrada neste dia.")
+                </p>
+            }
+            else if (!_chamada.PodeRegistrar)
             {
                 <FluentMessageBar Intent="MessageBarIntent.Warning" AllowDismiss="false">
                     @(_data > Hoje
@@ -85,7 +92,7 @@
             }
             else
             {
-                @if (_chamada.PodeRegistrar)
+                @if (PodeRegistrar)
                 {
                     <div class="chamada-barra">
                         <FluentButton Appearance="ButtonAppearance.Subtle" Size="ButtonSize.Small"
@@ -105,25 +112,34 @@
                     @foreach (var aluno in Lista)
                     {
                         var presente = _presencas[aluno.AlunoId];
+                        // Consulta: dia sem chamada nao vira "todos presentes" (isso so vale para o professor comecar a marcar).
+                        var semRegistro = SomenteLeitura && aluno.Presente is null;
                         <li @key="aluno.AlunoId">
                             <button type="button"
-                                    class="chamada-aluno @(presente ? "chamada-aluno--presente" : "chamada-aluno--falta")"
+                                    class="chamada-aluno @(semRegistro ? null : presente ? "chamada-aluno--presente" : "chamada-aluno--falta")"
                                     aria-pressed="@(presente ? "false" : "true")"
-                                    aria-label="@($"{aluno.Nome}: {(presente ? "presente" : "falta")}. Tocar para alternar.")"
-                                    disabled="@(!_chamada.PodeRegistrar)"
+                                    aria-label="@($"{aluno.Nome}: {(semRegistro ? "sem registro" : presente ? "presente" : "falta")}.{(PodeRegistrar ? " Tocar para alternar." : null)}")"
+                                    disabled="@(!PodeRegistrar)"
                                     @onclick="@(() => Alternar(aluno.AlunoId))">
                                 <FluentAvatar Name="@aluno.Nome" Size="AvatarSize.Size32" Color="AvatarColor.Colorful" aria-hidden="true" />
                                 <span class="chamada-nome">@aluno.Nome</span>
-                                <span class="chamada-marca">
-                                    <FluentIcon Value="@(presente ? IconePresente : IconeFalta)" Color="Color.Custom" CustomColor="currentColor" aria-hidden="true" />
-                                    @(presente ? "Presente" : "Falta")
-                                </span>
+                                @if (semRegistro)
+                                {
+                                    <span class="chamada-marca texto-suave">Sem registro</span>
+                                }
+                                else
+                                {
+                                    <span class="chamada-marca">
+                                        <FluentIcon Value="@(presente ? IconePresente : IconeFalta)" Color="Color.Custom" CustomColor="currentColor" aria-hidden="true" />
+                                        @(presente ? "Presente" : "Falta")
+                                    </span>
+                                }
                             </button>
                         </li>
                     }
                 </ul>
 
-                @if (_chamada.PodeRegistrar)
+                @if (PodeRegistrar)
                 {
                     @if (_erroSalvar is not null)
                     {
@@ -204,8 +220,14 @@
     [Parameter, EditorRequired]
     public DiarioInfo Diario { get; set; } = default!;
 
+    /// <summary>Consulta da coordenação: vê a chamada de cada dia, sem marcar nem salvar.</summary>
+    [Parameter]
+    public bool SomenteLeitura { get; set; }
+
     [Parameter]
     public EventCallback<AvisoPagina> OnAviso { get; set; }
+
+    private bool PodeRegistrar => _chamada is { PodeRegistrar: true } && !SomenteLeitura;
 
     private DateOnly Hoje => DateOnly.FromDateTime(Relogio.GetLocalNow().DateTime);
 

@@ -1,12 +1,12 @@
 @inherits HomeViewBase
+@inject IBoletimApiClient BoletimApi
 
-@* Pagina inicial do perfil Aluno. Estrutura inicial: layout e indicadores serao definidos depois. *@
-<section aria-labelledby="aluno-home-title">
-    <FluentText As="TextTag.H1" Id="aluno-home-title" Size="TextSize.Size800" Weight="TextWeight.Semibold" Block="true">
-        Meu painel
-    </FluentText>
-    <FluentText Block="true">Olá, @PrimeiroNome</FluentText>
+@* Pagina inicial do aluno: desempenho por disciplina em graficos (media e frequencia), no bimestre atual. *@
+<div class="pagina">
+    <PageHeader Titulo="Meu desempenho"
+                Secao="Visão geral"
+                Icone="@(new Icons.Regular.Size24.DataBarHorizontal())"
+                Descricao="@($"Olá, {PrimeiroNome}. Veja como você está em cada disciplina; troque o bimestre para ver os anteriores.")" />
 
-    @* TODO: minhas turmas e disciplinas *@
-    @* TODO: notas e frequencia *@
-</section>
+    <BoletimView Carregar="BoletimApi.MeuBoletimAsync" LinkBoletim="aluno/boletim" />
+</div>

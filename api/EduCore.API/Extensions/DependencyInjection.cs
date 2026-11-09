@@ -38,6 +38,7 @@ public static class DependencyInjection
         services.AddScoped<ChamadaService>();
         services.AddScoped<BoletimService>();
         services.AddScoped<DiarioService>();
+        services.AddScoped<AcompanhamentoService>();
 
         services.AddScoped<IAlunoRepository, AlunoRepository>();
         services.AddScoped<IUsuarioRepository, UsuarioRepository>();
@@ -51,6 +52,7 @@ public static class DependencyInjection
         services.AddScoped<INotaRepository, NotaRepository>();
         services.AddScoped<IPresencaRepository, PresencaRepository>();
         services.AddScoped<IBoletimRepository, BoletimRepository>();
+        services.AddScoped<IAcompanhamentoRepository, AcompanhamentoRepository>();
 
         return services;
     }

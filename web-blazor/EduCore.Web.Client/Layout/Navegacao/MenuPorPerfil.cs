@@ -52,10 +52,9 @@ public static class MenuPorPerfil
         new(null, [Inicio]),
         new("Vida escolar",
         [
+            // Frequencia aparece no grafico do Inicio e no boletim: nao precisa de pagina propria.
             new("Boletim", "aluno/boletim",
-                new Icons.Regular.Size20.DocumentBulletList(), new Icons.Filled.Size20.DocumentBulletList(), Disponivel: false),
-            new("Frequência", "aluno/frequencia",
-                new Icons.Regular.Size20.CalendarCheckmark(), new Icons.Filled.Size20.CalendarCheckmark(), Disponivel: false),
+                new Icons.Regular.Size20.DocumentBulletList(), new Icons.Filled.Size20.DocumentBulletList()),
         ]),
     ];
 

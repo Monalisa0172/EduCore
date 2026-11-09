@@ -11,6 +11,13 @@
   --educore-secondary-text: #8A5A00;
   --educore-secondary-tint: color-mix(in srgb, var(--educore-secondary) 18%, transparent);
   --educore-primary-tint: color-mix(in srgb, var(--educore-primary) 12%, transparent);
+
+  /* Situacao de desempenho nos graficos (ok / atencao / risco). Validadas para daltonismo
+     (deuteranopia e protanopia) e contraste com o validador de paleta; sempre usadas com
+     icone + rotulo, nunca como unica informacao. Nao reutilizar para outras series. */
+  --educore-status-ok: #2a9d8f;
+  --educore-status-atencao: #c98f00;
+  --educore-status-risco: #c93a3a;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -18,6 +25,9 @@
     --educore-primary-text: #8FB3F0;
     --educore-secondary-text: #F2A900;
     --educore-primary-tint: color-mix(in srgb, var(--educore-primary) 30%, transparent);
+    --educore-status-ok: #35a89a;
+    --educore-status-atencao: #b98a00;
+    --educore-status-risco: #d9455c;
   }
 }
 

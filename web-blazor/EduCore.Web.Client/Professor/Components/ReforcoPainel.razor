@@ -1,0 +1,129 @@
+@using System.Globalization
+
+@* Alunos em alerta de cada turma do professor. No 4o bimestre mostra a projecao para o fim do ano:
+   nota necessaria no 4o bimestre (reforco) e aulas a repor para voltar a 75% (reposicao). *@
+@if (!Itens.Any(i => i.ProjecaoDisponivel))
+{
+    <p class="reforco-aviso">
+        <FluentIcon Value="@(new Icons.Regular.Size16.Info())" Color="Color.Custom" CustomColor="currentColor" aria-hidden="true" />
+        A projeção de reforço e reposição aparece no 4º bimestre, quando já dá para calcular a nota que falta para fechar o ano.
+        Até lá, acompanhe abaixo os alunos em alerta.
+    </p>
+}
+
+@if (Itens.All(i => i.AlunosEmAlerta.Count == 0))
+{
+    <section class="secao-card">
+        <EmptyState Titulo="Nenhum aluno em alerta"
+                    Descricao="Em todas as turmas deste professor, médias e frequências estão acima dos limites."
+                    Icone="@(new Icons.Regular.Size24.PeopleCheckmark())" />
+    </section>
+}
+
+@foreach (var item in Itens.Where(i => i.AlunosEmAlerta.Count > 0))
+{
+    <section class="secao-card" aria-labelledby="@($"reforco-{item.TurmaId}-{item.DisciplinaId}")" @key="(item.TurmaId, item.DisciplinaId)">
+        <div class="secao-cabecalho">
+            <div class="secao-titulo">
+                <FluentText As="TextTag.H2" Id="@($"reforco-{item.TurmaId}-{item.DisciplinaId}")" Size="TextSize.Size500" Weight="TextWeight.Semibold">
+                    @item.TurmaNome · @item.Titulo
+                </FluentText>
+                <span class="secao-contagem">@item.AlunosEmAlerta.Count @(item.AlunosEmAlerta.Count == 1 ? "aluno em alerta" : "alunos em alerta")</span>
+            </div>
+        </div>
+
+        <div class="reforco-rolagem">
+            <table class="reforco">
+                <thead>
+                    <tr>
+                        <th scope="col">Aluno</th>
+                        <th scope="col" class="reforco-numero">Média do ano</th>
+                        @if (item.ProjecaoDisponivel)
+                        {
+                            <th scope="col" class="reforco-numero">Nota necessária no 4º bim.</th>
+                        }
+                        <th scope="col" class="reforco-numero">Frequência</th>
+                        @if (item.ProjecaoDisponivel)
+                        {
+                            <th scope="col" class="reforco-numero">Aulas a repor</th>
+                        }
+                        <th scope="col">Orientação</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var aluno in item.AlunosEmAlerta)
+                    {
+                        <tr @key="aluno.AlunoId">
+                            <th scope="row">
+                                <a href="@($"alunos/{aluno.UsuarioId}?voltar={Uri.EscapeDataString(UrlFicha)}&origem={Uri.EscapeDataString(NomeProfessor)}")">@aluno.Nome</a>
+                            </th>
+                            <td class="reforco-numero">
+                                @(aluno.MediaAnual is { } m ? m.ToString("0.0", PtBr) : "—")@if (aluno.MediaAnualParcial && aluno.MediaAnual is not null)
+                                {<sup title="Média parcial">*</sup>}
+                            </td>
+                            @if (item.ProjecaoDisponivel)
+                            {
+                                <td class="reforco-numero">@NotaNecessaria(aluno)</td>
+                            }
+                            <td class="reforco-numero">@(aluno.Frequencia is { } f ? $"{f.ToString("0", PtBr)}%" : "—")</td>
+                            @if (item.ProjecaoDisponivel)
+                            {
+                                <td class="reforco-numero">@(aluno.AulasParaRepor == 0 ? "—" : $"{aluno.AulasParaRepor} {(aluno.AulasParaRepor == 1 ? "aula" : "aulas")}")</td>
+                            }
+                            <td>
+                                <div class="reforco-orientacao">
+                                    @if (aluno.NivelMedia is NivelDesempenho.Risco or NivelDesempenho.Atencao)
+                                    {
+                                        <IconeSituacao Nivel="aluno.NivelMedia" Texto="Reforço" />
+                                    }
+                                    @if (aluno.NivelFrequencia is NivelDesempenho.Risco or NivelDesempenho.Atencao)
+                                    {
+                                        <IconeSituacao Nivel="aluno.NivelFrequencia" Texto="@(aluno.AulasParaRepor > 0 ? "Reposição de aulas" : "Frequência no limite")" />
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+}
+
+<p class="texto-suave reforco-nota">
+    Nota necessária: o mínimo no 4º bimestre para a média do ano chegar a 6 (média dos 4 bimestres).
+    Aulas a repor: aulas seguidas com presença para a frequência voltar a 75%. * média parcial.
+</p>
+
+@code {
+    private static readonly CultureInfo PtBr = CultureInfo.GetCultureInfo("pt-BR");
+
+    [Parameter, EditorRequired]
+    public IReadOnlyList<AcompanhamentoItem> Itens { get; set; } = [];
+
+    /// <summary>Endereço da ficha do professor (os links de aluno voltam para ela).</summary>
+    [Parameter, EditorRequired]
+    public string UrlFicha { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string NomeProfessor { get; set; } = string.Empty;
+
+    private static RenderFragment NotaNecessaria(AlunoEmAlerta aluno) => __builder =>
+    {
+        switch (aluno.ProjecaoNota)
+        {
+            case SituacaoProjecao.Possivel:
+                <strong>@aluno.NotaNecessaria!.Value.ToString("0.0", PtBr)</strong>
+                break;
+            case SituacaoProjecao.Garantida:
+                <span class="texto-suave">já garantida</span>
+                break;
+            case SituacaoProjecao.Impossivel:
+                <IconeSituacao Nivel="NivelDesempenho.Risco" Texto="acima de 10: recuperação" />
+                break;
+            default:
+                <span class="texto-suave" title="Falta média de algum bimestre anterior">—</span>
+                break;
+        }
+    };
+}

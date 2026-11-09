@@ -1,3 +1,4 @@
+using EduCore.Web.Client.Aluno.Services;
 using EduCore.Web.Client.Atribuicoes.Services;
 using EduCore.Web.Client.Auth.Services;
 using EduCore.Web.Client.Disciplinas.Services;
@@ -42,6 +43,8 @@ public static class ApiServiceCollectionExtensions
         services.AddHttpClient<ISubDisciplinaApiClient, SubDisciplinaApiClient>(ConfigureClient);
         services.AddHttpClient<IAtribuicaoApiClient, AtribuicaoApiClient>(ConfigureClient);
         services.AddHttpClient<IDiarioApiClient, DiarioApiClient>(ConfigureClient);
+        services.AddHttpClient<IBoletimApiClient, BoletimApiClient>(ConfigureClient);
+        services.AddHttpClient<IAcompanhamentoApiClient, AcompanhamentoApiClient>(ConfigureClient);
 
         return services;
 

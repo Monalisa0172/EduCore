@@ -35,7 +35,7 @@ public partial class EditarUsuario : IDisposable
     /// <summary>Caminho relativo seguro para o retorno; vazio = painel.</summary>
     private string UrlRetorno => RetornoNavegacao.CaminhoInterno(Voltar) ?? string.Empty;
 
-    private IReadOnlyList<ItemTrilha>? Trilha => RetornoNavegacao.TrilhaDaTurma(Voltar, Origem, "Editar usuário");
+    private IReadOnlyList<ItemTrilha>? Trilha => RetornoNavegacao.TrilhaDeRetorno(Voltar, Origem, "Editar usuário");
 
     [Inject]
     private IUsuarioApiClient UsuarioApi { get; set; } = default!;

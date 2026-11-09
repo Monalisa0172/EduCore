@@ -1,0 +1,30 @@
+.ficha-carregando {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.ficha-dados {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 24px;
+    margin: 0;
+}
+
+    .ficha-dados div {
+        display: flex;
+        gap: 6px;
+    }
+
+    .ficha-dados dt {
+        color: var(--colorNeutralForeground3);
+    }
+
+    .ficha-dados dd {
+        margin: 0;
+        font-weight: var(--fontWeightSemibold, 600);
+    }
+
+    .ficha-dados a {
+        color: var(--educore-primary-text);
+    }

@@ -1,0 +1,31 @@
+.boletim-carregando {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.boletim-carregando-graficos {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr));
+    gap: 16px;
+}
+
+/* Filtros numa linha, acima de tudo o que eles afetam */
+.boletim-filtros {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px 24px;
+}
+
+.boletim-conteudo {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    transition: opacity 150ms ease-out;
+}
+
+/* Recarregando outro ano: mantem o anterior esmaecido, sem esqueleto nem salto */
+.boletim-conteudo--recarregando {
+    opacity: 0.5;
+    pointer-events: none;
+}
