@@ -7,131 +7,133 @@
 
 <PageTitle>@(_usuario?.Nome ?? "Professor") | EduCore</PageTitle>
 
-@* Ficha do professor (coordenacao): cabecalho com os dados e "Editar cadastro"; abas por rota
-   Acompanhamento (pendencias de lancamento e desempenho de cada turma) e Reforco e reposicao. *@
-<AuthorizeView Roles="@Roles.Admin">
-    <Authorized>
-        <div class="pagina">
-            @if (_carregando)
-            {
-                <div class="ficha-carregando" aria-busy="true" aria-label="Carregando ficha">
-                    <FluentSkeleton Width="200px" Height="20px" Shimmer="true" />
-                    <FluentSkeleton Width="320px" Height="40px" Shimmer="true" />
-                    <FluentSkeleton Height="220px" Shimmer="true" />
-                    <FluentSkeleton Height="220px" Shimmer="true" />
-                </div>
-            }
-            else if (_erro is { Kind: ApiErrorKind.NotFound } || _usuario is { IsAluno: true })
-            {
-                <PageHeader Titulo="Professor não encontrado" Trilha="@([ItemTrilha.Inicio, new("Professor")])" />
-                <section class="secao-card">
-                    <EmptyState Titulo="Esta ficha não existe"
-                                Descricao="@(_usuario is { IsAluno: true } ? "Este usuário é aluno: abra a ficha de aluno pelo painel." : "O endereço pode estar incorreto. Volte ao painel e escolha o professor.")"
-                                Icone="@(new Icons.Regular.Size24.Person())">
-                        <a class="atalho atalho--destaque" href="">Voltar ao painel</a>
-                    </EmptyState>
-                </section>
-            }
-            else if (_erro is not null)
-            {
-                <PageHeader Titulo="Ficha do professor" Trilha="@([ItemTrilha.Inicio, new("Professor")])" />
-                <FluentMessageBar Intent="MessageBarIntent.Error" Title="@_erro.Title" AllowDismiss="false">
-                    <ChildContent>@_erro.Message</ChildContent>
-                    <ActionsTemplate>
-                        <FluentButton Appearance="ButtonAppearance.Default" OnClick="CarregarAsync">Tentar novamente</FluentButton>
-                    </ActionsTemplate>
-                </FluentMessageBar>
-            }
-            else if (_usuario is { } professor && _acompanhamento is { } acompanhamento)
-            {
-                <PageHeader Titulo="@professor.Nome"
-                            Secao="Pessoas · Professor"
-                            Icone="@(new Icons.Regular.Size24.PersonBoard())"
-                            Trilha="@([ItemTrilha.Inicio, new(professor.Nome)])">
-                    <Selo>
-                        <StatusBadge Ativo="professor.Ativo" TextoAtivo="Ativo" TextoInativo="Inativo" />
-                    </Selo>
-                    <Detalhes>
-                        <dl class="ficha-dados">
-                            <div><dt>E-mail</dt><dd>@professor.Email</dd></div>
-                            @if (!string.IsNullOrWhiteSpace(professor.Professor?.Especialidade))
-                            {
-                                <div><dt>Especialidade</dt><dd>@professor.Professor.Especialidade</dd></div>
-                            }
-                            <div><dt>Turmas</dt><dd>@acompanhamento.Itens.Select(i => i.TurmaId).Distinct().Count()</dd></div>
-                        </dl>
-                    </Detalhes>
-                    <Acoes>
-                        <a class="atalho" href="@LinkEdicao">
-                            <FluentIcon Value="@(new Icons.Regular.Size16.Edit())" Color="Color.Custom" CustomColor="currentColor" aria-hidden="true" />
-                            Editar cadastro
-                        </a>
-                    </Acoes>
-                </PageHeader>
-
-                <nav class="abas" aria-label="Ficha do professor">
-                    <a href="@($"professores/{UsuarioId}")" class="@(EhReforco ? null : "active")" aria-current="@(EhReforco ? null : "page")">
-                        <FluentIcon Value="@(new Icons.Regular.Size20.TaskListSquareLtr())" Color="Color.Custom" CustomColor="currentColor" aria-hidden="true" />
-                        Acompanhamento
-                        @if (TotalPendencias > 0)
-                        {
-                            <span class="chip-atencao">@TotalPendencias</span>
-                        }
-                    </a>
-                    <a href="@UrlReforco" class="@(EhReforco ? "active" : null)" aria-current="@(EhReforco ? "page" : null)">
-                        <FluentIcon Value="@(new Icons.Regular.Size20.PeopleTeam())" Color="Color.Custom" CustomColor="currentColor" aria-hidden="true" />
-                        Reforço e reposição
-                        @if (AlunosEmAlerta > 0)
-                        {
-                            <span class="chip-atencao">@AlunosEmAlerta</span>
-                        }
-                    </a>
-                </nav>
-
-                @if (acompanhamento.Itens.Count == 0)
+<AreaSegura>
+    @* Ficha do professor (coordenacao): cabecalho com os dados e "Editar cadastro"; abas por rota
+       Acompanhamento (pendencias de lancamento e desempenho de cada turma) e Reforco e reposicao. *@
+    <AuthorizeView Roles="@Roles.Admin">
+        <Authorized>
+            <div class="pagina">
+                @if (_carregando)
                 {
+                    <div class="ficha-carregando" aria-busy="true" aria-label="Carregando ficha">
+                        <FluentSkeleton Width="200px" Height="20px" Shimmer="true" />
+                        <FluentSkeleton Width="320px" Height="40px" Shimmer="true" />
+                        <FluentSkeleton Height="220px" Shimmer="true" />
+                        <FluentSkeleton Height="220px" Shimmer="true" />
+                    </div>
+                }
+                else if (_erro is { Kind: ApiErrorKind.NotFound } || _usuario is { IsAluno: true })
+                {
+                    <PageHeader Titulo="Professor não encontrado" Trilha="@([ItemTrilha.Inicio, new("Professor")])" />
                     <section class="secao-card">
-                        <EmptyState Titulo="Sem turmas atribuídas"
-                                    Descricao="Este professor não leciona em nenhuma turma ativa. Faça a atribuição na tela da turma."
-                                    Icone="@(new Icons.Regular.Size24.PeopleTeam())">
-                            <a class="atalho atalho--destaque" href="turmas">Ver turmas</a>
+                        <EmptyState Titulo="Esta ficha não existe"
+                                    Descricao="@(_usuario is { IsAluno: true } ? "Este usuário é aluno: abra a ficha de aluno pelo painel." : "O endereço pode estar incorreto. Volte ao painel e escolha o professor.")"
+                                    Icone="@(new Icons.Regular.Size24.Person())">
+                            <a class="atalho atalho--destaque" href="">Voltar ao painel</a>
                         </EmptyState>
                     </section>
                 }
-                else if (EhReforco)
+                else if (_erro is not null)
                 {
-                    <ReforcoPainel Itens="acompanhamento.Itens" UrlFicha="@($"/professores/{UsuarioId}/reforco")" NomeProfessor="@professor.Nome" />
+                    <PageHeader Titulo="Ficha do professor" Trilha="@([ItemTrilha.Inicio, new("Professor")])" />
+                    <FluentMessageBar Intent="MessageBarIntent.Error" Title="@_erro.Title" AllowDismiss="false">
+                        <ChildContent>@_erro.Message</ChildContent>
+                        <ActionsTemplate>
+                            <FluentButton Appearance="ButtonAppearance.Default" OnClick="CarregarAsync">Tentar novamente</FluentButton>
+                        </ActionsTemplate>
+                    </FluentMessageBar>
                 }
-                else
+                else if (_usuario is { } professor && _acompanhamento is { } acompanhamento)
                 {
-                    <p class="ficha-resumo" role="status">
-                        @if (TotalPendencias == 0)
-                        {
-                            <IconeSituacao Nivel="NivelDesempenho.Ok" Texto="Lançamentos em dia" />
-                            <span>em @Turmas(acompanhamento.Itens.Count).</span>
-                        }
-                        else
-                        {
-                            <IconeSituacao Nivel="NivelDesempenho.Atencao" Texto="@(TotalPendencias == 1 ? "1 pendência" : $"{TotalPendencias} pendências")" />
-                            <span>de lançamento no bimestre atual, em @Turmas(acompanhamento.Itens.Count(i => i.Pendencias > 0)).</span>
-                        }
-                    </p>
+                    <PageHeader Titulo="@professor.Nome"
+                                Secao="Pessoas · Professor"
+                                Icone="@(new Icons.Regular.Size24.PersonBoard())"
+                                Trilha="@([ItemTrilha.Inicio, new(professor.Nome)])">
+                        <Selo>
+                            <StatusBadge Ativo="professor.Ativo" TextoAtivo="Ativo" TextoInativo="Inativo" />
+                        </Selo>
+                        <Detalhes>
+                            <dl class="ficha-dados">
+                                <div><dt>E-mail</dt><dd>@professor.Email</dd></div>
+                                @if (!string.IsNullOrWhiteSpace(professor.Professor?.Especialidade))
+                                {
+                                    <div><dt>Especialidade</dt><dd>@professor.Professor.Especialidade</dd></div>
+                                }
+                                <div><dt>Turmas</dt><dd>@acompanhamento.Itens.Select(i => i.TurmaId).Distinct().Count()</dd></div>
+                            </dl>
+                        </Detalhes>
+                        <Acoes>
+                            <a class="atalho" href="@LinkEdicao">
+                                <FluentIcon Value="@(new Icons.Regular.Size16.Edit())" Color="Color.Custom" CustomColor="currentColor" aria-hidden="true" />
+                                Editar cadastro
+                            </a>
+                        </Acoes>
+                    </PageHeader>
 
-                    @foreach (var item in acompanhamento.Itens)
+                    <nav class="abas" aria-label="Ficha do professor">
+                        <a href="@($"professores/{UsuarioId}")" class="@(EhReforco ? null : "active")" aria-current="@(EhReforco ? null : "page")">
+                            <FluentIcon Value="@(new Icons.Regular.Size20.TaskListSquareLtr())" Color="Color.Custom" CustomColor="currentColor" aria-hidden="true" />
+                            Acompanhamento
+                            @if (TotalPendencias > 0)
+                            {
+                                <span class="chip-atencao">@TotalPendencias</span>
+                            }
+                        </a>
+                        <a href="@UrlReforco" class="@(EhReforco ? "active" : null)" aria-current="@(EhReforco ? "page" : null)">
+                            <FluentIcon Value="@(new Icons.Regular.Size20.PeopleTeam())" Color="Color.Custom" CustomColor="currentColor" aria-hidden="true" />
+                            Reforço e reposição
+                            @if (AlunosEmAlerta > 0)
+                            {
+                                <span class="chip-atencao">@AlunosEmAlerta</span>
+                            }
+                        </a>
+                    </nav>
+
+                    @if (acompanhamento.Itens.Count == 0)
                     {
-                        <AcompanhamentoCartao @key="(item.TurmaId, item.DisciplinaId)"
-                                              Item="item"
-                                              ConsultaDeOrigem="@ConsultaDeOrigem"
-                                              UrlReforco="@UrlReforco" />
+                        <section class="secao-card">
+                            <EmptyState Titulo="Sem turmas atribuídas"
+                                        Descricao="Este professor não leciona em nenhuma turma ativa. Faça a atribuição na tela da turma."
+                                        Icone="@(new Icons.Regular.Size24.PeopleTeam())">
+                                <a class="atalho atalho--destaque" href="turmas">Ver turmas</a>
+                            </EmptyState>
+                        </section>
+                    }
+                    else if (EhReforco)
+                    {
+                        <ReforcoPainel Itens="acompanhamento.Itens" UrlFicha="@($"/professores/{UsuarioId}/reforco")" NomeProfessor="@professor.Nome" />
+                    }
+                    else
+                    {
+                        <p class="ficha-resumo" role="status">
+                            @if (TotalPendencias == 0)
+                            {
+                                <IconeSituacao Nivel="NivelDesempenho.Ok" Texto="Lançamentos em dia" />
+                                <span>em @Turmas(acompanhamento.Itens.Count).</span>
+                            }
+                            else
+                            {
+                                <IconeSituacao Nivel="NivelDesempenho.Atencao" Texto="@(TotalPendencias == 1 ? "1 pendência" : $"{TotalPendencias} pendências")" />
+                                <span>de lançamento no bimestre atual, em @Turmas(acompanhamento.Itens.Count(i => i.Pendencias > 0)).</span>
+                            }
+                        </p>
+
+                        @foreach (var item in acompanhamento.Itens)
+                        {
+                            <AcompanhamentoCartao @key="(item.TurmaId, item.DisciplinaId)"
+                                                  Item="item"
+                                                  ConsultaDeOrigem="@ConsultaDeOrigem"
+                                                  UrlReforco="@UrlReforco" />
+                        }
                     }
                 }
-            }
-        </div>
-    </Authorized>
-    <NotAuthorized>
-        <AcessoNegadoOuLogin />
-    </NotAuthorized>
-</AuthorizeView>
+            </div>
+        </Authorized>
+        <NotAuthorized>
+            <AcessoNegadoOuLogin />
+        </NotAuthorized>
+    </AuthorizeView>
+</AreaSegura>
 
 @code {
     private readonly CancellationTokenSource _cts = new();

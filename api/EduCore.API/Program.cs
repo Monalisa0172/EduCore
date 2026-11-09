@@ -4,6 +4,7 @@ using System.Threading.RateLimiting;
 using EduCore.API.Controllers;
 using EduCore.API.Data;
 using EduCore.API.Extensions;
+using EduCore.API.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -12,6 +13,10 @@ using Microsoft.OpenApi;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
+
+// Erros nao previstos viram ProblemDetails (com traceId) em vez de 500 vazio.
+builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<TratadorErrosGlobal>();
 
 builder.Services.AddEndpointsApiExplorer();
 
@@ -133,6 +138,10 @@ builder.Services.AddAuthorization();
 builder.Services.AddApplication(builder.Configuration);
 
 var app = builder.Build();
+
+// Primeiro do pipeline: pega excecoes de tudo que vem depois. Os cabecalhos de CORS sao
+// aplicados no inicio da resposta, entao o front tambem consegue ler a resposta de erro.
+app.UseExceptionHandler();
 
 if (app.Environment.IsDevelopment())
 {

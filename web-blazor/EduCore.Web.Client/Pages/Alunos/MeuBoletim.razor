@@ -4,19 +4,21 @@
 
 <PageTitle>Boletim | EduCore</PageTitle>
 
-<AuthorizeView Roles="@Roles.Aluno">
-    <Authorized>
-        <div class="pagina">
-            <PageHeader Titulo="Boletim"
-                        Secao="Vida escolar"
-                        Icone="@(new Icons.Regular.Size24.DocumentBulletList())"
-                        Descricao="Notas de cada avaliação, médias dos bimestres, frequência e situação em cada disciplina."
-                        Trilha="@([ItemTrilha.Inicio, new("Boletim")])" />
+<AreaSegura>
+    <AuthorizeView Roles="@Roles.Aluno">
+        <Authorized>
+            <div class="pagina">
+                <PageHeader Titulo="Boletim"
+                            Secao="Vida escolar"
+                            Icone="@(new Icons.Regular.Size24.DocumentBulletList())"
+                            Descricao="Notas de cada avaliação, médias dos bimestres, frequência e situação em cada disciplina."
+                            Trilha="@([ItemTrilha.Inicio, new("Boletim")])" />
 
-            <BoletimView Carregar="BoletimApi.MeuBoletimAsync" MostrarPainel="false" MostrarTabela="true" />
-        </div>
-    </Authorized>
-    <NotAuthorized>
-        <AcessoNegadoOuLogin />
-    </NotAuthorized>
-</AuthorizeView>
+                <BoletimView Carregar="BoletimApi.MeuBoletimAsync" MostrarPainel="false" MostrarTabela="true" />
+            </div>
+        </Authorized>
+        <NotAuthorized>
+            <AcessoNegadoOuLogin />
+        </NotAuthorized>
+    </AuthorizeView>
+</AreaSegura>

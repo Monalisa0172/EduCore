@@ -6,111 +6,113 @@
 
 <PageTitle>@(_diario is null ? "Diário" : $"{_diario.Titulo} · {_diario.TurmaNome}") | EduCore</PageTitle>
 
-@* Professor: o proprio diario. Admin (coordenacao): consulta, sem acoes de lancamento. *@
-<AuthorizeView Roles="@($"{Roles.Professor},{Roles.Admin}")">
-    <Authorized Context="autenticacao">
-        @{ var somenteLeitura = autenticacao.User.IsInRole(Roles.Admin); }
-        <div class="pagina">
-            @if (_carregando)
-            {
-                <div class="diario-carregando" aria-busy="true" aria-label="Carregando diário">
-                    <FluentSkeleton Width="200px" Height="20px" Shimmer="true" />
-                    <FluentSkeleton Width="320px" Height="40px" Shimmer="true" />
-                    <FluentSkeleton Height="260px" Shimmer="true" />
-                </div>
-            }
-            else if (_erro is { Kind: ApiErrorKind.NotFound })
-            {
-                <PageHeader Titulo="Diário não encontrado" Trilha="TrilhaBase" />
-                <section class="secao-card">
-                    <EmptyState Titulo="Você não leciona esta disciplina nesta turma"
-                                Descricao="O endereço pode estar incorreto ou a atribuição foi encerrada. Volte para suas turmas."
-                                Icone="@(new Icons.Regular.Size24.PeopleTeam())">
-                        <a class="atalho atalho--destaque" href="professor/turmas">Minhas turmas</a>
-                    </EmptyState>
-                </section>
-            }
-            else if (_erro is not null)
-            {
-                <PageHeader Titulo="Diário" Trilha="TrilhaBase" />
-                <FluentMessageBar Intent="MessageBarIntent.Error" Title="@_erro.Title" AllowDismiss="false">
-                    <ChildContent>@_erro.Message</ChildContent>
-                    <ActionsTemplate>
-                        <FluentButton Appearance="ButtonAppearance.Default" OnClick="CarregarAsync">Tentar novamente</FluentButton>
-                    </ActionsTemplate>
-                </FluentMessageBar>
-            }
-            else if (_diario is { } diario)
-            {
-                <PageHeader Titulo="@diario.Titulo"
-                            Secao="@($"Sala de aula · {diario.TurmaNome}")"
-                            Icone="@(new Icons.Regular.Size24.BookOpen())"
-                            Trilha="@TrilhaDo(diario, somenteLeitura)">
-                    <Detalhes>
-                        <dl class="diario-dados">
-                            <div><dt>Turma</dt><dd>@diario.TurmaNome</dd></div>
-                            <div><dt>Ano letivo</dt><dd>@diario.AnoLetivo</dd></div>
-                            <div><dt>Alunos ativos</dt><dd>@diario.AlunosAtivos</dd></div>
-                            <div><dt>Bimestre atual</dt><dd>@(diario.BimestreVigente)º</dd></div>
-                        </dl>
-                    </Detalhes>
-                </PageHeader>
-
-                @if (_aviso is not null)
+<AreaSegura>
+    @* Professor: o proprio diario. Admin (coordenacao): consulta, sem acoes de lancamento. *@
+    <AuthorizeView Roles="@($"{Roles.Professor},{Roles.Admin}")">
+        <Authorized Context="autenticacao">
+            @{ var somenteLeitura = autenticacao.User.IsInRole(Roles.Admin); }
+            <div class="pagina">
+                @if (_carregando)
                 {
-                    <FluentMessageBar @key="_avisoId"
-                                      Intent="@(_aviso.Erro ? MessageBarIntent.Error : MessageBarIntent.Success)"
-                                      Title="@_aviso.Titulo"
-                                      AllowDismiss="true">
-                        @_aviso.Mensagem
+                    <div class="diario-carregando" aria-busy="true" aria-label="Carregando diário">
+                        <FluentSkeleton Width="200px" Height="20px" Shimmer="true" />
+                        <FluentSkeleton Width="320px" Height="40px" Shimmer="true" />
+                        <FluentSkeleton Height="260px" Shimmer="true" />
+                    </div>
+                }
+                else if (_erro is { Kind: ApiErrorKind.NotFound })
+                {
+                    <PageHeader Titulo="Diário não encontrado" Trilha="TrilhaBase" />
+                    <section class="secao-card">
+                        <EmptyState Titulo="Você não leciona esta disciplina nesta turma"
+                                    Descricao="O endereço pode estar incorreto ou a atribuição foi encerrada. Volte para suas turmas."
+                                    Icone="@(new Icons.Regular.Size24.PeopleTeam())">
+                            <a class="atalho atalho--destaque" href="professor/turmas">Minhas turmas</a>
+                        </EmptyState>
+                    </section>
+                }
+                else if (_erro is not null)
+                {
+                    <PageHeader Titulo="Diário" Trilha="TrilhaBase" />
+                    <FluentMessageBar Intent="MessageBarIntent.Error" Title="@_erro.Title" AllowDismiss="false">
+                        <ChildContent>@_erro.Message</ChildContent>
+                        <ActionsTemplate>
+                            <FluentButton Appearance="ButtonAppearance.Default" OnClick="CarregarAsync">Tentar novamente</FluentButton>
+                        </ActionsTemplate>
                     </FluentMessageBar>
                 }
-
-                @if (somenteLeitura)
+                else if (_diario is { } diario)
                 {
-                    <FluentMessageBar Intent="MessageBarIntent.Info" Title="Consulta da coordenação" AllowDismiss="false">
-                        Você está vendo o diário do professor: avaliações, notas e chamadas ficam só para leitura.
-                    </FluentMessageBar>
-                }
+                    <PageHeader Titulo="@diario.Titulo"
+                                Secao="@($"Sala de aula · {diario.TurmaNome}")"
+                                Icone="@(new Icons.Regular.Size24.BookOpen())"
+                                Trilha="@TrilhaDo(diario, somenteLeitura)">
+                        <Detalhes>
+                            <dl class="diario-dados">
+                                <div><dt>Turma</dt><dd>@diario.TurmaNome</dd></div>
+                                <div><dt>Ano letivo</dt><dd>@diario.AnoLetivo</dd></div>
+                                <div><dt>Alunos ativos</dt><dd>@diario.AlunosAtivos</dd></div>
+                                <div><dt>Bimestre atual</dt><dd>@(diario.BimestreVigente)º</dd></div>
+                            </dl>
+                        </Detalhes>
+                    </PageHeader>
 
-                @if (!diario.TurmaAtiva)
-                {
-                    <FluentMessageBar Intent="MessageBarIntent.Warning" Title="Turma encerrada" AllowDismiss="false">
-                        Esta turma é de um ano anterior ou foi inativada: avaliações, notas e chamadas ficam só para consulta.
-                    </FluentMessageBar>
-                }
+                    @if (_aviso is not null)
+                    {
+                        <FluentMessageBar @key="_avisoId"
+                                          Intent="@(_aviso.Erro ? MessageBarIntent.Error : MessageBarIntent.Success)"
+                                          Title="@_aviso.Titulo"
+                                          AllowDismiss="true">
+                            @_aviso.Mensagem
+                        </FluentMessageBar>
+                    }
 
-                <nav class="abas" aria-label="Diário de classe">
-                    <NavLink href="@($"{BaseUrl}/avaliacoes{Consulta}")" Match="NavLinkMatch.Prefix" class="@(EhChamada ? null : "active")" aria-current="@(EhChamada ? null : "page")">
-                        <FluentIcon Value="@(new Icons.Regular.Size20.ClipboardTask())" Color="Color.Custom" CustomColor="currentColor" aria-hidden="true" />
-                        Avaliações e notas
-                    </NavLink>
-                    <NavLink href="@($"{BaseUrl}/chamada{Consulta}")" Match="NavLinkMatch.Prefix" aria-current="@(EhChamada ? "page" : null)">
-                        <FluentIcon Value="@(new Icons.Regular.Size20.ClipboardCheckmark())" Color="Color.Custom" CustomColor="currentColor" aria-hidden="true" />
-                        Chamada
-                    </NavLink>
-                </nav>
+                    @if (somenteLeitura)
+                    {
+                        <FluentMessageBar Intent="MessageBarIntent.Info" Title="Consulta da coordenação" AllowDismiss="false">
+                            Você está vendo o diário do professor: avaliações, notas e chamadas ficam só para leitura.
+                        </FluentMessageBar>
+                    }
 
-                @if (EhChamada)
-                {
-                    <ChamadaPainel Diario="diario" SomenteLeitura="somenteLeitura" OnAviso="MostrarAviso" />
+                    @if (!diario.TurmaAtiva)
+                    {
+                        <FluentMessageBar Intent="MessageBarIntent.Warning" Title="Turma encerrada" AllowDismiss="false">
+                            Esta turma é de um ano anterior ou foi inativada: avaliações, notas e chamadas ficam só para consulta.
+                        </FluentMessageBar>
+                    }
+
+                    <nav class="abas" aria-label="Diário de classe">
+                        <NavLink href="@($"{BaseUrl}/avaliacoes{Consulta}")" Match="NavLinkMatch.Prefix" class="@(EhChamada ? null : "active")" aria-current="@(EhChamada ? null : "page")">
+                            <FluentIcon Value="@(new Icons.Regular.Size20.ClipboardTask())" Color="Color.Custom" CustomColor="currentColor" aria-hidden="true" />
+                            Avaliações e notas
+                        </NavLink>
+                        <NavLink href="@($"{BaseUrl}/chamada{Consulta}")" Match="NavLinkMatch.Prefix" aria-current="@(EhChamada ? "page" : null)">
+                            <FluentIcon Value="@(new Icons.Regular.Size20.ClipboardCheckmark())" Color="Color.Custom" CustomColor="currentColor" aria-hidden="true" />
+                            Chamada
+                        </NavLink>
+                    </nav>
+
+                    @if (EhChamada)
+                    {
+                        <ChamadaPainel Diario="diario" SomenteLeitura="somenteLeitura" OnAviso="MostrarAviso" />
+                    }
+                    else
+                    {
+                        <AvaliacoesPainel Diario="diario"
+                                          SomenteLeitura="somenteLeitura"
+                                          ConsultaDeOrigem="@RetornoNavegacao.ConsultaDeOrigem(Voltar, Origem)"
+                                          BimestreInicial="Bimestre"
+                                          OnAviso="MostrarAviso"
+                                          OnPesosAlterados="RecarregarDiarioAsync" />
+                    }
                 }
-                else
-                {
-                    <AvaliacoesPainel Diario="diario"
-                                      SomenteLeitura="somenteLeitura"
-                                      ConsultaDeOrigem="@RetornoNavegacao.ConsultaDeOrigem(Voltar, Origem)"
-                                      BimestreInicial="Bimestre"
-                                      OnAviso="MostrarAviso"
-                                      OnPesosAlterados="RecarregarDiarioAsync" />
-                }
-            }
-        </div>
-    </Authorized>
-    <NotAuthorized>
-        <AcessoNegadoOuLogin />
-    </NotAuthorized>
-</AuthorizeView>
+            </div>
+        </Authorized>
+        <NotAuthorized>
+            <AcessoNegadoOuLogin />
+        </NotAuthorized>
+    </AuthorizeView>
+</AreaSegura>
 
 @code {
     private static readonly IReadOnlyList<ItemTrilha> TrilhaBase =
