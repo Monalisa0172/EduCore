@@ -24,8 +24,8 @@ SELECT * FROM dbo.HistoricoScripts ORDER BY Script;
 | Script | O que faz |
 |---|---|
 | `001_modelo_academico.sql` | Cria a tabela `Atribuicao`, que substitui `ProfessorTurma` e `ProfessorSubDisciplina`. Avaliação passa a ter turma, nota passa a ser por avaliação e presença passa a ter turma. O banco passa a impedir matrícula duplicada, nota fora de 0–10, peso fora de 0–100 e subdisciplina de outra disciplina. Cria os índices nas chaves estrangeiras. As notas, presenças e avaliações antigas não tinham turma nem avaliação; elas são copiadas para `bkp.*_001` e removidas. |
-
 | `002_dados_demonstracao.sql` | Dados de demonstração: turma **9º Ano A (2026)** com 5 professores, 8 alunos, atribuições (Português dividida em Gramática e Literatura), avaliações dos 4 bimestres com pesos somando 100, notas e chamadas. Reaproveita as disciplinas que já existem pelo nome. Só gera notas de avaliações já aplicadas e chamadas até a data em que o script roda. |
+| `003_redefinicao_senha.sql` | Cria a tabela `RedefinicaoSenha` para o "Esqueci minha senha". Ela guarda só o hash SHA-256 do link, nunca o link. Também **apaga as senhas gravadas em texto puro** (as que não estão em BCrypt), porque esses usuários não conseguiam entrar. Essas senhas não vão para o `bkp`, de propósito. Os usuários afetados criam uma senha nova pelo "Esqueci minha senha" ou recebem uma do admin. |
 
 ## Acesso de demonstração
 

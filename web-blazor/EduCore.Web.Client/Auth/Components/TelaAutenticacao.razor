@@ -1,0 +1,52 @@
+@* Moldura das telas publicas (entrar, esqueci minha senha, nova senha): painel da marca a esquerda e o
+   formulario a direita. As classes login-alert e login-submit ficam disponiveis para o conteudo. *@
+<div class="login-page">
+    <aside class="brand-panel" aria-label="Apresentação do EduCore">
+        <div class="brand-logo">
+            <span class="brand-logo-mark" aria-hidden="true">
+                <FluentIcon Value="@(new Icons.Filled.Size24.HatGraduation())" Color="Color.Custom" CustomColor="var(--educore-primary)" />
+            </span>
+            <span class="brand-logo-text">EduCore</span>
+        </div>
+
+        <div class="brand-hero">
+            <img src="images/login-hero.svg" alt="" class="brand-illustration" width="360" height="260" />
+            <p class="brand-title">Gestão escolar simples</p>
+            <p class="brand-text">Turmas, disciplinas, professores e avaliações em um só lugar.</p>
+        </div>
+
+        <p class="brand-footer">© @DateTime.Now.Year EduCore</p>
+    </aside>
+
+    <main class="form-panel">
+        <div class="form-container">
+            <header class="login-header">
+                <FluentText As="TextTag.H1" Size="TextSize.Size800" Weight="TextWeight.Semibold" Block="true">
+                    @Titulo
+                </FluentText>
+                @if (!string.IsNullOrWhiteSpace(Subtitulo))
+                {
+                    <FluentText Size="TextSize.Size400" Block="true" Class="login-subtitle">@Subtitulo</FluentText>
+                }
+            </header>
+
+            @ChildContent
+
+            <footer class="login-footer">
+                <FluentIcon Value="@(new Icons.Regular.Size16.ShieldCheckmark())" Color="Color.Custom" CustomColor="var(--colorNeutralForeground3)" />
+                <FluentText Size="TextSize.Size200" Class="login-footer-text">Conexão protegida</FluentText>
+            </footer>
+        </div>
+    </main>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Titulo { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? Subtitulo { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+}

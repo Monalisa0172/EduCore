@@ -1,0 +1,204 @@
+@page "/redefinir-senha"
+@layout AuthLayout
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@implements IDisposable
+@using EduCore.Web.Client.Auth.Models
+@inject ISenhaApiClient SenhaApi
+@inject NavigationManager Navigation
+
+<PageTitle>Nova senha | EduCore</PageTitle>
+
+@* Aberta pelo link do e-mail. Confere o link antes de pedir a senha e tira o token do endereco
+   (nao fica no historico do navegador). *@
+@if (_estado == Estado.Verificando)
+{
+    <TelaAutenticacao Titulo="Nova senha">
+        <div class="senha-verificando" aria-busy="true" aria-label="Conferindo o link">
+            <FluentSkeleton Height="56px" Shimmer="true" />
+            <FluentSkeleton Height="56px" Shimmer="true" />
+        </div>
+    </TelaAutenticacao>
+}
+else if (_estado == Estado.Invalido)
+{
+    <TelaAutenticacao Titulo="Link inválido ou expirado">
+        <div class="senha-confirmacao" role="status">
+            <span class="senha-confirmacao-icone senha-confirmacao-icone--alerta" aria-hidden="true">
+                <FluentIcon Value="@(new Icons.Regular.Size24.LinkDismiss())" Color="Color.Custom" CustomColor="var(--educore-secondary-text)" />
+            </span>
+            <p>@(_erroConsulta?.Message ?? "Este link de redefinição já foi usado, expirou (vale por 30 minutos) ou foi substituído por um pedido mais novo.")</p>
+        </div>
+
+        <FluentStack Orientation="Orientation.Vertical" VerticalGap="12px" HorizontalAlignment="HorizontalAlignment.Stretch">
+            <a class="senha-botao" href="esqueci-senha">Pedir novo link</a>
+            <a class="senha-voltar" href="login">
+                <FluentIcon Value="@(new Icons.Regular.Size16.ArrowLeft())" Color="Color.Custom" CustomColor="currentColor" aria-hidden="true" />
+                Voltar para o login
+            </a>
+        </FluentStack>
+    </TelaAutenticacao>
+}
+else
+{
+    <TelaAutenticacao Titulo="Crie uma nova senha" Subtitulo="Use pelo menos 8 caracteres. Depois, é só entrar com a senha nova.">
+        <EditForm EditContext="_editContext" OnValidSubmit="SalvarAsync" FormName="nova-senha" novalidate>
+            <DataAnnotationsValidator />
+
+            <FluentStack Orientation="Orientation.Vertical" VerticalGap="20px" HorizontalAlignment="HorizontalAlignment.Stretch">
+                @if (_erro is not null)
+                {
+                    <FluentMessageBar Intent="MessageBarIntent.Error" Title="@_erro.Title" AllowDismiss="true" Class="login-alert">
+                        @_erro.Message
+                    </FluentMessageBar>
+                }
+
+                <FluentTextInput Id="nova-senha"
+                                 Label="Nova senha"
+                                 @bind-Value="_modelo.Senha"
+                                 TextInputType="@(_mostrar ? TextInputType.Text : TextInputType.Password)"
+                                 AutoComplete="new-password"
+                                 Spellcheck="false"
+                                 MaxLength="100"
+                                 Required="true"
+                                 Immediate="true"
+                                 ImmediateDelay="0"
+                                 Autofocus="true"
+                                 Disabled="_salvando"
+                                 Size="TextInputSize.Large"
+                                 Width="100%">
+                    <StartTemplate>
+                        <FluentIcon Value="@(new Icons.Regular.Size20.Key())" />
+                    </StartTemplate>
+                    <EndTemplate>
+                        <FluentButton Type="ButtonType.Button"
+                                      Appearance="ButtonAppearance.Transparent"
+                                      Size="ButtonSize.Small"
+                                      IconOnly="true"
+                                      IconStart="@(_mostrar ? IconeOcultar : IconeMostrar)"
+                                      Title="@(_mostrar ? "Ocultar senha" : "Mostrar senha")"
+                                      aria-label="@(_mostrar ? "Ocultar senha" : "Mostrar senha")"
+                                      aria-pressed="@(_mostrar ? "true" : "false")"
+                                      OnClick="@(() => _mostrar = !_mostrar)" />
+                    </EndTemplate>
+                </FluentTextInput>
+
+                <p class="senha-regra @(_modelo.Senha.Length >= 8 ? "senha-regra--ok" : null)" aria-live="polite">
+                    <FluentIcon Value="@(_modelo.Senha.Length >= 8 ? IconeOk : IconeRegra)" Color="Color.Custom" CustomColor="currentColor" aria-hidden="true" />
+                    Pelo menos 8 caracteres (@_modelo.Senha.Length)
+                </p>
+
+                <FluentTextInput Id="nova-senha-confirmacao"
+                                 Label="Repita a nova senha"
+                                 @bind-Value="_modelo.Confirmacao"
+                                 TextInputType="@(_mostrar ? TextInputType.Text : TextInputType.Password)"
+                                 AutoComplete="new-password"
+                                 Spellcheck="false"
+                                 MaxLength="100"
+                                 Required="true"
+                                 Immediate="true"
+                                 ImmediateDelay="0"
+                                 Disabled="_salvando"
+                                 Size="TextInputSize.Large"
+                                 Width="100%">
+                    <StartTemplate>
+                        <FluentIcon Value="@(new Icons.Regular.Size20.Key())" />
+                    </StartTemplate>
+                </FluentTextInput>
+
+                <FluentButton Type="ButtonType.Submit"
+                              Appearance="ButtonAppearance.Primary"
+                              Size="ButtonSize.Large"
+                              Loading="_salvando"
+                              Class="login-submit">
+                    @(_salvando ? "Salvando..." : "Salvar nova senha")
+                </FluentButton>
+            </FluentStack>
+        </EditForm>
+    </TelaAutenticacao>
+}
+
+@code {
+    private enum Estado { Verificando, Invalido, Formulario }
+
+    private static readonly Icon IconeMostrar = new Icons.Regular.Size20.Eye();
+    private static readonly Icon IconeOcultar = new Icons.Regular.Size20.EyeOff();
+    private static readonly Icon IconeOk = new Icons.Regular.Size16.CheckmarkCircle();
+    private static readonly Icon IconeRegra = new Icons.Regular.Size16.Circle();
+
+    private readonly CancellationTokenSource _cts = new();
+    private readonly NovaSenhaModel _modelo = new();
+
+    private EditContext _editContext = default!;
+    private Estado _estado = Estado.Verificando;
+    private string? _token;
+    private ApiError? _erro;
+    private ApiError? _erroConsulta;
+    private bool _salvando;
+    private bool _mostrar;
+
+    [SupplyParameterFromQuery(Name = "token")]
+    public string? Token { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        _editContext = new EditContext(_modelo);
+        _token = Token;
+
+        if (string.IsNullOrWhiteSpace(_token))
+        {
+            _estado = Estado.Invalido;
+            return;
+        }
+
+        // O token sai do endereco (historico do navegador); fica so em memoria nesta tela.
+        Navigation.NavigateTo("redefinir-senha", replace: true);
+
+        var resultado = await SenhaApi.LinkValidoAsync(_token, _cts.Token);
+
+        if (!resultado.Succeeded)
+        {
+            _erroConsulta = resultado.Error;
+            _estado = Estado.Invalido;
+            return;
+        }
+
+        _estado = resultado.Value ? Estado.Formulario : Estado.Invalido;
+    }
+
+    private async Task SalvarAsync()
+    {
+        if (_salvando || _token is null)
+        {
+            return;
+        }
+
+        _salvando = true;
+        _erro = null;
+
+        var resultado = await SenhaApi.RedefinirAsync(_token, _modelo.Senha, _cts.Token);
+
+        _salvando = false;
+
+        if (resultado.Succeeded)
+        {
+            Navigation.NavigateTo("login?senha=redefinida", replace: true);
+            return;
+        }
+
+        // Link venceu ou foi usado enquanto a tela estava aberta.
+        if (resultado.Error.FieldErrors?.ContainsKey("Token") == true)
+        {
+            _erroConsulta = new ApiError(resultado.Error.Kind, resultado.Error.Title, resultado.Error.FieldErrors["Token"].First());
+            _estado = Estado.Invalido;
+            return;
+        }
+
+        _erro = resultado.Error;
+    }
+
+    public void Dispose()
+    {
+        _cts.Cancel();
+        _cts.Dispose();
+    }
+}

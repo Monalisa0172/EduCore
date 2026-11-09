@@ -4,118 +4,95 @@
 
 <PageTitle>Entrar | EduCore</PageTitle>
 
-<div class="login-page">
-    <aside class="brand-panel" aria-label="Apresentação do EduCore">
-        <div class="brand-logo">
-            <span class="brand-logo-mark" aria-hidden="true">
-                <FluentIcon Value="@(new Icons.Filled.Size24.HatGraduation())" Color="Color.Custom" CustomColor="var(--educore-primary)" />
-            </span>
-            <span class="brand-logo-text">EduCore</span>
-        </div>
+<TelaAutenticacao Titulo="Bem-vindo de volta" Subtitulo="Entre com seu e-mail e senha para acessar o EduCore.">
+    <EditForm EditContext="_editContext" OnSubmit="HandleSubmitAsync" FormName="login" novalidate>
+        <DataAnnotationsValidator />
 
-        <div class="brand-hero">
-            <img src="images/login-hero.svg" alt="" class="brand-illustration" width="360" height="260" />
-            <p class="brand-title">Gestão escolar simples</p>
-            <p class="brand-text">Turmas, disciplinas, professores e avaliações em um só lugar.</p>
-        </div>
+        <FluentStack Orientation="Orientation.Vertical" VerticalGap="20px" HorizontalAlignment="HorizontalAlignment.Stretch">
+            @if (SenhaRedefinida && _failure is null)
+            {
+                <FluentMessageBar Intent="MessageBarIntent.Success" Title="Senha redefinida" AllowDismiss="true">
+                    Entre com o seu e-mail e a nova senha.
+                </FluentMessageBar>
+            }
 
-        <p class="brand-footer">© @DateTime.Now.Year EduCore</p>
-    </aside>
+            @if (_failure is not null)
+            {
+                <FluentMessageBar Intent="MessageBarIntent.Error"
+                                  Layout="MessageBarLayout.MultiLine"
+                                  Title="@_failure.Title"
+                                  AllowDismiss="true"
+                                  Class="login-alert">
+                    @_failure.Message
+                </FluentMessageBar>
+            }
 
-    <main class="form-panel">
-        <div class="form-container">
-            <header class="login-header">
-                <FluentText As="TextTag.H1" Size="TextSize.Size800" Weight="TextWeight.Semibold" Block="true">
-                    Bem-vindo de volta
-                </FluentText>
-                <FluentText Size="TextSize.Size400" Block="true" Class="login-subtitle">
-                    Entre com seu e-mail e senha para acessar o EduCore.
-                </FluentText>
-            </header>
+            <FluentTextInput Id="login-email"
+                             Label="E-mail"
+                             @bind-Value="_model.Email"
+                             TextInputType="TextInputType.Email"
+                             AutoComplete="username"
+                             InputMode="TextInputMode.Email"
+                             Spellcheck="false"
+                             Placeholder="nome@escola.com"
+                             MaxLength="100"
+                             Required="true"
+                             Immediate="true"
+                             ImmediateDelay="0"
+                             Autofocus="true"
+                             Disabled="_isSubmitting"
+                             Size="TextInputSize.Large"
+                             Width="100%">
+                <StartTemplate>
+                    <FluentIcon Value="@(new Icons.Regular.Size20.Mail())" />
+                </StartTemplate>
+            </FluentTextInput>
 
-            <EditForm EditContext="_editContext" OnSubmit="HandleSubmitAsync" FormName="login" novalidate>
-                <DataAnnotationsValidator />
+            <div class="login-senha">
+                <FluentTextInput Id="login-password"
+                                 Label="Senha"
+                                 @bind-Value="_model.Password"
+                                 TextInputType="@(_showPassword ? TextInputType.Text : TextInputType.Password)"
+                                 AutoComplete="current-password"
+                                 Spellcheck="false"
+                                 Placeholder="Digite sua senha"
+                                 MaxLength="128"
+                                 Required="true"
+                                 Immediate="true"
+                                 ImmediateDelay="0"
+                                 Disabled="_isSubmitting"
+                                 Size="TextInputSize.Large"
+                                 Width="100%">
+                    <StartTemplate>
+                        <FluentIcon Value="@(new Icons.Regular.Size20.Key())" />
+                    </StartTemplate>
+                    <EndTemplate>
+                        <FluentButton Type="ButtonType.Button"
+                                      Appearance="ButtonAppearance.Transparent"
+                                      Size="ButtonSize.Small"
+                                      IconOnly="true"
+                                      IconStart="@PasswordToggleIcon"
+                                      Title="@PasswordToggleLabel"
+                                      aria-label="@PasswordToggleLabel"
+                                      aria-pressed="@(_showPassword ? "true" : "false")"
+                                      aria-controls="login-password"
+                                      Disabled="_isSubmitting"
+                                      OnClick="TogglePasswordVisibility" />
+                    </EndTemplate>
+                </FluentTextInput>
 
-                <FluentStack Orientation="Orientation.Vertical" VerticalGap="20px" HorizontalAlignment="HorizontalAlignment.Stretch">
-                    @if (_failure is not null)
-                    {
-                        <FluentMessageBar Intent="MessageBarIntent.Error"
-                                          Layout="MessageBarLayout.MultiLine"
-                                          Title="@_failure.Title"
-                                          AllowDismiss="true"
-                                          Class="login-alert">
-                            @_failure.Message
-                        </FluentMessageBar>
-                    }
+                @* Leva o e-mail ja digitado, para a pessoa nao precisar digitar de novo. *@
+                <a class="login-esqueci" href="esqueci-senha" @onclick="GuardarEmail">Esqueci minha senha</a>
+            </div>
 
-                    <FluentTextInput Id="login-email"
-                                     Label="E-mail"
-                                     @bind-Value="_model.Email"
-                                     TextInputType="TextInputType.Email"
-                                     AutoComplete="username"
-                                     InputMode="TextInputMode.Email"
-                                     Spellcheck="false"
-                                     Placeholder="nome@escola.com"
-                                     MaxLength="100"
-                                     Required="true"
-                                     Immediate="true"
-                                     ImmediateDelay="0"
-                                     Autofocus="true"
-                                     Disabled="_isSubmitting"
-                                     Size="TextInputSize.Large"
-                                     Width="100%">
-                        <StartTemplate>
-                            <FluentIcon Value="@(new Icons.Regular.Size20.Mail())" />
-                        </StartTemplate>
-                    </FluentTextInput>
-
-                    <FluentTextInput Id="login-password"
-                                     Label="Senha"
-                                     @bind-Value="_model.Password"
-                                     TextInputType="@(_showPassword ? TextInputType.Text : TextInputType.Password)"
-                                     AutoComplete="current-password"
-                                     Spellcheck="false"
-                                     Placeholder="Digite sua senha"
-                                     MaxLength="128"
-                                     Required="true"
-                                     Immediate="true"
-                                     ImmediateDelay="0"
-                                     Disabled="_isSubmitting"
-                                     Size="TextInputSize.Large"
-                                     Width="100%">
-                        <StartTemplate>
-                            <FluentIcon Value="@(new Icons.Regular.Size20.Key())" />
-                        </StartTemplate>
-                        <EndTemplate>
-                            <FluentButton Type="ButtonType.Button"
-                                          Appearance="ButtonAppearance.Transparent"
-                                          Size="ButtonSize.Small"
-                                          IconOnly="true"
-                                          IconStart="@PasswordToggleIcon"
-                                          Title="@PasswordToggleLabel"
-                                          aria-label="@PasswordToggleLabel"
-                                          aria-pressed="@(_showPassword ? "true" : "false")"
-                                          aria-controls="login-password"
-                                          Disabled="_isSubmitting"
-                                          OnClick="TogglePasswordVisibility" />
-                        </EndTemplate>
-                    </FluentTextInput>
-
-                    <FluentButton Type="ButtonType.Submit"
-                                  Appearance="ButtonAppearance.Primary"
-                                  Size="ButtonSize.Large"
-                                  Loading="_isSubmitting"
-                                  Disabled="!CanSubmit"
-                                  Class="login-submit">
-                        @(_isSubmitting ? "Entrando..." : "Entrar")
-                    </FluentButton>
-                </FluentStack>
-            </EditForm>
-
-            <footer class="login-footer">
-                <FluentIcon Value="@(new Icons.Regular.Size16.ShieldCheckmark())" Color="Color.Custom" CustomColor="var(--colorNeutralForeground3)" />
-                <FluentText Size="TextSize.Size200" Class="login-footer-text">Conexão protegida</FluentText>
-            </footer>
-        </div>
-    </main>
-</div>
+            <FluentButton Type="ButtonType.Submit"
+                          Appearance="ButtonAppearance.Primary"
+                          Size="ButtonSize.Large"
+                          Loading="_isSubmitting"
+                          Disabled="!CanSubmit"
+                          Class="login-submit">
+                @(_isSubmitting ? "Entrando..." : "Entrar")
+            </FluentButton>
+        </FluentStack>
+    </EditForm>
+</TelaAutenticacao>

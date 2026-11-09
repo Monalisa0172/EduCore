@@ -36,3 +36,6 @@ appsettings.*.local.json
 # OS
 .DS_Store
 Thumbs.db
+
+# E-mails gravados em arquivo no desenvolvimento (esqueci minha senha)
+emails-dev/

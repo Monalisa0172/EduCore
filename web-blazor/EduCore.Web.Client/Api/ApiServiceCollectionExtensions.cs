@@ -35,6 +35,8 @@ public static class ApiServiceCollectionExtensions
         services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredService<JwtAuthenticationStateProvider>());
         services.AddScoped<IAuthenticationStateNotifier>(sp => sp.GetRequiredService<JwtAuthenticationStateProvider>());
         services.AddHttpClient<IAuthService, AuthService>(ConfigureClient);
+        services.AddHttpClient<ISenhaApiClient, SenhaApiClient>(ConfigureClient);
+        services.AddScoped<EmailInformado>();
 
         // Clientes da API (anexam o JWT em cada chamada)
         services.AddHttpClient<IUsuarioApiClient, UsuarioApiClient>(ConfigureClient);

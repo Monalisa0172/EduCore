@@ -28,6 +28,9 @@
 			<PrivateAssets>all</PrivateAssets>
 		</PackageReference>
 
+		<!-- SMTP do "esqueci minha senha" (4.16+ sem os alertas GHSA-9j88 do MailKit e GHSA-g7hc do MimeKit). -->
+		<PackageReference Include="MailKit" Version="4.18.2" />
+
 		<PackageReference Include="Swashbuckle.AspNetCore" Version="10.3.1" />
 
 		<!-- Override transitivo: Microsoft.Data.SqlClient 6.1.7 traz Pkcs 9.0.11 (GHSA-846f-f764-76mx).
