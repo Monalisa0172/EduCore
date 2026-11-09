@@ -1,3 +1,4 @@
+using EduCore.Web.Client.Auth;
 using EduCore.Web.Client.Auth.Models;
 using EduCore.Web.Client.Auth.Services;
 using Microsoft.AspNetCore.Components;
@@ -197,6 +198,7 @@ public partial class Login : IAsyncDisposable
 
     /// <summary>
     /// Aceita apenas caminhos relativos da propria aplicacao (evita open redirect).
+    /// Telas de acesso (o proprio login) viram a pagina inicial.
     /// </summary>
     private string GetSafeReturnUrl()
     {
@@ -204,7 +206,8 @@ public partial class Login : IAsyncDisposable
             || !ReturnUrl.StartsWith('/')
             || ReturnUrl.StartsWith("//", StringComparison.Ordinal)
             || ReturnUrl.StartsWith("/\\", StringComparison.Ordinal)
-            || !Uri.IsWellFormedUriString(ReturnUrl, UriKind.Relative))
+            || !Uri.IsWellFormedUriString(ReturnUrl, UriKind.Relative)
+            || PaginasDeAcesso.Contem(ReturnUrl))
         {
             return DefaultRedirect;
         }

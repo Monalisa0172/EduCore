@@ -5,7 +5,16 @@
 @code {
     protected override void OnInitialized()
     {
-        var returnUrl = "/" + Navigation.ToBaseRelativePath(Navigation.Uri);
+        var atual = Navigation.ToBaseRelativePath(Navigation.Uri);
+
+        // Ao sair, a pagina anterior ainda reage ao logout depois que o endereco ja virou "login":
+        // redirecionar daqui gravaria returnUrl=/login e o proximo login voltaria para o proprio login.
+        if (PaginasDeAcesso.Contem(atual))
+        {
+            return;
+        }
+
+        var returnUrl = "/" + atual;
 
         var loginUrl = returnUrl == "/"
             ? "login"
